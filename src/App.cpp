@@ -236,7 +236,6 @@ void App::init()
         
         ship.DrawSprite(spriteShader.GetShader(), model, view, projection);
         
-        
         ImGui::Render();
 	
         SDL_GL_SwapWindow(window);
