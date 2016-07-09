@@ -65,6 +65,9 @@ GLuint Sprite::textureFromFile(std::string imageFile)
 }
 
 void Sprite::DrawSprite(GLuint shader, glm::mat4 model, glm::mat4 view, glm::mat4 projection) {
+	glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+	glEnable(GL_BLEND);
+
 	glUseProgram(shader);
 	glBindVertexArray(vao);
 	
@@ -80,12 +83,11 @@ void Sprite::DrawSprite(GLuint shader, glm::mat4 model, glm::mat4 view, glm::mat
 	};
 	
 	GLfloat texCoords[] = {
-		-1.0,  1.0,
-		-1.0, -1.0,
-		 1.0, -1.0,
+		 0.0,  1.0,
+		 0.0,  0.0,
+		 1.0,  0.0,
 		 1.0,  1.0,
 	};
-	
 	
 	GLuint indices[] = {
         0, 1, 3,
@@ -119,4 +121,6 @@ void Sprite::DrawSprite(GLuint shader, glm::mat4 model, glm::mat4 view, glm::mat
 
     glBindVertexArray(0);
     glUseProgram(0);
+
+	glDisable(GL_BLEND);
 }
