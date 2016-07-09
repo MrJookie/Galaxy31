@@ -19,9 +19,8 @@
 
 #include <imgui.h>
 #include "imgui_impl_sdl_gl3.h"
-#include <stdio.h>
-#include <GL/gl3w.h>
-#include <SDL.h>
+//~ #include <GL/gl3w.h>
+#include <GL/glew.h>
 
 class App {
     public:

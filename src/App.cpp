@@ -30,7 +30,7 @@ void App::init()
         throw std::string("Failed to initialize SDL: ") + SDL_GetError();
     }
 
-    window = SDL_CreateWindow("Cubex", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, m_sizeX, m_sizeY, SDL_WINDOW_OPENGL);
+    window = SDL_CreateWindow("Galaxy31", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, m_sizeX, m_sizeY, SDL_WINDOW_OPENGL);
     if(window == nullptr) {
         throw std::string("Failed to create window: ") + SDL_GetError();
     }
@@ -59,6 +59,8 @@ void App::init()
     glewExperimental = GL_TRUE; 
     glewInit();
     //gl3wInit();
+    
+    ImGui_ImplSdlGL3_Init(window);
     
     printf("Vendor:   %s\n", glGetString(GL_VENDOR));
     printf("Renderer: %s\n", glGetString(GL_RENDERER));
@@ -94,6 +96,7 @@ void App::init()
 
         while(SDL_PollEvent(&e))
         {
+			ImGui_ImplSdlGL3_ProcessEvent(&e);
             if(e.type == SDL_QUIT) {
                 running = false;
             }
@@ -162,6 +165,20 @@ void App::init()
                 skipMouseResolution = 2;
             }
         }
+        
+        ImGui_ImplSdlGL3_NewFrame(window);
+
+        ImGui::GetStyle().Colors[ImGuiCol_WindowBg] = ImColor(1.0f, 0.0f, 0.0f, 0.5f);
+        //ImGui::SetNextWindowPos(ImVec2(0,0));
+		//ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
+		//ImGui::Begin("text", NULL, ImVec2(0,0), 0.0f, ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse);
+        {
+            static float f = 0.0f;
+            ImGui::Text("Hello, world!");
+            ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
+            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+        }
+        //ImGui::End();
 
         glViewport(0, 0, m_sizeX, m_sizeY);
 
@@ -206,6 +223,8 @@ void App::init()
                 //std::cout << xpos << " " << ypos << std::endl;
             }
         }
+        
+        ImGui::Render();
 	
         SDL_GL_SwapWindow(window);
         
