@@ -86,6 +86,7 @@ void Sprite::DrawSprite(GLuint shader, glm::mat4 model, glm::mat4 view, glm::mat
 		 1.0,  1.0,
 	};
 	
+	
 	GLuint indices[] = {
         0, 1, 3,
         1, 2, 3,
