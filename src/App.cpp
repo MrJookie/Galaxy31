@@ -168,7 +168,11 @@ void App::init()
         
         ImGui_ImplSdlGL3_NewFrame(window);
 
-        ImGui::GetStyle().Colors[ImGuiCol_WindowBg] = ImColor(1.0f, 0.0f, 0.0f, 0.5f);
+        ImGui::GetStyle().Colors[ImGuiCol_TitleBgActive] = ImColor(1.0f, 1.0f, 1.0f, 0.5f);
+        ImGui::GetStyle().WindowRounding = 2.0f;
+
+
+        ImGui::GetStyle().Colors[ImGuiCol_WindowBg] = ImColor(1.0f, 1.0f, 1.0f, 0.1f);
         //ImGui::SetNextWindowPos(ImVec2(0,0));
 		//ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
 		//ImGui::Begin("text", NULL, ImVec2(0,0), 0.0f, ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse);
