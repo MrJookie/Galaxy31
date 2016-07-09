@@ -59,6 +59,9 @@ GLuint Sprite::textureFromFile(std::string imageFile)
 	
 	glBindTexture(GL_TEXTURE_2D, 0);
 	
+	m_width = image->w;
+	m_height = image->h;
+	
 	SDL_FreeSurface(image);
 	
 	return textureID;

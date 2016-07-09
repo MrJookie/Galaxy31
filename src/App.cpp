@@ -87,7 +87,7 @@ void App::init()
     Shader spriteShader("Assets/sprite.vs", "Assets/sprite.fs");
     Sprite ship("Assets/SpaceShip01.png");
     
-    Camera camera(glm::vec3(0.0f, 0.0f, 10.0f));
+    Camera camera(glm::vec3(0.0f, 0.0f, 0.0f));
 
     int skipMouseResolution = 0;
     
@@ -232,8 +232,12 @@ void App::init()
         }
         
         glm::mat4 view = camera.GetViewMatrix();
-        glm::mat4 projection = glm::perspective(glm::radians(camera.GetZoom()), this->getSizeX()/(float)this->getSizeY(), 0.1f, 1000.0f);
+        view = glm::mat4(1.0f);
+        //glm::mat4 projection = glm::perspective(glm::radians(camera.GetZoom()), this->getSizeX()/(float)this->getSizeY(), 0.1f, 1000.0f);
+        glm::mat4 projection = glm::ortho(0.0f, (float)this->getSizeX(), (float)this->getSizeY(), 0.0f);
         glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0, 0.0, 0.0));
+        
+        model = glm::scale(model, glm::vec3(173, 291, 1.0f)); 
         
         ship.DrawSprite(spriteShader.GetShader(), model, view, projection);
         
