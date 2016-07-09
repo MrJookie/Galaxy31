@@ -76,7 +76,7 @@ void App::init()
     bool toggleWireframe = true;
     
     SDL_SetHintWithPriority(SDL_HINT_MOUSE_RELATIVE_MODE_WARP, "1", SDL_HINT_OVERRIDE);
-    SDL_SetWindowGrab(window, SDL_TRUE);
+    //SDL_SetWindowGrab(window, SDL_TRUE);
     
     if(toggleMouseRelative) {
         SDL_SetRelativeMouseMode(SDL_TRUE);
