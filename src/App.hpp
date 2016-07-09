@@ -22,6 +22,10 @@
 //~ #include <GL/gl3w.h>
 #include <GL/glew.h>
 
+#include "Camera.hpp"
+#include "Shader.hpp"
+#include "Sprite.hpp"
+
 class App {
     public:
         App();

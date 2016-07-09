@@ -81,12 +81,16 @@ void App::init()
     if(toggleMouseRelative) {
         SDL_SetRelativeMouseMode(SDL_TRUE);
     }
+    
+    
+    Shader spriteShader("Assets/sprite.vs", "Assets/sprite.fs");
+    Sprite ship("Assets/SpaceShip01.png");
+    
+    Camera camera(glm::vec3(0.0f, 0.0f, 10.0f));
 
     int skipMouseResolution = 0;
     
     bool running = true;
-    
-    int ax = 0;
     
     while(running)
     {
@@ -170,9 +174,7 @@ void App::init()
 
         ImGui::GetStyle().Colors[ImGuiCol_TitleBgActive] = ImColor(1.0f, 1.0f, 1.0f, 0.5f);
         ImGui::GetStyle().WindowRounding = 2.0f;
-
-
-        ImGui::GetStyle().Colors[ImGuiCol_WindowBg] = ImColor(1.0f, 1.0f, 1.0f, 0.1f);
+        ImGui::GetStyle().Colors[ImGuiCol_WindowBg] = ImColor(1.0f, 1.0f, 1.0f, 0.25f);
         //ImGui::SetNextWindowPos(ImVec2(0,0));
 		//ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
 		//ImGui::Begin("text", NULL, ImVec2(0,0), 0.0f, ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse);
@@ -227,6 +229,12 @@ void App::init()
                 //std::cout << xpos << " " << ypos << std::endl;
             }
         }
+        
+        glm::mat4 view = camera.GetViewMatrix();
+        glm::mat4 projection = glm::perspective(glm::radians(camera.GetZoom()), this->getSizeX()/(float)this->getSizeY(), 0.1f, 1000.0f);
+        glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0, 0.0, 0.0));
+        
+        ship.DrawSprite(spriteShader.GetShader(), model, view, projection);
         
         ImGui::Render();
 	
@@ -302,4 +310,3 @@ double App::getTimeElapsed() const
 {
     return m_chrono_elapsed;
 }
-

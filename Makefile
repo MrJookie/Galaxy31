@@ -23,6 +23,9 @@ cpp := 	\
 		$(ImGui)										\
 		src/Main.cpp									\
 		src/App.cpp										\
+		src/Camera.cpp									\
+		src/Shader.cpp									\
+		src/Sprite.cpp									\
 
 exe := Galaxy31
 
