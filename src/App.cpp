@@ -51,13 +51,14 @@ void App::init()
     glContext = SDL_GL_CreateContext(window);
     if(glContext == nullptr) {
         throw std::string("Failed to create GLContext: ") + SDL_GetError();
-    }
+    }  
 
     SDL_GL_SetSwapInterval(0);
     SDL_GL_MakeCurrent(window, glContext);
     
     glewExperimental = GL_TRUE; 
     glewInit();
+    //gl3wInit();
     
     printf("Vendor:   %s\n", glGetString(GL_VENDOR));
     printf("Renderer: %s\n", glGetString(GL_RENDERER));
@@ -213,8 +214,9 @@ void App::init()
         //SDL_Delay(16);
     }
     
+    ImGui_ImplSdlGL3_Shutdown();
+    SDL_GL_DeleteContext(glContext);
     SDL_DestroyWindow(window);
-    
     SDL_Quit();
 }
 
