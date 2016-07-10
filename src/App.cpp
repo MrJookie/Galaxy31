@@ -259,11 +259,11 @@ void App::init()
 			
 			ship.Accelerate(direction * acceleration);
 			
-			ship.SetPosition(ship.GetPosition().x + this->getDeltaTime() * ship.GetSpeed().x, 
-							 ship.GetPosition().y + this->getDeltaTime() * ship.GetSpeed().y);
-		} else {
-			// speed = 100;
+			
 		}
+		
+		ship.SetPosition(ship.GetPosition().x + this->getDeltaTime() * ship.GetSpeed().x, 
+							 ship.GetPosition().y + this->getDeltaTime() * ship.GetSpeed().y);
 
         ship.Draw(camera);
         
