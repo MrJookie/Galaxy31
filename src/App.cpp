@@ -232,14 +232,19 @@ void App::init()
         }
         
         glm::mat4 view = camera.GetViewMatrix();
-        view = glm::mat4(1.0f);
         //glm::mat4 projection = glm::perspective(glm::radians(camera.GetZoom()), this->getSizeX()/(float)this->getSizeY(), 0.1f, 1000.0f);
         glm::mat4 projection = glm::ortho(0.0f, (float)this->getSizeX(), (float)this->getSizeY(), 0.0f);
-        glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0, 0.0, 0.0));
         
-        model = glm::scale(model, glm::vec3(173, 291, 1.0f)); 
+
+        int deltaX = ship.GetPosition().x + 0.5f * ship.GetSize().x - xpos;
+        int deltaY = ship.GetPosition().y + 0.5f * ship.GetSize().y - ypos;
+        double rot = atan2(deltaY, deltaX) * 180/3.141592;
+        ship.SetRotation(rot - 90);
         
-        ship.DrawSprite(spriteShader.GetShader(), model, view, projection);
+        ship.SetPosition(ship.GetPosition().x - deltaX * this->getDeltaTime() * 10, ship.GetPosition().y - deltaY * this->getDeltaTime() * 10);
+
+        
+        ship.DrawSprite(spriteShader.GetShader(), view, projection);
         
         ImGui::Render();
 	

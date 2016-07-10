@@ -21,15 +21,29 @@ class Sprite {
 		Sprite(std::string imageFile);
 		~Sprite();
 		
-		void DrawSprite(GLuint shader, glm::mat4 model, glm::mat4 view, glm::mat4 projection);
+		void DrawSprite(GLuint shader, glm::mat4 view, glm::mat4 projection);
 		
-		int m_width;
-		int m_height;
+		
+		void SetSize(int sizeX, int sizeY);
+		void SetPosition(int posX, int posY);
+		void SetRotation(float rotation);
+		
+		glm::vec2 GetSize();
+		glm::vec2 GetPosition();
+		float GetRotation();
+		
 
 
 	private:
 		GLuint textureFromFile(std::string imageFile);
 		
-		GLuint vao, vbo[2], ebo;
-		GLuint texture;
+		glm::mat4 m_modelMat;
+		
+		GLuint m_vao, m_vbo[2], m_ebo;
+		GLuint m_texture;
+		
+		glm::vec2 m_size;
+		glm::vec2 m_position;
+		
+		float m_rotation;
 };
