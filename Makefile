@@ -26,6 +26,7 @@ cpp := 	\
 		src/Camera.cpp									\
 		src/Shader.cpp									\
 		src/Sprite.cpp									\
+		src/Ship.cpp									\
 
 exe := Galaxy31
 

@@ -1,5 +1,5 @@
-#ifndef SPRITE_HPP
-#define SPRITE_HPP
+#ifndef SHIP_HPP
+#define SHIP_HPP
 #include <GL/glew.h>
 
 #include <SDL2/SDL.h>
@@ -12,19 +12,23 @@
 #include <fstream>
 #include <sstream>
 #include <cstdlib>
-
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-class Sprite {
+#include "Camera.hpp"
+
+#include "Sprite.hpp"
+
+class Ship {
 	public:
-		Sprite();
-		Sprite(std::string imageFile);
-		~Sprite();
+		Ship();
+		Ship(std::string);
+		~Ship();
+		void SetSpeed(glm::vec2 speed);
+		glm::vec2 GetSpeed();
 		
-		void DrawSprite(GLuint shader, glm::mat4 view, glm::mat4 projection);
-		
+		void Accelerate(glm::vec2 acceleration);
 		
 		void SetSize(int sizeX, int sizeY);
 		void SetPosition(float posX, float posY);
@@ -34,19 +38,16 @@ class Sprite {
 		glm::vec2 GetPosition();
 		float GetRotation();
 		
-
-
+		void SetSpriteShader(unsigned int spriteShader);
+		
+		void DrawSprite(GLuint shader, glm::mat4 view, glm::mat4 projection);
+		
+		void Draw(Camera &cam);
+		
 	private:
-		GLuint textureFromFile(std::string imageFile);
+		unsigned int m_sprite_shader;
+		Sprite m_sprite;
+		glm::vec2 m_speed;
 		
-		glm::mat4 m_modelMat;
-		
-		GLuint m_vao, m_vbo[2], m_ebo;
-		GLuint m_texture;
-		
-		glm::vec2 m_size;
-		glm::vec2 m_position;
-		
-		float m_rotation;
 };
 #endif

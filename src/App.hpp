@@ -26,6 +26,7 @@
 #include "Camera.hpp"
 #include "Shader.hpp"
 #include "Sprite.hpp"
+#include "Ship.hpp"
 
 class App {
     public:

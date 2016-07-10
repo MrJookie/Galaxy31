@@ -34,6 +34,7 @@ Camera::Camera(float posX, float posY, float posZ, float upX, float upY, float u
 
 Camera::~Camera() {}
 
+
 void Camera::ProcessKeyboard(MoveDirection direction, float dt)
 {
 	glm::vec3 lastCameraPosition = m_position;
@@ -368,4 +369,18 @@ glm::vec3 Camera::threePlanesIntersectionPoint(glm::vec4 a, glm::vec4 b, glm::ve
 	glm::vec3 numerator = glm::vec3(v1.x + v2.x + v3.x, v1.y + v2.y + v3.y, v1.z + v2.z + v3.z);
 	
 	return numerator / denominator;
+}
+
+// added 10.07.16
+glm::mat4 Camera::GetView() {
+	return view;
+}
+glm::mat4 Camera::GetProjection() {
+	return projection;
+}
+void Camera::SetProjection(glm::mat4 proj) {
+	this->projection = proj;
+}
+void Camera::SetView(glm::mat4 view) {
+	this->view = view;
 }

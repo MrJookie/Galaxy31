@@ -85,8 +85,8 @@ void App::init()
     
     
     Shader spriteShader("Assets/sprite.vs", "Assets/sprite.fs");
-    Sprite ship("Assets/SpaceShip01.png");
-    
+    Ship ship("Assets/SpaceShip01.png");
+    ship.SetSpriteShader(spriteShader.GetShader());
     ship.SetPosition(100,100);
     
     float speed = 100.0f;
@@ -239,6 +239,8 @@ void App::init()
         //glm::mat4 projection = glm::perspective(glm::radians(camera.GetZoom()), this->getSizeX()/(float)this->getSizeY(), 0.1f, 1000.0f);
         glm::mat4 projection = glm::ortho(0.0f, (float)this->getSizeX(), (float)this->getSizeY(), 0.0f);
         
+        camera.SetProjection(projection);
+        camera.SetView(view);
 
         glm::vec2 pos_to_mouse_vector = glm::vec2(
 												(float)xpos - (ship.GetPosition().x + 0.5f*ship.GetSize().x), 
@@ -251,17 +253,19 @@ void App::init()
         float acceleration = 1.0;
 		
 		if(distance > ship.GetSize().y/2 + 0.0) {
-			if(speed < 1400.0) {
-				speed += acceleration;
-			}
+			// if(speed < 1400.0) {
+				// speed += acceleration;
+			// }
 			
-			ship.SetPosition(ship.GetPosition().x + direction.x * this->getDeltaTime() * speed, 
-							 ship.GetPosition().y + direction.y * this->getDeltaTime() * speed);
+			ship.Accelerate(direction * acceleration);
+			
+			ship.SetPosition(ship.GetPosition().x + this->getDeltaTime() * ship.GetSpeed().x, 
+							 ship.GetPosition().y + this->getDeltaTime() * ship.GetSpeed().y);
 		} else {
-			speed = 100;
+			// speed = 100;
 		}
 
-        ship.DrawSprite(spriteShader.GetShader(), view, projection);
+        ship.Draw(camera);
         
         ImGui::Render();
 	

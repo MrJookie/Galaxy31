@@ -1,3 +1,6 @@
+#ifndef CAMERA_HPP
+#define CAMERA_HPP
+
 #include <GL/glew.h>
 
 #include <glm/glm.hpp>
@@ -46,6 +49,12 @@ class Camera {
 		
 		glm::vec3 m_frustum_vertices[8];
 		
+		// added 10.07.16
+		void SetProjection(glm::mat4);
+		void SetView(glm::mat4);
+		glm::mat4 GetView();
+		glm::mat4 GetProjection();
+		
 	private:
 		void updateCameraVectors();
 		glm::vec3 threePlanesIntersectionPoint(glm::vec4 a, glm::vec4 b, glm::vec4 c);  
@@ -65,4 +74,11 @@ class Camera {
 		bool m_lock_y;
 		
 		glm::vec4 m_frustum_planes[6];
+		
+		// added 10.07.16
+		glm::mat4 projection;
+		glm::mat4 view;
+		
 };
+
+#endif
