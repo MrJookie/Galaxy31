@@ -76,8 +76,8 @@ class Camera {
 		glm::vec4 m_frustum_planes[6];
 		
 		// added 10.07.16
-		glm::mat4 projection;
-		glm::mat4 view;
+		glm::mat4 m_projection;
+		glm::mat4 m_view;
 		
 };
 

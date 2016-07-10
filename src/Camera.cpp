@@ -373,14 +373,14 @@ glm::vec3 Camera::threePlanesIntersectionPoint(glm::vec4 a, glm::vec4 b, glm::ve
 
 // added 10.07.16
 glm::mat4 Camera::GetView() {
-	return view;
+	return m_view;
 }
 glm::mat4 Camera::GetProjection() {
-	return projection;
+	return m_projection;
 }
 void Camera::SetProjection(glm::mat4 proj) {
-	this->projection = proj;
+	m_projection = proj;
 }
 void Camera::SetView(glm::mat4 view) {
-	this->view = view;
+	m_view = view;
 }

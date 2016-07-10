@@ -40,9 +40,9 @@ class Ship {
 		
 		void SetSpriteShader(unsigned int spriteShader);
 		
-		void DrawSprite(GLuint shader, glm::mat4 view, glm::mat4 projection);
-		
 		void Draw(Camera &cam);
+		
+		void Process(double delta_time);
 		
 	private:
 		unsigned int m_sprite_shader;

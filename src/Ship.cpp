@@ -40,13 +40,12 @@ glm::vec2 Ship::GetSize() {
 }
 
 void Ship::SetPosition(float posX, float posY) {
-	m_sprite.SetPosition(posX, posY);
+	m_sprite.SetPosition(posX - m_sprite.GetSize().x * 0.5, posY - m_sprite.GetSize().y * 0.5);
 }
 glm::vec2 Ship::GetPosition() {
-	//~ const glm::vec2 &pos = m_sprite.GetPosition();
-	//~ const glm::vec2 &size = m_sprite.GetSize();
-	//~ return glm::vec2( pos.x + 0.5 * size.x, pos.y + 0.5 + size.y );
-	return m_sprite.GetPosition();
+	const glm::vec2 &pos = m_sprite.GetPosition();
+	const glm::vec2 &size = m_sprite.GetSize();
+	return glm::vec2( pos.x + 0.5 * size.x, pos.y + 0.5 * size.y );
 }
 
 
@@ -58,6 +57,6 @@ void Ship::SetSpriteShader(unsigned int spriteShader) {
 	m_sprite_shader = spriteShader;
 }
 
-void Ship::DrawSprite(GLuint shader, glm::mat4 view, glm::mat4 projection) {
-	m_sprite.DrawSprite(shader, view, projection);
+void Ship::Process(double dt) {
+	SetPosition(GetPosition().x + dt * m_speed.x, GetPosition().y + dt * m_speed.y);
 }

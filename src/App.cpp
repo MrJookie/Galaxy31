@@ -243,8 +243,8 @@ void App::init()
         camera.SetView(view);
 
         glm::vec2 pos_to_mouse_vector = glm::vec2(
-												(float)xpos - (ship.GetPosition().x + 0.5f*ship.GetSize().x), 
-												(float)ypos - (ship.GetPosition().y + 0.5f*ship.GetSize().y) 
+												(float)xpos - ship.GetPosition().x, 
+												(float)ypos - ship.GetPosition().y 
 											);
 		glm::vec2 direction = glm::normalize(pos_to_mouse_vector);
 		float distance = glm::length(pos_to_mouse_vector);
@@ -253,17 +253,11 @@ void App::init()
         float acceleration = 1.0;
 		
 		if(distance > ship.GetSize().y/2 + 0.0) {
-			// if(speed < 1400.0) {
-				// speed += acceleration;
-			// }
-			
 			ship.Accelerate(direction * acceleration);
-			
-			
 		}
 		
-		ship.SetPosition(ship.GetPosition().x + this->getDeltaTime() * ship.GetSpeed().x, 
-							 ship.GetPosition().y + this->getDeltaTime() * ship.GetSpeed().y);
+		
+		ship.Process(this->getDeltaTime());
 
         ship.Draw(camera);
         
