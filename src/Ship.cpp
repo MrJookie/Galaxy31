@@ -3,6 +3,7 @@
 Ship::Ship() {
 	init();
 }
+
 Ship::Ship(std::string sprite_file) : m_sprite(sprite_file) {
 	init();
 }
@@ -66,6 +67,7 @@ glm::vec2 Ship::GetPosition() {
 void Ship::Draw(Camera &cam) {
 	m_sprite.DrawSprite(m_sprite_shader, cam.GetView(), cam.GetProjection());
 	const float a = 0.8;
+	
 	if(m_last_acceleration > 0) {
 		m_engine_propulsion.SetSize(GetSize().x, GetSize().y * 0.7 * std::min(1.0f, m_last_acceleration*a) );
 		float theta = (m_sprite.GetRotation() + 90) * 3.141592 / 180.0;

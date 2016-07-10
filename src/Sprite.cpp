@@ -1,6 +1,8 @@
 #include "Sprite.hpp"
 
-Sprite::Sprite() {}
+Sprite::Sprite() {
+	m_texture = 0;
+}
 
 Sprite::Sprite(std::string imageFile)
 {
@@ -14,8 +16,14 @@ Sprite::Sprite(std::string imageFile)
 	m_texture = this->textureFromFile(imageFile);
 }
 
+Sprite& Sprite::operator=(Sprite && o) {
+	*this = o;
+	o.m_texture = 0;
+}
+
 Sprite::~Sprite()
 {
+	if(m_texture == 0) return;
 	glDeleteBuffers(2, m_vbo);
     glDeleteBuffers(1, &m_ebo);
     glDeleteVertexArrays(1, &m_vao);	

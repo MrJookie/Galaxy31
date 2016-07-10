@@ -230,6 +230,8 @@ void App::init()
                 //int xpos;
                 //int ypos;
                 SDL_GetMouseState(&xpos, &ypos);
+                xpos += camera.GetPosition().x;
+                ypos += camera.GetPosition().y;
                 
                 //std::cout << xpos << " " << ypos << std::endl;
             }
@@ -238,6 +240,8 @@ void App::init()
         glm::mat4 view = camera.GetViewMatrix();
         //glm::mat4 projection = glm::perspective(glm::radians(camera.GetZoom()), this->getSizeX()/(float)this->getSizeY(), 0.1f, 1000.0f);
         glm::mat4 projection = glm::ortho(0.0f, (float)this->getSizeX(), (float)this->getSizeY(), 0.0f);
+        
+        
         
         // background
         glUseProgram(backgroundShader.GetShader());
@@ -255,6 +259,7 @@ void App::init()
         glUseProgram(0);
         //
         
+        camera.SetPosition( glm::vec3(ship.GetPosition().x - getSizeX()/2, ship.GetPosition().y - getSizeY()/2, 0) );
         camera.SetProjection(projection);
         camera.SetView(view);
 
@@ -277,7 +282,7 @@ void App::init()
 
         ship.Draw(camera);
         
-        // ImGui::Render();
+        ImGui::Render();
 	
         SDL_GL_SwapWindow(window);
         

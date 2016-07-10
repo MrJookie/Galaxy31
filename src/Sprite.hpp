@@ -22,6 +22,8 @@ class Sprite {
 		Sprite();
 		Sprite(std::string imageFile);
 		~Sprite();
+		Sprite& operator=(Sprite &&);
+		Sprite& operator=(const Sprite& o) = default;
 		
 		void DrawSprite(GLuint shader, glm::mat4 view, glm::mat4 projection);
 		
