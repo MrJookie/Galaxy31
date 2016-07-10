@@ -143,7 +143,7 @@ void Sprite::SetSize(int sizeX, int sizeY)
 	m_size.y = sizeY;
 }
 
-void Sprite::SetPosition(int posX, int posY)
+void Sprite::SetPosition(float posX, float posY)
 {
 	m_position.x = posX;
 	m_position.y = posY;

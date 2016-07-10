@@ -25,7 +25,7 @@ class Sprite {
 		
 		
 		void SetSize(int sizeX, int sizeY);
-		void SetPosition(int posX, int posY);
+		void SetPosition(float posX, float posY);
 		void SetRotation(float rotation);
 		
 		glm::vec2 GetSize();
