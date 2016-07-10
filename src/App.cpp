@@ -251,7 +251,7 @@ void App::init()
         float acceleration = 1.0;
 		
 		if(distance > ship.GetSize().y/2 + 0.0) {
-			if(speed < 150) {
+			if(speed < 1500.0) {
 				speed += acceleration;
 			}
 			
