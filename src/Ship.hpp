@@ -45,9 +45,14 @@ class Ship {
 		void Process(double delta_time);
 		
 	private:
-		unsigned int m_sprite_shader;
+		GLuint m_sprite_shader;
+		float m_last_acceleration;
 		Sprite m_sprite;
 		glm::vec2 m_speed;
 		
+		static bool initialized_statics;
+		static Sprite m_engine_propulsion;
+		
+		void init();
 };
 #endif

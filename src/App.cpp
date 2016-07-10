@@ -83,7 +83,7 @@ void App::init()
         SDL_SetRelativeMouseMode(SDL_TRUE);
     }
     
-    
+	Shader backgroundShader("Assets/background.vs", "Assets/background.fs");
     Shader spriteShader("Assets/sprite.vs", "Assets/sprite.fs");
     Ship ship("Assets/SpaceShip01.png");
     ship.SetSpriteShader(spriteShader.GetShader());
@@ -239,6 +239,22 @@ void App::init()
         //glm::mat4 projection = glm::perspective(glm::radians(camera.GetZoom()), this->getSizeX()/(float)this->getSizeY(), 0.1f, 1000.0f);
         glm::mat4 projection = glm::ortho(0.0f, (float)this->getSizeX(), (float)this->getSizeY(), 0.0f);
         
+        // background
+        glUseProgram(backgroundShader.GetShader());
+        
+        GLuint VAO;
+        glGenVertexArrays(1, &VAO);
+		glBindVertexArray(VAO);
+		
+        glUniform2f(glGetUniformLocation(backgroundShader.GetShader(), "iMouse"), ship.GetPosition().x, -ship.GetPosition().y);
+        glUniform2f(glGetUniformLocation(backgroundShader.GetShader(), "iResolution"), this->getSizeX(), this->getSizeY());
+        
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+        glDeleteVertexArrays(1, &VAO);
+        
+        glUseProgram(0);
+        //
+        
         camera.SetProjection(projection);
         camera.SetView(view);
 
@@ -253,7 +269,7 @@ void App::init()
         float acceleration = 1.0;
 		
 		if(distance > ship.GetSize().y/2 + 0.0) {
-			ship.Accelerate(direction * acceleration);
+			ship.Accelerate(direction * distance*0.001f);
 		}
 		
 		
@@ -261,7 +277,7 @@ void App::init()
 
         ship.Draw(camera);
         
-        ImGui::Render();
+        // ImGui::Render();
 	
         SDL_GL_SwapWindow(window);
         
