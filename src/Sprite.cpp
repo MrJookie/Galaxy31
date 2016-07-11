@@ -1,35 +1,40 @@
 #include "Sprite.hpp"
 
 Sprite::Sprite() {
-	m_texture = 0;
+	m_textures[0] = 0;
 }
 
 Sprite::Sprite(std::string imageFile)
 {
+	m_textures_num = 0;
+	
 	glGenVertexArrays(1, &m_vao);
     glBindVertexArray(m_vao);
     
     glGenBuffers(2, m_vbo);
     glGenBuffers(1, &m_ebo);
+	glGenTextures(2, m_textures);
     
     glBindVertexArray(0);
-	m_texture = this->textureFromFile(imageFile);
+	this->textureFromFile(imageFile);
 }
 
 Sprite& Sprite::operator=(Sprite && o) {
 	*this = o;
-	o.m_texture = 0;
+	o.m_textures[0] = 0;
 }
 
 Sprite::~Sprite()
 {
-	if(m_texture == 0) return;
+	if(m_textures[0] == 0) return;
 	glDeleteBuffers(2, m_vbo);
     glDeleteBuffers(1, &m_ebo);
+    glDeleteBuffers(2, m_textures);
+    
     glDeleteVertexArrays(1, &m_vao);	
 }
 
-GLuint Sprite::textureFromFile(std::string imageFile)
+void Sprite::textureFromFile(std::string imageFile)
 {
 	SDL_Surface* image = IMG_Load(imageFile.c_str());
 	if(!image) {
@@ -56,21 +61,15 @@ GLuint Sprite::textureFromFile(std::string imageFile)
 	else {
 		 throw std::string("Image is not truecolor!");
 	}
-	
-	GLuint textureID;
-	glGenTextures(1, &textureID);
-	
-	glBindTexture(GL_TEXTURE_2D, textureID);
+
+	glBindTexture(GL_TEXTURE_2D, m_textures[m_textures_num++]);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image->w, image->h, 0, colorMode, GL_UNSIGNED_BYTE, image->pixels);
 	glGenerateMipmap(GL_TEXTURE_2D);
-	
 	glBindTexture(GL_TEXTURE_2D, 0);
 
 	this->SetSize(image->w, image->h);
 	
 	SDL_FreeSurface(image);
-	
-	return textureID;
 }
 
 void Sprite::DrawSprite(GLuint shader, glm::mat4 view, glm::mat4 projection)
@@ -128,7 +127,7 @@ void Sprite::DrawSprite(GLuint shader, glm::mat4 view, glm::mat4 projection)
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 	
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, m_texture);
+	glBindTexture(GL_TEXTURE_2D, m_textures[0]);
 	glUniform1i(glGetUniformLocation(shader, "textureUniform"), 0);
 	
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -175,4 +174,9 @@ glm::vec2 Sprite::GetPosition()
 float Sprite::GetRotation()
 {
 	return m_rotation;
+}
+
+void Sprite::SetSkin(std::string imageFile)
+{
+	this->textureFromFile(imageFile);
 }

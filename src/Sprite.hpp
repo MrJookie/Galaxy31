@@ -31,6 +31,7 @@ class Sprite {
 		void SetSize(int sizeX, int sizeY);
 		void SetPosition(float posX, float posY);
 		void SetRotation(float rotation);
+		void SetSkin(std::string imageFile);
 		
 		glm::vec2 GetSize();
 		glm::vec2 GetPosition();
@@ -39,13 +40,13 @@ class Sprite {
 
 
 	private:
-		GLuint textureFromFile(std::string imageFile);
+		void textureFromFile(std::string imageFile);
 		
 		glm::mat4 m_modelMat;
 		
-		GLuint m_vao, m_vbo[2], m_ebo;
-		GLuint m_texture;
-		
+		GLuint m_vao, m_vbo[2], m_ebo, m_textures[2];
+		int m_textures_num;
+
 		glm::vec2 m_size;
 		glm::vec2 m_position;
 		

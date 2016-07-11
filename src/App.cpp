@@ -85,7 +85,9 @@ void App::init()
     
 	Shader backgroundShader("Assets/background.vs", "Assets/background.fs");
     Shader spriteShader("Assets/sprite.vs", "Assets/sprite.fs");
-    Ship ship("Assets/SpaceShip01.png");
+    Ship ship("Assets/ship_01_silhouette.png");
+    ship.SetSkin("Assets/ship_01_skin.png");
+    
     ship.SetSpriteShader(spriteShader.GetShader());
     ship.SetPosition(100,100);
     

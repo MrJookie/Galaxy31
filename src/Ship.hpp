@@ -25,18 +25,19 @@ class Ship {
 		Ship();
 		Ship(std::string);
 		~Ship();
-		void SetSpeed(glm::vec2 speed);
-		glm::vec2 GetSpeed();
-		
+
 		void Accelerate(glm::vec2 acceleration);
 		
 		void SetSize(int sizeX, int sizeY);
 		void SetPosition(float posX, float posY);
 		void SetRotation(float rotation);
+		void SetSpeed(glm::vec2 speed);
+		void SetSkin(std::string imageFile);
 		
 		glm::vec2 GetSize();
 		glm::vec2 GetPosition();
 		float GetRotation();
+		glm::vec2 GetSpeed();
 		
 		void SetSpriteShader(unsigned int spriteShader);
 		

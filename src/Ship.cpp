@@ -91,3 +91,8 @@ void Ship::SetSpriteShader(unsigned int spriteShader) {
 void Ship::Process(double dt) {
 	SetPosition(GetPosition().x + dt * m_speed.x, GetPosition().y + dt * m_speed.y);
 }
+
+void Ship::SetSkin(std::string imageFile)
+{
+	m_sprite.SetSkin(imageFile);
+}
