@@ -23,13 +23,16 @@ TODO:
 		- slow rotation
 		- strafe movement (in case of additional engines available on sides)
 		- when base is attacked add some info on minimap
+		- configuration files (linux: $HOME/.config/galaxy31/, windows: C:\...\Documents\configuration files ...\galaxy31\...)
 	network
 		- setup enet
+		master server
 		server network
 			- chat
 			- secure channel
 			- ship controls
 			- handling lot of players
+			- multiple servers?
 		client network
 			- join
 			- chat

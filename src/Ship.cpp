@@ -66,17 +66,17 @@ glm::vec2 Ship::GetPosition() {
 
 void Ship::Draw(Camera &cam) {
 	m_sprite.DrawSprite(m_sprite_shader, cam.GetView(), cam.GetProjection());
-	const float a = 0.8;
+	const float a = 0.4;
 	
-	if(m_last_acceleration > 0) {
-		m_engine_propulsion.SetSize(GetSize().x, GetSize().y * 0.7 * std::min(1.0f, m_last_acceleration*a) );
+	if(m_last_acceleration > 0.1) {
+		m_engine_propulsion.SetSize(GetSize().x*0.5, GetSize().y * 0.6 * std::max(0.01f, m_last_acceleration*a) );
 		float theta = (m_sprite.GetRotation() + 90) * 3.141592 / 180.0;
 		const glm::vec2 &pos = m_sprite.GetPosition();
 		const glm::vec2 &size = m_sprite.GetSize();
 		const glm::vec2 &psize = m_engine_propulsion.GetSize();
 		const float A = size.y * 0.5 + psize.y*0.5;
 		m_engine_propulsion.SetPosition( 
-										pos.x + A*cos(theta), 
+										pos.x + A*cos(theta) + psize.x*0.5, 
 										pos.y + size.y * 0.5 + A*sin(theta) - psize.y*0.5
 										);
 		m_engine_propulsion.SetRotation( m_sprite.GetRotation() );
