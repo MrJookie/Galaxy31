@@ -1,0 +1,36 @@
+TODO:
+		- big background (galaxy, moves very little)
+		- first layer background stars (stars must move at different speeds since they are not all at equal distance from us)
+		- asteroids
+		- mining asteroids
+		- asteroid resources (multiple resource types to gather from asteroids)
+		- asteroid destroying, leaving scrap
+		+ camera zoom in/out
+		- minimap
+		- minimap zooming in/out
+		- basic weapons
+		- collision with asteroids and other ships
+		- terminal, commands, debug
+		- getting score, upgrade points
+		- adding more ships
+		- upgrading ship
+		- stats (health bar, score points, upgrade points)
+		- customizing ship
+		- advanced weapons (which are crafted or bought later)
+		- bases (big space station, planet, big asteroid, system of space stations or something like that)
+		- customizing placement components around ship (put weapons infront, shield, reflective shield, big but weaker shield, power, lot of other stuff ...)
+		- more complex health (maybe make each component of the ship have its health, volatility, but keep overall health with some formula or averaging)
+		- slow rotation
+		- strafe movement (in case of additional engines available on sides)
+		- when base is attacked add some info on minimap
+	network
+		- setup enet
+		server network
+			- chat
+			- secure channel
+			- ship controls
+			- handling lot of players
+		client network
+			- join
+			- chat
+			- sending controls and stats

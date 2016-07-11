@@ -53,6 +53,8 @@ class App {
         int m_ticks_current;
         int m_frames_current;
         int m_frames_elapsed;
+        
+        float m_zooming = 2;
 
         int m_ticks_then;
         double m_delta_time;

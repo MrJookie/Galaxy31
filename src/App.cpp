@@ -173,6 +173,11 @@ void App::init()
 
                 skipMouseResolution = 2;
             }
+            else if(e.type == SDL_MOUSEWHEEL) {
+				m_zooming = std::max(m_zooming - e.wheel.y, 1.0f);
+				
+				
+			}
         }
         
         ImGui_ImplSdlGL3_NewFrame(window);
@@ -188,6 +193,7 @@ void App::init()
             ImGui::Text("Hello, world!");
             ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
             ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+            ImGui::Text("speed: %.2f", glm::length(ship.GetSpeed()));
         }
         //ImGui::End();
 
@@ -215,12 +221,14 @@ void App::init()
             //camera.ProcessKeyboard(cx::Camera::MoveDirection::RIGHT, getDeltaTime() * 2.0);
         }
         
+        
+        
         int xpos;
         int ypos;
         SDL_GetRelativeMouseState(&xpos, &ypos);
         
         if(skipMouseResolution > 0 && (xpos != 0 || ypos != 0)) {
-            skipMouseResolution--; 
+            skipMouseResolution--;
         }
         else {
             if(toggleMouseRelative) {
@@ -230,17 +238,11 @@ void App::init()
                 //int xpos;
                 //int ypos;
                 SDL_GetMouseState(&xpos, &ypos);
-                xpos += camera.GetPosition().x;
-                ypos += camera.GetPosition().y;
+                xpos = ((float)xpos-getSizeX()*0.5)*m_zooming + camera.GetPosition().x;
+                ypos = ((float)ypos-getSizeY()*0.5)*m_zooming + camera.GetPosition().y;
                 
-                //std::cout << xpos << " " << ypos << std::endl;
             }
         }
-        
-        glm::mat4 view = camera.GetViewMatrix();
-        //glm::mat4 projection = glm::perspective(glm::radians(camera.GetZoom()), this->getSizeX()/(float)this->getSizeY(), 0.1f, 1000.0f);
-        glm::mat4 projection = glm::ortho(0.0f, (float)this->getSizeX(), (float)this->getSizeY(), 0.0f);
-        
         
         
         // background
@@ -258,10 +260,6 @@ void App::init()
         
         glUseProgram(0);
         //
-        
-        camera.SetPosition( glm::vec3(ship.GetPosition().x - getSizeX()/2, ship.GetPosition().y - getSizeY()/2, 0) );
-        camera.SetProjection(projection);
-        camera.SetView(view);
 
         glm::vec2 pos_to_mouse_vector = glm::vec2(
 												(float)xpos - ship.GetPosition().x, 
@@ -277,8 +275,13 @@ void App::init()
 			ship.Accelerate(direction * distance*0.001f);
 		}
 		
-		
 		ship.Process(this->getDeltaTime());
+		
+		camera.SetPosition( glm::vec3(ship.GetPosition().x, ship.GetPosition().y, 0) );
+        glm::mat4 projection = glm::ortho(-(float)this->getSizeX()*m_zooming*0.5, (float)this->getSizeX()*m_zooming*0.5, (float)this->getSizeY()*m_zooming*0.5, -(float)this->getSizeY()*m_zooming*0.5);
+        glm::mat4 view = camera.GetViewMatrix();
+        camera.SetProjection(projection);
+        camera.SetView(view);
 
         ship.Draw(camera);
         

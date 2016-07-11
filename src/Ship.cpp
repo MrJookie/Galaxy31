@@ -23,7 +23,7 @@ Sprite Ship::m_engine_propulsion;
 Ship::~Ship() {
 	
 }
-		
+
 void Ship::SetSpeed(glm::vec2 speed) {
 	m_speed = speed;
 }
