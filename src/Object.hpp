@@ -1,5 +1,5 @@
-#ifndef SPRITE_HPP
-#define SPRITE_HPP
+#ifndef OBJECT_HPP
+#define OBJECT_HPP
 
 #include <GL/glew.h>
 
@@ -13,41 +13,43 @@
 #include <fstream>
 #include <sstream>
 #include <cstdlib>
-
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
 #include "GameState.hpp"
+#include "Sprite.hpp"
 
-class Sprite {
+class Object {
 	public:
-		Sprite();
-		~Sprite();
-		Sprite& operator=(Sprite &&);
-		Sprite& operator=(const Sprite& o) = default;
-		
-		void Draw();
-		
-		void SetTexture(GLuint textureID);
+		Object();
+		~Object();
+
 		void SetSize(glm::vec2 size);
 		void SetPosition(glm::vec2 position);
 		void SetRotation(float rotation);
+		void SetSpeed(glm::vec2 speed);
+		void SetAcceleration(float acceleration);
 		
 		glm::vec2 GetSize() const;
 		glm::vec2 GetPosition() const;
 		float GetRotation() const;
+		glm::vec2 GetSpeed() const;
+		float GetAcceleration() const;
+		
+		void Accelerate(glm::vec2 acceleration);
 
-	private:
-		glm::mat4 m_modelMat;
-		
-		GLuint m_vao, m_vbo[2], m_ebo;
-		GLuint m_texture;
-		
+	protected:
 		glm::vec2 m_size;
 		glm::vec2 m_position;
-		
 		float m_rotation;
+		glm::vec2 m_speed;
+		
+		float m_acceleration;
+		float m_last_acceleration;
+		
+	private:
+
 };
 
 #endif

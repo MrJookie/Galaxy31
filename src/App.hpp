@@ -1,3 +1,6 @@
+#ifndef APP_HPP
+#define APP_HPP
+
 #include <GL/glew.h>
 
 #include <SDL2/SDL.h>
@@ -23,8 +26,10 @@
 //~ #include <GL/gl3w.h>
 #include <GL/glew.h>
 
+#include "GameState.hpp"
+#include "Asset.hpp"
+#include "Object.hpp"
 #include "Camera.hpp"
-#include "Shader.hpp"
 #include "Sprite.hpp"
 #include "Ship.hpp"
 
@@ -37,17 +42,23 @@ class App {
         void init();
         void loop(); 
         void showFPS();
-        int getSizeX() const;
-        int getSizeY() const;
-        void setSizeX(int sizeX);
-        void setSizeY(int sizeY);
+        
+        void setWindowSize(glm::vec2 windowSize);
+        void setScreenMousePosition(glm::vec2 screenMousePosition);
+        void setWorldMousePosition(glm::vec2 worldMousePosition);
+        
+        glm::vec2 getWindowSize() const;
+        glm::vec2 getScreenMousePosition() const;
+        glm::vec2 getWorldMousePosition() const;
         double getDeltaTime() const;
         double getTimeElapsed() const;
+        
         void takeScreenshot(int x, int y, int w, int h);
         void takeScreenshotPNG(int x, int y, int w, int h);
         
-        int m_sizeX;
-        int m_sizeY;
+        glm::vec2 m_windowSize;
+        glm::vec2 m_screenMousePosition;
+        glm::vec2 m_worldMousePosition;
         
         int m_ticks_previous;
         int m_ticks_current;
@@ -61,4 +72,6 @@ class App {
         
         std::chrono::high_resolution_clock::time_point m_chrono_start;
         double m_chrono_elapsed;
-};  
+};
+
+#endif

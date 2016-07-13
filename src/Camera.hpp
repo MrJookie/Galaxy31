@@ -33,10 +33,17 @@ class Camera {
 		void ProcessKeyboard(MoveDirection direction, float dt);
 		void ProcessMouseMovement(float offsetX, float offsetY, bool constrainPitch = true);
 		void ProcessMouseScroll(float offsetY);
+		
 		void SetPosition(glm::vec3 position);
+		void SetProjection(glm::mat4);
+		void SetView(glm::mat4);
+		
 		float GetZoom() const;
 		glm::mat4 GetViewMatrix() const;
 		glm::vec3 GetPosition() const;
+		//glm::mat4 GetView();
+		glm::mat4 GetProjection() const;
+		
 		void ToggleLockY();
 		
 		void ExtractFrustumPlanes(glm::mat4& view, glm::mat4& projection);
@@ -50,10 +57,9 @@ class Camera {
 		glm::vec3 m_frustum_vertices[8];
 		
 		// added 10.07.16
-		void SetProjection(glm::mat4);
-		void SetView(glm::mat4);
-		glm::mat4 GetView();
-		glm::mat4 GetProjection();
+		
+		
+		
 		
 	private:
 		void updateCameraVectors();

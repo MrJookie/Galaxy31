@@ -22,9 +22,11 @@ hpp :=	\
 cpp := 	\
 		$(ImGui)										\
 		src/Main.cpp									\
+		src/GameState.cpp								\
 		src/App.cpp										\
+		src/Asset.cpp									\
+		src/Object.cpp									\
 		src/Camera.cpp									\
-		src/Shader.cpp									\
 		src/Sprite.cpp									\
 		src/Ship.cpp									\
 

@@ -1,5 +1,5 @@
-#ifndef SPRITE_HPP
-#define SPRITE_HPP
+#ifndef SHIP_HPP
+#define SHIP_HPP
 
 #include <GL/glew.h>
 
@@ -13,41 +13,48 @@
 #include <fstream>
 #include <sstream>
 #include <cstdlib>
-
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
 #include "GameState.hpp"
+#include "Sprite.hpp"
 
-class Sprite {
+class Ship {
 	public:
-		Sprite();
-		~Sprite();
-		Sprite& operator=(Sprite &&);
-		Sprite& operator=(const Sprite& o) = default;
+		Ship();
+		~Ship();
 		
-		void Draw();
+		void SetSpriteTexture(GLuint textureID);
+		void SetSpriteShader(GLuint spriteShader);
 		
-		void SetTexture(GLuint textureID);
 		void SetSize(glm::vec2 size);
 		void SetPosition(glm::vec2 position);
 		void SetRotation(float rotation);
-		
+		void SetSpeed(glm::vec2 speed);
+		void SetAcceleration(float acceleration);
+
 		glm::vec2 GetSize() const;
 		glm::vec2 GetPosition() const;
 		float GetRotation() const;
-
+		glm::vec2 GetSpeed() const;
+		float GetAcceleration() const;
+		
+		void Accelerate(glm::vec2 acceleration);
+		
+		void Draw();
+		
+		void Process();
+		
 	private:
-		glm::mat4 m_modelMat;
+		Sprite m_sprite;
 		
-		GLuint m_vao, m_vbo[2], m_ebo;
-		GLuint m_texture;
-		
-		glm::vec2 m_size;
-		glm::vec2 m_position;
-		
-		float m_rotation;
+		GLuint m_sprite_shader;
+		float m_acceleration;
+		float m_last_acceleration;
+		glm::vec2 m_speed;
+
+		//static Sprite m_engine_propulsion;
 };
 
 #endif

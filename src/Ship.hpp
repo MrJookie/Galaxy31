@@ -1,5 +1,6 @@
 #ifndef SHIP_HPP
 #define SHIP_HPP
+
 #include <GL/glew.h>
 
 #include <SDL2/SDL.h>
@@ -16,44 +17,33 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "Camera.hpp"
-
+#include "Asset.hpp"
+#include "GameState.hpp"
+#include "Object.hpp"
 #include "Sprite.hpp"
 
-class Ship {
+class Ship : public Object {
+	struct Chassi {
+		int m_id;
+		std::string m_name;
+		GLuint m_texture;
+		GLuint m_skin_texture;
+		float m_mass;
+		float m_armor;
+		//std::vector<char> m_mountables_matrix;
+	};
+	
 	public:
-		Ship();
-		Ship(std::string);
+		Ship(int id, std::string name, Asset::Texture chassiTexture, Asset::Texture chassiSkin, float mass, float armor);
 		~Ship();
-
-		void Accelerate(glm::vec2 acceleration);
 		
-		void SetSize(int sizeX, int sizeY);
-		void SetPosition(float posX, float posY);
-		void SetRotation(float rotation);
-		void SetSpeed(glm::vec2 speed);
-		void SetSkin(std::string imageFile);
-		
-		glm::vec2 GetSize();
-		glm::vec2 GetPosition();
-		float GetRotation();
-		glm::vec2 GetSpeed();
-		
-		void SetSpriteShader(unsigned int spriteShader);
-		
-		void Draw(Camera &cam);
-		
-		void Process(double delta_time);
+		void Process();
+		void Draw();
 		
 	private:
-		GLuint m_sprite_shader;
-		float m_last_acceleration;
+		Chassi m_chassi;
 		Sprite m_sprite;
-		glm::vec2 m_speed;
-		
-		static bool initialized_statics;
-		static Sprite m_engine_propulsion;
-		
-		void init();
+
 };
+
 #endif
