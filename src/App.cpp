@@ -65,10 +65,6 @@ void App::init() {
     printf("Version:  %s\n", glGetString(GL_VERSION));
     printf("GLSL:  %s\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
 
-    SDL_SetHintWithPriority(SDL_HINT_MOUSE_RELATIVE_MODE_WARP, "1", SDL_HINT_OVERRIDE);
-    //SDL_SetRelativeMouseMode(SDL_TRUE);
-    //SDL_SetWindowGrab(window, SDL_TRUE);
-
     bool toggleMouseRelative = false;
     bool toggleFullscreen = true;
     bool toggleWireframe = true;
@@ -92,21 +88,10 @@ void App::init() {
     
     //std::cout << GameState::asset.GetShader("Assets/Shaders/background.vs") << std::endl;
     //std::cout << GameState::asset.GetShader("Assets/Shaders/sprite.vs") << std::endl;
-    
-    /*
-    Ship ship;
-    //ship.SetChassiTexture = GameState::asset.GetTexture("Assets/Textures/ship_01_skin.png");
-    //ship.SetChassiTexture = GameState::asset.GetTexture("Assets/Textures/ship_01_skin.png");
-    ship.SetSpriteTexture(GameState::asset.GetTexture("Assets/Textures/ship_01_skin.png").id);
-    ship.SetSpriteShader(GameState::asset.GetShader("Assets/Shaders/sprite.vs").id);
-    ship.SetSize(GameState::asset.GetTexture("Assets/Textures/ship_01_skin.png").size);
-    //ship.SetPosition(glm::vec2(100,100));
-    ship.SetAcceleration(0.001f); //just for now, later will be based on mass and engines
-    */
-    
-    Ship ship(0, "some name", GameState::asset.GetTexture("Assets/Textures/ship_01_skin.png"), GameState::asset.GetTexture("Assets/Textures/ship_01_skin.png"), 100.0, 100.0);
-    
 
+    Ship ship(glm::vec2(0, 0), 0.0, glm::vec2(0, 0), 0.001, 0, "some name", GameState::asset.GetTexture("Assets/Textures/ship_01_skin.png"), GameState::asset.GetTexture("Assets/Textures/ship_01_skin.png"), 100.0, 100.0);
+    Ship ship2(glm::vec2(0, 0), 0.0, glm::vec2(0, 0), 0.001, 0, "some name", GameState::asset.GetTexture("Assets/Textures/ship_01_skin.png"), GameState::asset.GetTexture("Assets/Textures/ship_01_skin.png"), 100.0, 100.0); 
+    
     int skipMouseResolution = 0;
 
     bool running = true;
@@ -144,7 +129,7 @@ void App::init() {
 
                         toggleFullscreen = true;
                     }
-
+                    
                     skipMouseResolution = 4;
                 }
                 break;
@@ -169,7 +154,7 @@ void App::init() {
             } else if(e.type == SDL_MOUSEBUTTONUP && e.button.button == SDL_BUTTON_RIGHT) {
 
             } else if(e.type == SDL_MOUSEWHEEL) {
-                m_zooming = std::max(m_zooming - e.wheel.y, 1.0f);
+                this->setZoom(std::max(this->getZoom() - e.wheel.y, 1.0f));
             }
         }
 
@@ -222,6 +207,7 @@ void App::init() {
         GameState::worldMousePosition = this->getWorldMousePosition();
         GameState::deltaTime = this->getDeltaTime();
         GameState::timeElapsed = this->getTimeElapsed();
+        GameState::zoom = this->getZoom();
 
         // background
         glUseProgram(GameState::asset.GetShader("Assets/Shaders/background.vs").id);
@@ -238,27 +224,18 @@ void App::init() {
 
         glUseProgram(0);
         //
-        
-        
-        glm::vec2 pos_to_mouse_vector = glm::vec2( (float)this->getWorldMousePosition().x - ship.GetPosition().x, (float)this->getWorldMousePosition().y - ship.GetPosition().y );
-        glm::vec2 direction = glm::normalize(pos_to_mouse_vector);
-        float distance = glm::length(pos_to_mouse_vector);
-        float angle = glm::degrees( glm::orientedAngle( glm::vec2(1.0f,0.0f), direction ) );
-        ship.SetRotation( angle + 90 );
-
-        if(distance > (ship.GetSize().y * 0.5)) {
-            ship.Accelerate(direction * distance * ship.GetAcceleration());
-        }
 
         ship.Process();
+        //ship2.Process();
 
         GameState::camera.SetPosition( glm::vec3(ship.GetPosition().x, ship.GetPosition().y, 0) );
-        glm::mat4 projection = glm::ortho(-(float)this->getWindowSize().x*m_zooming*0.5, (float)this->getWindowSize().x*m_zooming*0.5, (float)this->getWindowSize().y*m_zooming*0.5, -(float)this->getWindowSize().y*m_zooming*0.5);
+        glm::mat4 projection = glm::ortho(-(float)this->getWindowSize().x*this->getZoom()*0.5, (float)this->getWindowSize().x*this->getZoom()*0.5, (float)this->getWindowSize().y*this->getZoom()*0.5, -(float)this->getWindowSize().y*this->getZoom()*0.5);
         glm::mat4 view = GameState::camera.GetViewMatrix();
         GameState::camera.SetProjection(projection);
         GameState::camera.SetView(view);
         
         ship.Draw();
+        ship2.Draw();
         
         ImGui::Render();
 
@@ -315,6 +292,10 @@ void App::setWorldMousePosition(glm::vec2 worldMousePosition) {
     m_worldMousePosition = worldMousePosition;
 }
 
+void App::setZoom(float zoom) {
+	m_zooming = zoom;
+}
+
 glm::vec2 App::getWindowSize() const {
     return m_windowSize;
 }
@@ -333,4 +314,8 @@ double App::getDeltaTime() const {
 
 double App::getTimeElapsed() const {
     return m_chrono_elapsed;
+}
+
+float App::getZoom() const {
+	return m_zooming;
 }

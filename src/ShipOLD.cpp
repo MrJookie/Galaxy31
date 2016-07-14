@@ -69,8 +69,8 @@ void Ship::Accelerate(glm::vec2 acceleration) {
 
 void Ship::Draw() {
     m_sprite.DrawSprite(m_sprite_shader, GameState::camera.GetViewMatrix(), GameState::camera.GetProjection());
-    const float a = 0.4;
 /*
+	const float a = 0.4;
     if(m_last_acceleration > 0.1) {
         m_engine_propulsion.SetSize(GetSize().x*0.5, GetSize().y * 0.6 * std::max(0.01f, m_last_acceleration*a) );
         float theta = (m_sprite.GetRotation() + 90) * 3.141592 / 180.0;

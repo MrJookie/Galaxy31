@@ -1,48 +1,29 @@
 #ifndef SHIP_HPP
 #define SHIP_HPP
 
-#include <GL/glew.h>
-
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_image.h>
-#include <SDL2/SDL_mixer.h>
-#include <SDL2/SDL2_gfxPrimitives.h>
-#include <SDL2/SDL_ttf.h>
-
-#include <iostream>
-#include <fstream>
-#include <sstream>
-#include <cstdlib>
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-
 #include "Asset.hpp"
 #include "GameState.hpp"
 #include "Object.hpp"
 #include "Sprite.hpp"
 
 class Ship : public Object {
-	struct Chassi {
-		int m_id;
-		std::string m_name;
-		GLuint m_texture;
-		GLuint m_skin_texture;
-		float m_mass;
-		float m_armor;
-		//std::vector<char> m_mountables_matrix;
-	};
-	
 	public:
-		Ship(int id, std::string name, Asset::Texture chassiTexture, Asset::Texture chassiSkin, float mass, float armor);
+		Ship(glm::vec2 position, float rotation, glm::vec2 speed, float acceleration, int chassiId, std::string chassiName, Asset::Texture chassiTexture, Asset::Texture chassiSkin, float chassiMass, float chassiArmor);
 		~Ship();
 		
 		void Process();
 		void Draw();
 		
 	private:
-		Chassi m_chassi;
-		Sprite m_sprite;
+		int m_chassi_id;
+		std::string m_chassi_name;
+		GLuint m_chassi_texture;
+		GLuint m_chassi_texture_skin;
+		float m_chassi_mass;
+		float m_chassi_armor;
+		
+		Sprite m_chassi_sprite;
+		Sprite m_engine_propulsion;
 
 };
 
