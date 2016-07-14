@@ -4,3 +4,6 @@
 [submodule "src/EventSystem"]
 	path = src/EventSystem
 	url = https://github.com/112212/event-system
+[submodule "src/--name"]
+	path = src/--name
+	url = https://github.com/112212/event-system
