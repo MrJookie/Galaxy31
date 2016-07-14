@@ -24,7 +24,6 @@ class Ship : public Object {
 		
 		Sprite m_chassi_sprite;
 		Sprite m_engine_propulsion;
-
 };
 
 #endif
