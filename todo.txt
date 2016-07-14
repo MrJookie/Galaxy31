@@ -24,6 +24,18 @@ TODO:
 		- strafe movement (in case of additional engines available on sides)
 		- when base is attacked add some info on minimap
 		- configuration files (linux: $HOME/.config/galaxy31/, windows: C:\...\Documents\configuration files ...\galaxy31\...)
+		- ambient sound
+		- local data configuration (downloads)
+		- stabilizers
+		- setup event system
+	build
+		- windows build
+		- mac build
+		
+	sound
+		- engines
+		- weapons
+	
 	network
 		- setup enet
 		master server
@@ -33,6 +45,7 @@ TODO:
 			- ship controls
 			- handling lot of players
 			- multiple servers?
+			- server mysql connection
 		client network
 			- join
 			- chat

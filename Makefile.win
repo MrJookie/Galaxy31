@@ -1,0 +1,84 @@
+
+arch := 
+
+includes := -Ilibs 				 \
+			-Ilibs/imgui 		 \
+			-Ilibs/SDL2 \
+			-Ilibs/glew/ \
+
+ImGui := libs/imgui/imgui_impl_sdl_gl3.cpp  \
+		 libs/imgui/imgui.cpp				\
+		 libs/imgui/imgui_draw.cpp
+
+hpp :=	\
+		
+cpp := 	\
+		$(ImGui)										\
+		src/Main.cpp									\
+		src/App.cpp										\
+		src/Camera.cpp									\
+		src/Sprite.cpp									\
+		src/Ship.cpp									\
+		src/Object.cpp									\
+		src/GameState.cpp								\
+		src/Asset.cpp									\
+
+program_name := Galaxy31
+
+
+tmp_win32_binaries :=/tmp/$(program_name)
+tmp_link := $(tmp_win32_binaries)/win32/link
+tmp_bin := $(tmp_win32_binaries)/win32/dlls
+link32bit := \
+		-L$(tmp_link)/ -L$(tmp_bin)  \
+		 -lSDL2 -lSDL2_image \
+		-lglew32 -lopengl32 -limm32   \
+		-static-libgcc  -Wl,-subsystem,windows -mwindows -lmingw32 -Wl,-Bstatic -lstdc++ -lpthread -Wl,-Bdynamic
+
+link := $(link32bit)
+
+build := build/win32
+release := release
+flags := -O2
+
+defs := -DGLEW_STATIC 
+
+CXX := i686-w64-mingw32-g++
+
+obj := $(addprefix $(build)/, $(patsubst %.cpp,%.o,$(cpp)))
+
+.phony: make_dirs
+
+exe := $(program_name).exe
+
+all: make_dirs $(exe)
+
+clean:
+	rm -rf build
+	rm -rf release
+
+make_dirs:
+	@mkdir -p $(build)
+	@mkdir -p $(build)/src/
+	@mkdir -p $(build)/libs/imgui/
+	@mkdir -p $(release)
+	
+.ONESHELL:
+$(exe): $(obj)
+	@if [ ! -d $(tmp_win32_binaries) ]
+	then
+		mkdir $(tmp_win32_binaries)
+		tar -xf libs/win32.txz -C $(tmp_win32_binaries)
+	fi
+	
+	if [ -d $(tmp_win32_binaries) ]
+	then
+		echo $(CXX) $^ -o $(release)/$(exe) $(link) $(arch)
+		$(CXX) $^ -o $(release)/$(exe) $(link) $(arch)
+		if [ $$? -eq 0 ]; then
+			cp $(tmp_win32_binaries)/win32/dlls/* $(release)
+		fi
+	fi
+
+$(build)/%.o: %.cpp
+	$(CXX) -c $< -o $@ -std=c++14 $(arch) $(flags) $(includes) $(defs)

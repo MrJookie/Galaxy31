@@ -41,6 +41,7 @@ obj := $(addprefix $(build)/, $(patsubst %.cpp,%.o,$(cpp)))
 
 all: make_dirs $(exe)
 
+
 clean:
 	find $(build) -type f -name *.o -exec rm {} \;
 	rm -f $(exe)

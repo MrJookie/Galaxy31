@@ -1,3 +1,4 @@
+#define SDL_MAIN_HANDLED
 #include "App.hpp"
 
 int main(int argc, char* args[]) {
