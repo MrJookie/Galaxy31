@@ -1,0 +1,6 @@
+[submodule "src/GUI"]
+	path = src/GUI
+	url = https://github.com/112212/simple-gui-engine
+[submodule "src/EventSystem"]
+	path = src/EventSystem
+	url = https://github.com/112212/event-system
