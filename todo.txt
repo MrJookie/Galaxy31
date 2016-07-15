@@ -8,7 +8,7 @@ TODO:
 		+ camera zoom in/out
 		- minimap
 		- minimap zooming in/out
-		- basic weapons
+		+ basic weapons
 		- collision with asteroids and other ships
 		- terminal, commands, debug
 		- getting score, upgrade points
@@ -20,24 +20,27 @@ TODO:
 		- bases (big space station, planet, big asteroid, system of space stations or something like that)
 		- customizing placement components around ship (put weapons infront, shield, reflective shield, big but weaker shield, power, lot of other stuff ...)
 		- more complex health (maybe make each component of the ship have its health, volatility, but keep overall health with some formula or averaging)
-		- slow rotation
+		+ slow rotation
 		- strafe movement (in case of additional engines available on sides)
 		- when base is attacked add some info on minimap
 		- configuration files (linux: $HOME/.config/galaxy31/, windows: C:\...\Documents\configuration files ...\galaxy31\...)
-		- ambient sound
 		- local data configuration (downloads)
-		- stabilizers
-		- setup event system
+		+ stabilizers
+		
+	BUGFIX:
+		+ big propulsion
+		
+		
 	build
-		- windows build
+		+ windows build
 		- mac build
 		
 	sound
+		+ ambient sound
 		- engines
 		- weapons
 	
 	network
-		- setup enet
 		master server
 		server network
 			- chat

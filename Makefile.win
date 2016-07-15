@@ -22,6 +22,7 @@ cpp := 	\
 		src/Object.cpp									\
 		src/GameState.cpp								\
 		src/Asset.cpp									\
+		src/Projectile.cpp								\
 
 program_name := Galaxy31
 
@@ -31,7 +32,7 @@ tmp_link := $(tmp_win32_binaries)/win32/link
 tmp_bin := $(tmp_win32_binaries)/win32/dlls
 link32bit := \
 		-L$(tmp_link)/ -L$(tmp_bin)  \
-		 -lSDL2 -lSDL2_image \
+		 -lSDL2 -lSDL2_image -lSDL2_mixer \
 		-lglew32 -lopengl32 -limm32   \
 		-static-libgcc  -Wl,-subsystem,windows -mwindows -lmingw32 -Wl,-Bstatic -lstdc++ -lpthread -Wl,-Bdynamic
 

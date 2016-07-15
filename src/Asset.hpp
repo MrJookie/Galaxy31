@@ -9,21 +9,13 @@
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
-//#include <SDL2/SDL_mixer.h>
-//#include <SDL2/SDL2_gfxPrimitives.h>
-//#include <SDL2/SDL_ttf.h>
+#include <SDL2/SDL_mixer.h>
 
-#include <chrono>
-#include <iostream>
-#include <fstream>
-#include <sstream>
+
 #include <unordered_map>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-//#include <glm/gtc/matrix_access.hpp>
-//#include <glm/gtc/type_ptr.hpp>
-#include <glm/gtx/vector_angle.hpp>
 
 //later pack files and access just by filenames and hardcode filepaths
 
@@ -50,13 +42,20 @@ class Asset {
 		Shader GetShader(std::string fileName);
 		void UseShader(std::string fileName);
 		void UnuseShader();
+		
+		Mix_Music* GetMusic(std::string fileName);
+		Mix_Chunk* GetSound(std::string fileName);
+		
+		
+		void FreeAssets();
 
 	private:
 		GLuint readShader(std::string shaderFile, GLenum shaderType);
 		
 		std::unordered_map<std::string, Texture> m_textures;
 		std::unordered_map<std::string, Shader> m_shaders;
-		//std::unordered_map<std::string, Sound> m_sounds;
+		std::unordered_map<std::string, Mix_Music*> m_musics;
+		std::unordered_map<std::string, Mix_Chunk*> m_sounds;
 		
 };
 

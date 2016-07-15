@@ -3,6 +3,8 @@
 
 #include "Asset.hpp"
 #include "Camera.hpp"
+#include "Projectile.hpp"
+#include <vector>
 
 namespace GameState {
 	extern glm::vec2 windowSize;
@@ -12,6 +14,7 @@ namespace GameState {
 	extern double timeElapsed;
 	extern float zoom;
 	
+	extern std::vector<Projectile> projectiles;
 	extern Asset asset;
 	extern Camera camera;
 }

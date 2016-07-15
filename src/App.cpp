@@ -17,12 +17,18 @@ App::App() {
     this->init();
 }
 
-App::~App() {}
+App::~App() {
+	GameState::asset.FreeAssets();
+    Mix_CloseAudio();
+    Mix_Quit();
+    ImGui_ImplSdlGL3_Shutdown();
+    SDL_GL_DeleteContext(glContext);
+    SDL_DestroyWindow(window);
+    SDL_Quit();
+}
 
 void App::init() {
-    SDL_Window* window;
-    SDL_GLContext glContext;
-
+    
     if(SDL_Init(SDL_INIT_EVERYTHING) != 0) {
         throw std::string("Failed to initialize SDL: ") + SDL_GetError();
     }
@@ -45,6 +51,16 @@ void App::init() {
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
     //SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG);
+    
+    if(!Mix_Init(MIX_INIT_OGG)) {
+		throw std::string("Failed to initialize SDL_mixer");
+	}
+	if(Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 1024)==-1) {
+		throw std::string("Mix_OpenAudio: ") + Mix_GetError();
+		exit(2);
+	}
+	Mix_PlayMusic(GameState::asset.GetMusic("loop.ogg"), -1);
+	Mix_VolumeMusic(MIX_MAX_VOLUME);
 
     glContext = SDL_GL_CreateContext(window);
     if(glContext == nullptr) {
@@ -77,20 +93,21 @@ void App::init() {
     }
     
     //load all textures here
-    GameState::asset.LoadTexture("Assets/Textures/ship_01_skin.png");
-    GameState::asset.LoadTexture("Assets/Textures/propulsion.png");
+    GameState::asset.LoadTexture("ship_01_skin.png");
+    GameState::asset.LoadTexture("propulsion.png");
     
     //std::cout << GameState::asset.GetTexture("Assets/Textures/ship_01_skin.png") << std::endl;
     //std::cout << GameState::asset.GetTexture("Assets/Textures/propulsion.png") << std::endl;
     
-    GameState::asset.LoadShader("Assets/Shaders/background.vs", "Assets/Shaders/background.fs");
-    GameState::asset.LoadShader("Assets/Shaders/sprite.vs", "Assets/Shaders/sprite.fs");
+    GameState::asset.LoadShader("background.vs", "background.fs");
+    GameState::asset.LoadShader("sprite.vs", "sprite.fs");
     
     //std::cout << GameState::asset.GetShader("Assets/Shaders/background.vs") << std::endl;
     //std::cout << GameState::asset.GetShader("Assets/Shaders/sprite.vs") << std::endl;
 
-    Ship ship(glm::vec2(0, 0), 0.0, glm::vec2(0, 0), 0.001, 0, "some name", GameState::asset.GetTexture("Assets/Textures/ship_01_skin.png"), GameState::asset.GetTexture("Assets/Textures/ship_01_skin.png"), 100.0, 100.0);
-    Ship ship2(glm::vec2(0, 0), 0.0, glm::vec2(0, 0), 0.001, 0, "some name", GameState::asset.GetTexture("Assets/Textures/ship_01_skin.png"), GameState::asset.GetTexture("Assets/Textures/ship_01_skin.png"), 100.0, 100.0); 
+	Ship::Chassis chassis("main_ship", "ship_01_skin.png", "ship_01_skin.png");
+    Ship ship(glm::vec2(0, 0), 0.0, chassis);
+    Ship ship2(glm::vec2(0, 0), 0.0, chassis);
     
     int skipMouseResolution = 0;
 
@@ -149,10 +166,17 @@ void App::init() {
                 }
                 break;
                 }
-            } else if(e.type == SDL_MOUSEBUTTONDOWN && e.button.button == SDL_BUTTON_RIGHT) {
-
-            } else if(e.type == SDL_MOUSEBUTTONUP && e.button.button == SDL_BUTTON_RIGHT) {
-
+            } else if(e.type == SDL_MOUSEBUTTONDOWN) {
+				if(e.button.button == SDL_BUTTON_LEFT) {
+					ship.Fire();
+				} else {
+					ship.Stabilizers();
+				}
+            } else if(e.type == SDL_MOUSEBUTTONUP) {
+				if(e.button.button == SDL_BUTTON_LEFT) {
+				} else {
+					ship.Stabilizers();
+				}
             } else if(e.type == SDL_MOUSEWHEEL) {
                 this->setZoom(std::max(this->getZoom() - e.wheel.y, 1.0f));
             }
@@ -210,14 +234,14 @@ void App::init() {
         GameState::zoom = this->getZoom();
 
         // background
-        glUseProgram(GameState::asset.GetShader("Assets/Shaders/background.vs").id);
+        glUseProgram(GameState::asset.GetShader("background.vs").id);
 
         GLuint VAO;
         glGenVertexArrays(1, &VAO);
         glBindVertexArray(VAO);
         
-        glUniform2f(glGetUniformLocation(GameState::asset.GetShader("Assets/Shaders/background.vs").id, "iMouse"), ship.GetPosition().x, -ship.GetPosition().y);
-        glUniform2f(glGetUniformLocation(GameState::asset.GetShader("Assets/Shaders/background.vs").id, "iResolution"), this->getWindowSize().x, this->getWindowSize().y);
+        glUniform2f(glGetUniformLocation(GameState::asset.GetShader("background.vs").id, "iMouse"), ship.GetPosition().x, -ship.GetPosition().y);
+        glUniform2f(glGetUniformLocation(GameState::asset.GetShader("background.vs").id, "iResolution"), this->getWindowSize().x, this->getWindowSize().y);
 
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
         glDeleteVertexArrays(1, &VAO);
@@ -226,6 +250,13 @@ void App::init() {
         //
 
         ship.Process();
+		for(auto it = GameState::projectiles.begin(); it != GameState::projectiles.end(); it++) {
+			it->Process();
+			if(it->IsDead()) {
+				it = GameState::projectiles.erase(it);
+				if(it == GameState::projectiles.end()) break;
+			}
+		}
         //ship2.Process();
 
         GameState::camera.SetPosition( glm::vec3(ship.GetPosition().x, ship.GetPosition().y, 0) );
@@ -237,6 +268,10 @@ void App::init() {
         ship.Draw();
         ship2.Draw();
         
+        for(Projectile& projectile : GameState::projectiles) {
+			projectile.Draw();
+		}
+        
         ImGui::Render();
 
         SDL_GL_SwapWindow(window);
@@ -246,10 +281,7 @@ void App::init() {
         //SDL_Delay(16);
     }
 
-    ImGui_ImplSdlGL3_Shutdown();
-    SDL_GL_DeleteContext(glContext);
-    SDL_DestroyWindow(window);
-    SDL_Quit();
+	
 }
 
 void App::loop() {

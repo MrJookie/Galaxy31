@@ -3,6 +3,8 @@
 
 #include "GameState.hpp"
 #include "Ship.hpp"
+#include <chrono>
+#include <iostream>
 
 class App {
     public:
@@ -45,6 +47,9 @@ class App {
         
         std::chrono::high_resolution_clock::time_point m_chrono_start;
         double m_chrono_elapsed;
+        
+        SDL_Window* window;
+        SDL_GLContext glContext;
 };
 
 #endif

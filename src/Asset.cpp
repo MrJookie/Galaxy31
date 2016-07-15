@@ -1,6 +1,14 @@
 #include "Asset.hpp"
+#include <fstream>
+#include <sstream>
+#include <iostream>
 
 Asset::Asset() {}
+
+#define SHADER_PATH "Assets/Shaders/"
+#define TEXTURE_PATH "Assets/Textures/"
+#define MUSIC_PATH "Assets/Music/"
+#define SOUND_PATH "Assets/Sound/"
 
 Asset::~Asset() {
 		for(const auto& texture : m_textures) {
@@ -14,7 +22,7 @@ Asset::~Asset() {
 
 void Asset::LoadTexture(std::string fileName) {
 	if(!m_textures[fileName].fileName.length() > 0) { //load only if texture fileName is not loaded yet, not calling GetTexture == 0, because it would throw error
-		SDL_Surface* image = IMG_Load(fileName.c_str());
+		SDL_Surface* image = IMG_Load((TEXTURE_PATH + fileName).c_str());
 		if(!image) {
 			throw std::string("Error loading image: ") + IMG_GetError();
 		}
@@ -55,22 +63,28 @@ void Asset::LoadTexture(std::string fileName) {
 }
 
 Asset::Texture Asset::GetTexture(std::string fileName) {
-	if(!m_textures[fileName].fileName.length() > 0) {
-		throw std::string("Trying to access unitialized texture: ") + fileName;
+	auto texture_it = m_textures.find(fileName);
+	if(texture_it == m_textures.end()) {
+		LoadTexture(fileName);
 	}
 	
 	return m_textures[fileName];
 }
 
 
+
+
 void Asset::LoadShader(std::string vertexShaderFile, std::string fragmentShaderFile, std::string geometryShaderFile) {
+	std::string vertex = std::string(SHADER_PATH) + vertexShaderFile;
+	std::string fragment = std::string(SHADER_PATH) + fragmentShaderFile;
+	std::string geometry = std::string(SHADER_PATH) + geometryShaderFile;
 	if(!m_shaders[vertexShaderFile].fileName.length() > 0) {
-		GLuint vertexShader = this->readShader(vertexShaderFile, GL_VERTEX_SHADER);
+		GLuint vertexShader = this->readShader(vertex, GL_VERTEX_SHADER);
 		GLuint geometryShader = 0;
 		if(geometryShaderFile.length() > 0) {
-			geometryShader = this->readShader(geometryShaderFile, GL_GEOMETRY_SHADER);
+			geometryShader = this->readShader(geometry, GL_GEOMETRY_SHADER);
 		}
-		GLuint fragmentShader = this->readShader(fragmentShaderFile, GL_FRAGMENT_SHADER);
+		GLuint fragmentShader = this->readShader(fragment, GL_FRAGMENT_SHADER);
 
 		// linking
 		GLuint shaderProgram = glCreateProgram();
@@ -121,7 +135,7 @@ GLuint Asset::readShader(std::string shaderFile, GLenum shaderType) {
         char buffer[512];
         glGetShaderInfoLog(shader, 512, NULL, buffer);
 
-        throw std::string(buffer);
+        throw "Shader " + shaderFile + "  Error: " + std::string(buffer);
     }
 
     return shader;
@@ -143,3 +157,41 @@ void Asset::UnuseShader() {
     glUseProgram(0);
 }
 
+
+Mix_Music* Asset::GetMusic(std::string fileName) {
+	auto music_it = m_musics.find(fileName);
+	if( music_it != m_musics.end()) {
+		return music_it->second;
+	} else {
+		Mix_Music *music = Mix_LoadMUS((MUSIC_PATH + fileName).c_str());
+		if(music) {
+			m_musics[fileName] = music;
+		} else {
+			std::cout << "failed to load music\n";
+		}
+		return music;
+	}
+}
+
+Mix_Chunk* Asset::GetSound(std::string fileName) {
+	auto sound_it = m_sounds.find(fileName);
+	if( sound_it != m_sounds.end()) {
+		return sound_it->second;
+	} else {
+		Mix_Chunk *sound = Mix_LoadWAV((SOUND_PATH + fileName).c_str());
+		if(sound) {
+			m_sounds[fileName] = sound;
+		} else {
+			std::cout << "failed to load sound\n";
+		}
+		return sound;
+	}
+}
+
+
+void Asset::FreeAssets() {
+	for(auto music : m_musics) {
+		Mix_FreeMusic(music.second);
+	}
+	
+}

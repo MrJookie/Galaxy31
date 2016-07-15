@@ -29,6 +29,7 @@ cpp := 	\
 		src/Camera.cpp									\
 		src/Sprite.cpp									\
 		src/Ship.cpp									\
+		src/Projectile.cpp								\
 
 exe := Galaxy31
 
@@ -43,7 +44,8 @@ all: make_dirs $(exe)
 
 
 clean:
-	find $(build) -type f -name *.o -exec rm {} \;
+	rm -rf build
+	rm -rf release
 	rm -f $(exe)
 
 make_dirs:

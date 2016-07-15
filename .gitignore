@@ -31,3 +31,4 @@ build
 release
 imgui.ini
 *.orig
+*.dia~

@@ -6,24 +6,42 @@
 #include "Object.hpp"
 #include "Sprite.hpp"
 
+
+
+
 class Ship : public Object {
 	public:
-		Ship(glm::vec2 position, float rotation, glm::vec2 speed, float acceleration, int chassiId, std::string chassiName, Asset::Texture chassiTexture, Asset::Texture chassiSkin, float chassiMass, float chassiArmor);
+	
+		struct Chassis {
+			Chassis(){}
+			Chassis(std::string _name, std::string _texture, std::string _skin) {
+				name = _name;
+				Asset::Texture tex = GameState::asset.GetTexture(_texture);
+				texture = tex.id;
+				skin = GameState::asset.GetTexture(_skin).id;
+				sprite.SetSize(tex.size);
+			}
+			std::string name;
+			GLuint texture;
+			GLuint skin;
+			float mass;
+			float armor;
+			Sprite sprite;
+		};
+
+		Ship(glm::vec2 position, float rotation, const Chassis& chassis);
 		~Ship();
 		
 		void Process();
 		void Draw();
-		
+		void Fire();
+		void Stabilizers();
 	private:
-		int m_chassi_id;
-		std::string m_chassi_name;
-		GLuint m_chassi_texture;
-		GLuint m_chassi_texture_skin;
-		float m_chassi_mass;
-		float m_chassi_armor;
-		
-		Sprite m_chassi_sprite;
+		Chassis m_chassis;
+		float m_rotation_speed_coefficient;
+		bool m_stabilizers_on;
 		Sprite m_engine_propulsion;
 };
+
 
 #endif

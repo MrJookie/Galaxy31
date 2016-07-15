@@ -1,76 +1,105 @@
 #include "Sprite.hpp"
+#include "GameState.hpp"
+#include <glm/gtc/matrix_transform.hpp>
 
-Sprite::Sprite() {
-    m_texture = 0;
+Sprite::Sprite() : m_size(0), m_position(0), m_rotation(0) {
     
-    glGenVertexArrays(1, &m_vao);
-    glBindVertexArray(m_vao);
+    if(first_time) {
+		first_time = false;
+		glGenVertexArrays(1, &m_vao);
+		glBindVertexArray(m_vao);
+		
 
-    glGenBuffers(1, &m_vbo);
-    glGenBuffers(1, &m_ebo);
+		glGenBuffers(1, &m_vbo);
+		glGenBuffers(1, &m_ebo);
 
-    glBindVertexArray(0);
+		glBindVertexArray(0);
+	}
 }
 
+bool Sprite::first_time = true;
+GLuint Sprite::m_vao;
+GLuint Sprite::m_vbo;
+GLuint Sprite::m_ebo;
+
 Sprite& Sprite::operator=(Sprite && o) {
-    *this = o;
-    o.m_texture = 0;
+    m_vao = o.m_vao; m_vbo = o.m_vbo;
+    m_ebo = o.m_ebo; m_size = o.m_size;
+    m_position = o.m_position;
+    m_textures = o.m_textures;
+    o.m_textures.clear();
 }
 
 Sprite::~Sprite() {
-    if(m_texture == 0) return;
-    glDeleteBuffers(1, &m_vbo);
-    glDeleteBuffers(1, &m_ebo);
-    glDeleteVertexArrays(1, &m_vao);
+    if(m_textures.size() == 0) return;
+    // glDeleteBuffers(1, &m_vbo);
+    // glDeleteBuffers(1, &m_ebo);
+    // glDeleteVertexArrays(1, &m_vao);
 }
 
-void Sprite::SetTexture(GLuint textureID) {
-	m_texture = textureID;
+void Sprite::SetTexture(const Asset::Texture &tex) {
+	m_size = tex.size;
+	AddTexture(tex.id);
+}
+void Sprite::AddTexture(GLuint textureID) {
+	m_textures.push_back(textureID);
 }
 
 void Sprite::DrawSprite(glm::vec2 size, glm::vec2 position, float rotation) {
+	m_size = size;
+	m_position = position;
+	m_rotation = rotation;
+	DrawSprite();
+}
+
+void Sprite::DrawSprite() {
     glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_BLEND);
     
-    glUseProgram(GameState::asset.GetShader("Assets/Shaders/sprite.vs").id);
+    glUseProgram(GameState::asset.GetShader("sprite.vs").id);
     glBindVertexArray(m_vao);
 
     glm::mat4 modelMat;
-    modelMat = glm::translate(modelMat, glm::vec3(position, 0.0f));
+    modelMat = glm::translate(modelMat, glm::vec3(m_position, 0.0f));
 
-    modelMat = glm::translate(modelMat, glm::vec3(0.5f * size.x, 0.5f * size.y, 0.0f));
-    modelMat = glm::rotate(modelMat, glm::radians(rotation), glm::vec3(0.0f, 0.0f, 1.0f));
-    modelMat = glm::translate(modelMat, glm::vec3(-0.5f * size.x, -0.5f * size.y, 0.0f));
+    modelMat = glm::translate(modelMat, glm::vec3(0.5f * m_size.x, 0.5f * m_size.y, 0.0f));
+    modelMat = glm::rotate(modelMat, glm::radians(m_rotation), glm::vec3(0.0f, 0.0f, 1.0f));
+    modelMat = glm::translate(modelMat, glm::vec3(-0.5f * m_size.x, -0.5f * m_size.y, 0.0f));
 
-    modelMat = glm::scale(modelMat, glm::vec3(size, 1.0f));
+    modelMat = glm::scale(modelMat, glm::vec3(m_size, 1.0f));
 
-    glUniformMatrix4fv(glGetUniformLocation(GameState::asset.GetShader("Assets/Shaders/sprite.vs").id, "model"), 1, GL_FALSE, glm::value_ptr(modelMat));
-    glUniformMatrix4fv(glGetUniformLocation(GameState::asset.GetShader("Assets/Shaders/sprite.vs").id, "view"), 1, GL_FALSE, glm::value_ptr(GameState::camera.GetViewMatrix()));
-    glUniformMatrix4fv(glGetUniformLocation(GameState::asset.GetShader("Assets/Shaders/sprite.vs").id, "projection"), 1, GL_FALSE, glm::value_ptr(GameState::camera.GetProjection()));
+    glUniformMatrix4fv(glGetUniformLocation(GameState::asset.GetShader("sprite.vs").id, "model"), 1, GL_FALSE, glm::value_ptr(modelMat));
+    glUniformMatrix4fv(glGetUniformLocation(GameState::asset.GetShader("sprite.vs").id, "view"), 1, GL_FALSE, glm::value_ptr(GameState::camera.GetViewMatrix()));
+    glUniformMatrix4fv(glGetUniformLocation(GameState::asset.GetShader("sprite.vs").id, "projection"), 1, GL_FALSE, glm::value_ptr(GameState::camera.GetProjection()));
 
     GLfloat position_and_texcoords[] = {
-        0.0,  1.0,
-        0.0,  0.0,
-        1.0,  0.0,
-        1.0,  1.0,
-    };
+		0.0,  1.0,
+		0.0,  0.0,
+		1.0,  0.0,
+		1.0,  1.0,
+	};
 
-    GLuint indices[] = {
-        0, 1, 3,
-        1, 2, 3,
-    };
+	GLuint indices[] = {
+		0, 1, 3,
+		1, 2, 3,
+	};
 
-    glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(position_and_texcoords), position_and_texcoords, GL_STATIC_DRAW);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
+	glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(position_and_texcoords), position_and_texcoords, GL_STATIC_DRAW);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ebo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ebo);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, m_texture);
-    glUniform1i(glGetUniformLocation(GameState::asset.GetShader("Assets/Shaders/sprite.vs").id, "textureUniform"), 0);
+    // setting textures in texture units
+    int i=0;
+    for(auto tex : m_textures) {
+		glActiveTexture(GL_TEXTURE0+(i++));
+		glBindTexture(GL_TEXTURE_2D, tex);
+	}
+	
+    glUniform1i(glGetUniformLocation(GameState::asset.GetShader("sprite.vs").id, "textureUniform"), 0);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
