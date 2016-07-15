@@ -209,14 +209,20 @@ void App::init() {
 
 			ImVec2 canvas_pos = ImGui::GetCursorScreenPos();            // ImDrawList API uses screen coordinates!
 			ImVec2 canvas_size = ImGui::GetContentRegionAvail();        // Resize canvas to what's available
+			/*
 			if (canvas_size.x < 50.0f) canvas_size.x = 50.0f;
 			if (canvas_size.y < 50.0f) canvas_size.y = 50.0f;
+			*/
 			//draw_list->AddRectFilledMultiColor(canvas_pos, ImVec2(canvas_pos.x + canvas_size.x, canvas_pos.y + canvas_size.y), ImColor(50,50,50), ImColor(50,50,60), ImColor(60,60,70), ImColor(50,50,60));
 			draw_list->AddRect(canvas_pos, ImVec2(canvas_pos.x + canvas_size.x, canvas_pos.y + canvas_size.y), ImColor(255,255,255));
 			
-			int pointX = 10;
-			int pointY = 10;
+			int pointX = (ship.GetPosition().x / (2 * GameState::worldSize.x) * canvas_size.x) + canvas_size.x/2.0f;
+			int pointY = (ship.GetPosition().y / (2 * GameState::worldSize.y) * canvas_size.y) + canvas_size.y/2.0f;
 			draw_list->AddCircleFilled(ImVec2(canvas_pos.x + pointX, canvas_pos.y + pointY), 2.0f, 0xFF00FFFF, 12);
+			
+			int point2X = (ship2.GetPosition().x / (2 * GameState::worldSize.x) * canvas_size.x) + canvas_size.x/2.0f;
+			int point2Y = (ship2.GetPosition().y / (2 * GameState::worldSize.y) * canvas_size.y) + canvas_size.y/2.0f;
+			draw_list->AddCircleFilled(ImVec2(canvas_pos.x + point2X, canvas_pos.y + point2Y), 2.0f, 0xFF0000FF, 12);
 			
 			draw_list->PushClipRect(canvas_pos, ImVec2(canvas_pos.x+canvas_size.x, canvas_pos.y+canvas_size.y));      // clip lines within the canvas (if we resize it, etc.)
 			draw_list->PopClipRect();
@@ -294,12 +300,12 @@ void App::init() {
         glUseProgram(0);
         //
         
-        //some rounding error? (still moving ship, check some corner)
-        if(std::abs(ship.GetPosition().x) > 1000 && std::abs(this->getWorldMousePosition().x) > std::abs(ship.GetPosition().x)) {
+        //some rounding error? (still moving ship outside of the world, check some corner)
+        if(std::abs(ship.GetPosition().x) >= GameState::worldSize.x && std::abs(this->getWorldMousePosition().x) >= std::abs(ship.GetPosition().x)) {
 			ship.SetSpeed(glm::vec2(0, ship.GetSpeed().y));
 		}
 		
-		if(std::abs(ship.GetPosition().y) > 1000 && std::abs(this->getWorldMousePosition().y) > std::abs(ship.GetPosition().y)) {
+		if(std::abs(ship.GetPosition().y) >= GameState::worldSize.y && std::abs(this->getWorldMousePosition().y) >= std::abs(ship.GetPosition().y)) {
 			ship.SetSpeed(glm::vec2(ship.GetSpeed().x, 0));
 		}
 		
@@ -334,8 +340,6 @@ void App::init() {
 
         //SDL_Delay(16);
     }
-
-	
 }
 
 void App::loop() {

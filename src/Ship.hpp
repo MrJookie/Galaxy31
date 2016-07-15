@@ -6,12 +6,8 @@
 #include "Object.hpp"
 #include "Sprite.hpp"
 
-
-
-
 class Ship : public Object {
 	public:
-	
 		struct Chassis {
 			Chassis(){}
 			Chassis(std::string _name, std::string _texture, std::string _skin) {
@@ -36,6 +32,7 @@ class Ship : public Object {
 		void Draw();
 		void Fire();
 		void Stabilizers();
+		
 	private:
 		Chassis m_chassis;
 		float m_rotation_speed_coefficient;

@@ -10,6 +10,7 @@ namespace GameState {
 	extern glm::vec2 windowSize;
 	extern glm::vec2 screenMousePosition;
 	extern glm::vec2 worldMousePosition;
+	extern glm::vec2 worldSize;
 	extern double deltaTime;
 	extern double timeElapsed;
 	extern float zoom;

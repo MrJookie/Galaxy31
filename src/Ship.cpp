@@ -26,7 +26,7 @@ void Ship::Draw() {
 	
 	const float a = 0.4;
 	if(m_last_acceleration > 0.1) {
-        m_engine_propulsion.SetSize(glm::vec2(GetSize().x*0.5, GetSize().y * 0.6 * std::max(0.01f, m_last_acceleration*a)) );
+        m_engine_propulsion.SetSize(glm::vec2(this->GetSize().x*0.5, this->GetSize().y * 0.6 * std::max(0.01f, m_last_acceleration*a)) );
         float theta = (GetRotation() + 90) * 3.141592 / 180.0;
         const glm::vec2 &psize = m_engine_propulsion.GetSize();
         const float A = m_size.y * 0.5 + psize.y*0.5;
@@ -34,7 +34,7 @@ void Ship::Draw() {
             m_position.x + A*cos(theta) + psize.x*0.5,
             m_position.y + m_size.y * 0.5 + A*sin(theta) - psize.y*0.5
         ));
-        m_engine_propulsion.SetRotation( GetRotation() );
+        m_engine_propulsion.SetRotation( this->GetRotation() );
         m_engine_propulsion.DrawSprite(m_engine_propulsion.GetSize(), m_engine_propulsion.GetPosition(), this->GetRotation());
     }
 }
@@ -62,7 +62,7 @@ void Ship::Process() {
 	this->SetRotationSpeed( angle_speed );
 	
 	if(m_stabilizers_on) {
-		Accelerate( -m_speed * 0.2f * float(GameState::deltaTime) );
+		this->Accelerate( -m_speed * 0.2f * float(GameState::deltaTime) );
 	} else {
 		if(distance > (this->GetSize().y * 0.5)) {
 			this->Accelerate(direction * distance * this->GetAcceleration());
