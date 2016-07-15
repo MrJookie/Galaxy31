@@ -202,6 +202,25 @@ void App::init() {
             ImGui::Text("Ship::m_speed: %.2f", glm::length(ship.GetSpeed()));
         }
         //ImGui::End();
+        
+        {
+			ImDrawList* draw_list = ImGui::GetWindowDrawList();
+			static ImVector<ImVec2> points;
+
+			ImVec2 canvas_pos = ImGui::GetCursorScreenPos();            // ImDrawList API uses screen coordinates!
+			ImVec2 canvas_size = ImGui::GetContentRegionAvail();        // Resize canvas to what's available
+			if (canvas_size.x < 50.0f) canvas_size.x = 50.0f;
+			if (canvas_size.y < 50.0f) canvas_size.y = 50.0f;
+			//draw_list->AddRectFilledMultiColor(canvas_pos, ImVec2(canvas_pos.x + canvas_size.x, canvas_pos.y + canvas_size.y), ImColor(50,50,50), ImColor(50,50,60), ImColor(60,60,70), ImColor(50,50,60));
+			draw_list->AddRect(canvas_pos, ImVec2(canvas_pos.x + canvas_size.x, canvas_pos.y + canvas_size.y), ImColor(255,255,255));
+			
+			int pointX = 10;
+			int pointY = 10;
+			draw_list->AddCircleFilled(ImVec2(canvas_pos.x + pointX, canvas_pos.y + pointY), 2.0f, 0xFF00FFFF, 12);
+			
+			draw_list->PushClipRect(canvas_pos, ImVec2(canvas_pos.x+canvas_size.x, canvas_pos.y+canvas_size.y));      // clip lines within the canvas (if we resize it, etc.)
+			draw_list->PopClipRect();
+		}
 
         glViewport(0, 0, this->getWindowSize().x, this->getWindowSize().y);
         glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
@@ -236,20 +255,55 @@ void App::init() {
         // background
         glUseProgram(GameState::asset.GetShader("background.vs").id);
 
-        GLuint VAO;
+        GLuint VAO, VBO, EBO;
         glGenVertexArrays(1, &VAO);
+        glGenBuffers(1, &VBO);
+        glGenBuffers(1, &EBO);
+        
         glBindVertexArray(VAO);
+        
+        GLfloat position[] = {
+		   -1.0,   1.0,
+		   -1.0,  -1.0,
+			1.0,  -1.0,
+			1.0,   1.0,
+		};
+		
+		GLuint indices[] = {
+			0, 1, 3,
+			1, 2, 3,
+		};
+
+		glBindBuffer(GL_ARRAY_BUFFER, VBO);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(position), position, GL_STATIC_DRAW);
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
+		
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
         
         glUniform2f(glGetUniformLocation(GameState::asset.GetShader("background.vs").id, "iMouse"), ship.GetPosition().x, -ship.GetPosition().y);
         glUniform2f(glGetUniformLocation(GameState::asset.GetShader("background.vs").id, "iResolution"), this->getWindowSize().x, this->getWindowSize().y);
 
-        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+        //glDrawArrays(GL_TRIANGLE_STRIP, 0, 6);
+        glDrawElements(GL_TRIANGLE_STRIP, 6, GL_UNSIGNED_INT, 0);
+        
+        glBindVertexArray(0);
         glDeleteVertexArrays(1, &VAO);
 
         glUseProgram(0);
         //
-
-        ship.Process();
+        
+        //some rounding error? (still moving ship, check some corner)
+        if(std::abs(ship.GetPosition().x) > 1000 && std::abs(this->getWorldMousePosition().x) > std::abs(ship.GetPosition().x)) {
+			ship.SetSpeed(glm::vec2(0, ship.GetSpeed().y));
+		}
+		
+		if(std::abs(ship.GetPosition().y) > 1000 && std::abs(this->getWorldMousePosition().y) > std::abs(ship.GetPosition().y)) {
+			ship.SetSpeed(glm::vec2(ship.GetSpeed().x, 0));
+		}
+		
+		ship.Process();
 		for(auto it = GameState::projectiles.begin(); it != GameState::projectiles.end(); it++) {
 			it->Process();
 			if(it->IsDead()) {

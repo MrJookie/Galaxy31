@@ -71,9 +71,6 @@ Asset::Texture Asset::GetTexture(std::string fileName) {
 	return m_textures[fileName];
 }
 
-
-
-
 void Asset::LoadShader(std::string vertexShaderFile, std::string fragmentShaderFile, std::string geometryShaderFile) {
 	std::string vertex = std::string(SHADER_PATH) + vertexShaderFile;
 	std::string fragment = std::string(SHADER_PATH) + fragmentShaderFile;
@@ -97,7 +94,7 @@ void Asset::LoadShader(std::string vertexShaderFile, std::string fragmentShaderF
 		glLinkProgram(shaderProgram);
 
 		if(!shaderProgram) {
-			throw std::string("Failed to create shader program");
+			throw std::string("Failed to create shader program: ") + vertexShaderFile;
 		}
 		
 		m_shaders[vertexShaderFile].fileName = vertexShaderFile;
@@ -157,7 +154,6 @@ void Asset::UnuseShader() {
     glUseProgram(0);
 }
 
-
 Mix_Music* Asset::GetMusic(std::string fileName) {
 	auto music_it = m_musics.find(fileName);
 	if( music_it != m_musics.end()) {
@@ -167,7 +163,7 @@ Mix_Music* Asset::GetMusic(std::string fileName) {
 		if(music) {
 			m_musics[fileName] = music;
 		} else {
-			std::cout << "failed to load music\n";
+			throw std::string("Failed to load music file: ") + fileName;
 		}
 		return music;
 	}
@@ -182,16 +178,14 @@ Mix_Chunk* Asset::GetSound(std::string fileName) {
 		if(sound) {
 			m_sounds[fileName] = sound;
 		} else {
-			std::cout << "failed to load sound\n";
+			throw std::string("Failed to load sound file: ") + fileName;
 		}
 		return sound;
 	}
 }
 
-
 void Asset::FreeAssets() {
-	for(auto music : m_musics) {
+	for(const auto& music : m_musics) {
 		Mix_FreeMusic(music.second);
-	}
-	
+	}	
 }
