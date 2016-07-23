@@ -4,6 +4,7 @@
 #include <mutex>
 #include <stdio.h>
 #include "network.hpp"
+#include <mysql++.h>
 ENetHost* host;
 using std::cout;
 using std::endl;

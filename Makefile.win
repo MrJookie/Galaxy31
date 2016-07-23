@@ -33,6 +33,7 @@ program_name := Galaxy31
 tmp_binaries :=/tmp/$(program_name)
 tmp_link := $(tmp_binaries)/win32/link
 tmp_bin := $(tmp_binaries)/win32/dlls
+
 link32bit := \
 		-L$(tmp_link)/ -L$(tmp_bin)  \
 		 -lSDL2 -lSDL2_image -lSDL2_mixer \
@@ -74,6 +75,7 @@ extract_tmp_files:
 clean:
 	rm -rf build
 	rm -rf release
+	rm -rf /tmp/Galaxy31
 
 make_dirs:
 	@mkdir -p $(build)
@@ -104,12 +106,12 @@ server_exe := $(release)/galaxy31_server.exe
 server_obj := $(addprefix $(server_build)/, $(patsubst %.cpp, %.o, $(server_cpp)))
 server_link := -L$(tmp_link) -lenet_w32 -lws2_32 -lwinmm \
 				-Wl,-subsystem,windows -mwindows -static-libgcc -lmingw32 -Wl,-Bstatic -lstdc++ -lpthread -Wl,-Bdynamic
-server_includes := -Ilibs/enet-1.3.13/
-server_arch := -m32
+server_includes := -Ilibs/enet-1.3.13/ -I/usr/include/mysql/ -I/usr/include/mysql++/
+server_flags := -Wno-deprecated-declarations -Wno-attributes
 
 server: make_dirs_server extract_tmp_files $(server_exe)
 	
 $(server_build)/%.o: %.cpp
-	$(CXX) -c $< -o $@ -std=c++14 $(server_arch) $(server_includes) 
+	$(CXX) -c $< -o $@ -std=c++14 $(arch)  $(server_flags) $(server_includes)
 $(server_exe): $(server_obj)
-	$(CXX) $^ -o $(server_exe) $(server_arch) $(server_link) 
+	$(CXX) $^ -o $(server_exe) $(arch) $(server_link) 

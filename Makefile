@@ -23,9 +23,8 @@ arch := -m$(cpu_arch)
 
 includes := -Ilibs 				 \
 			-Ilibs/imgui 		 \
-			-I/usr/include/SDL2	 \
-			-Ilibs/enet-1.3.13/
-
+			-I/usr/include/SDL2  \
+			
 ImGui := libs/imgui/imgui_impl_sdl_gl3.cpp  \
 		 libs/imgui/imgui.cpp				\
 		 libs/imgui/imgui_draw.cpp
@@ -49,7 +48,7 @@ cpp := 	\
 release := release
 
 build := build
-flags := -O2
+flags := -O2 
 CXX := g++
 
 obj := $(addprefix $(build)/, $(patsubst %.cpp,%.o,$(cpp)))
@@ -78,6 +77,7 @@ clean:
 	rm -rf build
 	rm -rf release
 	rm -f $(exe)
+	rm -rf /tmp/Galaxy31
 
 make_dirs:
 	@mkdir -p $(build)
@@ -104,12 +104,13 @@ server_exe := galaxy31_server
 server_build := $(build)/server/
 server_obj := $(addprefix $(server_build)/, $(patsubst %.cpp, %.o, $(server_cpp)))
 server_link := -Llibs/enet-1.3.13 -lenet
-server_includes := -Ilibs/enet-1.3.13/
+server_includes := -Ilibs/enet-1.3.13/ -I/usr/include/mysql/ -I/usr/include/mysql++/
 server_arch := -m64
+server_flags := -Wno-deprecated-declarations
 
 server: make_dirs_server extract_tmp_files $(server_exe)
 	
 $(server_build)/%.o: %.cpp
-	$(CXX) -c $< -o $@ -std=c++14 $(server_arch) $(server_includes) 
+	$(CXX) -c $< -o $@ -std=c++14 $(server_arch) $(server_flags) $(server_includes) 
 $(server_exe): $(server_obj)
 	$(CXX) $^ -o $(server_exe) $(server_link) $(server_arch) -pthread
