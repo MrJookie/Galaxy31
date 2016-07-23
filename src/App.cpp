@@ -59,7 +59,6 @@ void App::init() {
 	}
 	if(Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 1024)==-1) {
 		throw std::string("Mix_OpenAudio: ") + Mix_GetError();
-		exit(2);
 	}
 	Mix_PlayMusic(GameState::asset.GetMusic("loop.ogg"), -1);
 	Mix_VolumeMusic(MIX_MAX_VOLUME);

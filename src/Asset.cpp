@@ -11,14 +11,6 @@ Asset::Asset() {}
 #define SOUND_PATH "Assets/Sound/"
 
 Asset::~Asset() {
-		for(const auto& texture : m_textures) {
-			glDeleteTextures(1, &texture.second.id);
-		}
-		
-		for(const auto& shader : m_shaders) {
-			glDeleteProgram(shader.second.id);
-		}
-		FreeAssets();
 }
 
 void Asset::LoadTexture(std::string fileName) {
@@ -186,7 +178,15 @@ Mix_Chunk* Asset::GetSound(std::string fileName) {
 }
 
 void Asset::FreeAssets() {
+	for(const auto& texture : m_textures) {
+		glDeleteTextures(1, &texture.second.id);
+	}
+	
+	for(const auto& shader : m_shaders) {
+		glDeleteProgram(shader.second.id);
+	}
+	
 	for(const auto& music : m_musics) {
 		Mix_FreeMusic(music.second);
-	}	
+	}
 }

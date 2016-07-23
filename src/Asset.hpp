@@ -46,10 +46,10 @@ class Asset {
 		Mix_Chunk* GetSound(std::string fileName);
 		
 		
+		void FreeAssets();
 		
 
 	private:
-		void FreeAssets();
 		GLuint readShader(std::string shaderFile, GLenum shaderType);
 		
 		std::unordered_map<std::string, Texture> m_textures;
