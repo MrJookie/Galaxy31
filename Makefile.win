@@ -1,5 +1,6 @@
+cpu_arch := 32
 
-arch := 
+arch := -m$(cpu_arch)
 
 includes := -Ilibs 				 \
 			-Ilibs/imgui 		 \
@@ -29,9 +30,9 @@ cpp := 	\
 program_name := Galaxy31
 
 
-tmp_win32_binaries :=/tmp/$(program_name)
-tmp_link := $(tmp_win32_binaries)/win32/link
-tmp_bin := $(tmp_win32_binaries)/win32/dlls
+tmp_binaries :=/tmp/$(program_name)
+tmp_link := $(tmp_binaries)/win32/link
+tmp_bin := $(tmp_binaries)/win32/dlls
 link32bit := \
 		-L$(tmp_link)/ -L$(tmp_bin)  \
 		 -lSDL2 -lSDL2_image -lSDL2_mixer \
@@ -42,9 +43,9 @@ link32bit := \
 		-lws2_32 \
 		-lwinmm
 
-link := $(link32bit)
+link := $(link$(cpu_arch)bit)
 
-build := build/win32
+build := build/win$(cpu_arch)
 release := release
 flags := -O2
 
@@ -54,11 +55,21 @@ CXX := i686-w64-mingw32-g++
 
 obj := $(addprefix $(build)/, $(patsubst %.cpp,%.o,$(cpp)))
 
-.phony: make_dirs
+.phony: all make_dirs extract_tmp_files
 
 exe := $(program_name).exe
 
 all: make_dirs $(exe)
+
+
+extract_tmp_files:
+	@if [ ! -d $(tmp_binaries)/win$(cpu_arch) ]
+	then
+		mkdir -p $(tmp_binaries)/win$(cpu_arch)
+		tar -xf libs/win$(cpu_arch).txz -C $(tmp_binaries)
+	fi
+	
+	
 
 clean:
 	rm -rf build
@@ -72,26 +83,17 @@ make_dirs:
 	
 .ONESHELL:
 $(exe): $(obj)
-	@if [ ! -d $(tmp_win32_binaries) ]
+	@if [ -d $(tmp_binaries)/win$(cpu_arch) ]
 	then
-		mkdir $(tmp_win32_binaries)
-		tar -xf libs/win32.txz -C $(tmp_win32_binaries)
+		cp $(tmp_binaries)/win$(cpu_arch)/dlls/* $(release)
 	fi
-	
-	if [ -d $(tmp_win32_binaries) ]
-	then
-		echo $(CXX) $^ -o $(release)/$(exe) $(link) $(arch)
-		$(CXX) $^ -o $(release)/$(exe) $(link) $(arch)
-		if [ $$? -eq 0 ]; then
-			cp $(tmp_win32_binaries)/win32/dlls/* $(release)
-		fi
-	fi
+	$(CXX) $^ -o $(release)/$(exe) $(link) $(arch)
 
 $(build)/%.o: %.cpp
 	$(CXX) -c $< -o $@ -std=c++14 $(arch) $(flags) $(includes) $(defs)
 
 # ----------------
-server_build := $(build)/server_win32/
+server_build := $(build)/server_win$(cpu_arch)/
 make_dirs_server:
 	@mkdir -p $(server_build)/src/server
 	@mkdir -p $(release)
@@ -100,12 +102,12 @@ server_cpp := \
 		src/server/main.cpp
 server_exe := $(release)/galaxy31_server.exe
 server_obj := $(addprefix $(server_build)/, $(patsubst %.cpp, %.o, $(server_cpp)))
-server_link := -Llibs/enet-1.3.13 -lenet_w32 -lws2_32 -lwinmm \
+server_link := -L$(tmp_link) -lenet_w32 -lws2_32 -lwinmm \
 				-Wl,-subsystem,windows -mwindows -static-libgcc -lmingw32 -Wl,-Bstatic -lstdc++ -lpthread -Wl,-Bdynamic
 server_includes := -Ilibs/enet-1.3.13/
 server_arch := -m32
 
-server: make_dirs_server $(server_exe)
+server: make_dirs_server extract_tmp_files $(server_exe)
 	
 $(server_build)/%.o: %.cpp
 	$(CXX) -c $< -o $@ -std=c++14 $(server_arch) $(server_includes) 

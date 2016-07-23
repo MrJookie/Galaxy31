@@ -1,4 +1,10 @@
-#inc := -Iinclude -Isrc/Externallib
+cpu_arch := 64
+
+program_name := Galaxy31
+exe := galaxy31
+tmp_binaries :=/tmp/$(program_name)
+tmp_link := $(tmp_binaries)/linux$(cpu_arch)
+
 link64bit :=    -lSDL2 \
 				-lSDL2_image \
 				-lSDL2_mixer \
@@ -6,12 +12,14 @@ link64bit :=    -lSDL2 \
 				-lSDL2_ttf \
 				-lGL \
 				-lGLEW \
-				-Llibs/enet-1.3.13 -lenet
+				-L$(tmp_link) -lenet
 
 
 link := $(link64bit)
 
-arch := 
+
+
+arch := -m$(cpu_arch)
 
 includes := -Ilibs 				 \
 			-Ilibs/imgui 		 \
@@ -37,17 +45,34 @@ cpp := 	\
 		src/Projectile.cpp								\
 		src/Network.cpp									\
 
-exe := Galaxy31
+
+release := release
 
 build := build
 flags := -O2
+CXX := g++
 
 obj := $(addprefix $(build)/, $(patsubst %.cpp,%.o,$(cpp)))
 
-.phony: make_dirs
+	
+.PHONY: all make_dirs extract_tmp_files
 
-all: make_dirs $(exe)
+all: make_dirs $(exe) extract_tmp_files 
 
+.ONESHELL:
+extract_tmp_files:
+	@if [ ! -d $(tmp_binaries)/linux$(cpu_arch) ]
+	then
+		mkdir -p $(tmp_binaries)/linux$(cpu_arch)
+		tar -xf libs/linux$(cpu_arch).txz -C $(tmp_binaries)
+	fi
+
+
+windows:
+	+make -f Makefile.win
+	
+windows_server:
+	+make -f Makefile.win server
 
 clean:
 	rm -rf build
@@ -59,15 +84,17 @@ make_dirs:
 	@mkdir -p $(build)/src/
 	@mkdir -p $(build)/libs/imgui/
 
-$(exe): $(obj)
-	g++ $^ -o $(exe) $(link) $(arch) -pthread
 
+	
+$(exe): $(obj)
+	$(CXX) $^ -o $(exe) $(link) $(arch) -pthread
+	
 $(build)/%.o: %.cpp
-	g++ -c $< -o $@ -std=c++14 $(arch) $(flags) $(includes)
+	$(CXX) -c $< -o $@ -std=c++14 $(arch) $(flags) $(includes)
 
 
 # ----------------
-.ONESHELL:
+
 make_dirs_server:
 	@mkdir -p $(build)/server/src/server
 server_cpp := \
@@ -80,9 +107,9 @@ server_link := -Llibs/enet-1.3.13 -lenet
 server_includes := -Ilibs/enet-1.3.13/
 server_arch := -m64
 
-server: make_dirs_server $(server_exe)
+server: make_dirs_server extract_tmp_files $(server_exe)
 	
 $(server_build)/%.o: %.cpp
-	g++ -c $< -o $@ -std=c++14 $(server_arch) $(server_includes) 
+	$(CXX) -c $< -o $@ -std=c++14 $(server_arch) $(server_includes) 
 $(server_exe): $(server_obj)
-	g++ $^ -o $(server_exe) $(server_link) $(server_arch) -pthread
+	$(CXX) $^ -o $(server_exe) $(server_link) $(server_arch) -pthread
