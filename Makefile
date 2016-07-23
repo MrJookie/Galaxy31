@@ -1,7 +1,7 @@
 cpu_arch := 64
 
 program_name := Galaxy31
-exe := galaxy31
+exe := Galaxy31
 tmp_binaries :=/tmp/$(program_name)
 tmp_link := $(tmp_binaries)/linux$(cpu_arch)
 
@@ -100,17 +100,16 @@ make_dirs_server:
 server_cpp := \
 		src/server/server.cpp \
 		src/server/main.cpp
-server_exe := galaxy31_server
+server_exe := Galaxy31_server
 server_build := $(build)/server/
 server_obj := $(addprefix $(server_build)/, $(patsubst %.cpp, %.o, $(server_cpp)))
 server_link := -Llibs/enet-1.3.13 -lenet
 server_includes := -Ilibs/enet-1.3.13/ -I/usr/include/mysql/ -I/usr/include/mysql++/
-server_arch := -m64
 server_flags := -Wno-deprecated-declarations
 
 server: make_dirs_server extract_tmp_files $(server_exe)
 	
 $(server_build)/%.o: %.cpp
-	$(CXX) -c $< -o $@ -std=c++14 $(server_arch) $(server_flags) $(server_includes) 
+	$(CXX) -c $< -o $@ -std=c++14 $(arch) $(server_flags) $(server_includes) 
 $(server_exe): $(server_obj)
-	$(CXX) $^ -o $(server_exe) $(server_link) $(server_arch) -pthread
+	$(CXX) $^ -o $(server_exe) $(server_link) $(arch) -pthread

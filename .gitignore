@@ -27,9 +27,9 @@
 *.app
 
 Galaxy31
+Galaxy31_server
 build
 release
 imgui.ini
 *.orig
 *.dia~
-galaxy31_server

@@ -18,6 +18,7 @@ Asset::~Asset() {
 		for(const auto& shader : m_shaders) {
 			glDeleteProgram(shader.second.id);
 		}
+		FreeAssets();
 }
 
 void Asset::LoadTexture(std::string fileName) {

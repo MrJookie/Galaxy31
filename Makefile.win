@@ -102,7 +102,7 @@ make_dirs_server:
 server_cpp := \
 		src/server/server.cpp \
 		src/server/main.cpp
-server_exe := $(release)/galaxy31_server.exe
+server_exe := $(release)/Galaxy31_server.exe
 server_obj := $(addprefix $(server_build)/, $(patsubst %.cpp, %.o, $(server_cpp)))
 server_link := -L$(tmp_link) -lenet_w32 -lws2_32 -lwinmm \
 				-Wl,-subsystem,windows -mwindows -static-libgcc -lmingw32 -Wl,-Bstatic -lstdc++ -lpthread -Wl,-Bdynamic
