@@ -5,6 +5,7 @@ includes := -Ilibs 				 \
 			-Ilibs/imgui 		 \
 			-Ilibs/SDL2 \
 			-Ilibs/glew/ \
+			-Ilibs/enet-1.3.13
 
 ImGui := libs/imgui/imgui_impl_sdl_gl3.cpp  \
 		 libs/imgui/imgui.cpp				\
@@ -23,6 +24,7 @@ cpp := 	\
 		src/GameState.cpp								\
 		src/Asset.cpp									\
 		src/Projectile.cpp								\
+		src/Network.cpp									\
 
 program_name := Galaxy31
 
@@ -34,7 +36,11 @@ link32bit := \
 		-L$(tmp_link)/ -L$(tmp_bin)  \
 		 -lSDL2 -lSDL2_image -lSDL2_mixer \
 		-lglew32 -lopengl32 -limm32   \
-		-static-libgcc  -Wl,-subsystem,windows -mwindows -lmingw32 -Wl,-Bstatic -lstdc++ -lpthread -Wl,-Bdynamic
+		-static-libgcc -Wl,-subsystem,windows -mwindows -lmingw32 -Wl,-Bstatic -lstdc++ -lpthread -Wl,-Bdynamic \
+		-Llibs/enet-1.3.13 \
+		-lenet_w32 \
+		-lws2_32 \
+		-lwinmm
 
 link := $(link32bit)
 
@@ -83,3 +89,25 @@ $(exe): $(obj)
 
 $(build)/%.o: %.cpp
 	$(CXX) -c $< -o $@ -std=c++14 $(arch) $(flags) $(includes) $(defs)
+
+# ----------------
+server_build := $(build)/server_win32/
+make_dirs_server:
+	@mkdir -p $(server_build)/src/server
+	@mkdir -p $(release)
+server_cpp := \
+		src/server/server.cpp \
+		src/server/main.cpp
+server_exe := $(release)/galaxy31_server.exe
+server_obj := $(addprefix $(server_build)/, $(patsubst %.cpp, %.o, $(server_cpp)))
+server_link := -Llibs/enet-1.3.13 -lenet_w32 -lws2_32 -lwinmm \
+				-Wl,-subsystem,windows -mwindows -static-libgcc -lmingw32 -Wl,-Bstatic -lstdc++ -lpthread -Wl,-Bdynamic
+server_includes := -Ilibs/enet-1.3.13/
+server_arch := -m32
+
+server: make_dirs_server $(server_exe)
+	
+$(server_build)/%.o: %.cpp
+	$(CXX) -c $< -o $@ -std=c++14 $(server_arch) $(server_includes) 
+$(server_exe): $(server_obj)
+	$(CXX) $^ -o $(server_exe) $(server_arch) $(server_link) 

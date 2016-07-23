@@ -27,9 +27,10 @@ TODO:
 		- local data configuration (downloads)
 		+ stabilizers
 		
-	BUGFIX:
-		+ big propulsion
+	BUGS:
 		
+	TO FIX:
+		- windows enet not working with wine
 		
 	build
 		+ windows build

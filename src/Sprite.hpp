@@ -2,7 +2,7 @@
 #define SPRITE_HPP
 
 #include <glm/glm.hpp>
-#include <list>
+#include <vector>
 #include "Asset.hpp"
 
 class Sprite {
@@ -28,7 +28,7 @@ class Sprite {
 	private:
 		static bool first_time;
 		static GLuint m_vao, m_vbo, m_ebo;
-		std::list<GLuint> m_textures;
+		std::vector<GLuint> m_textures;
 
 		glm::vec2 m_size;
 		glm::vec2 m_position;

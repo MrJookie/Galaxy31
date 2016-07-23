@@ -1,5 +1,5 @@
 #include "App.hpp"
-
+#include "Network.hpp"
 App::App() {
     this->setWindowSize(glm::vec2(800, 600));
 
@@ -21,6 +21,7 @@ App::~App() {
 	GameState::asset.FreeAssets();
     Mix_CloseAudio();
     Mix_Quit();
+    Network::cleanup();
     ImGui_ImplSdlGL3_Shutdown();
     SDL_GL_DeleteContext(glContext);
     SDL_DestroyWindow(window);
@@ -28,7 +29,8 @@ App::~App() {
 }
 
 void App::init() {
-    
+    Network::initialize();
+    Network::connect("127.0.0.1", 1234);
     if(SDL_Init(SDL_INIT_EVERYTHING) != 0) {
         throw std::string("Failed to initialize SDL: ") + SDL_GetError();
     }
@@ -112,7 +114,7 @@ void App::init() {
     int skipMouseResolution = 0;
 
     bool running = true;
-
+	bool isFiring = false;
     while(running) {
         this->loop();
 
@@ -168,12 +170,13 @@ void App::init() {
                 }
             } else if(e.type == SDL_MOUSEBUTTONDOWN) {
 				if(e.button.button == SDL_BUTTON_LEFT) {
-					ship.Fire();
+					isFiring = true;
 				} else {
 					ship.Stabilizers();
 				}
             } else if(e.type == SDL_MOUSEBUTTONUP) {
 				if(e.button.button == SDL_BUTTON_LEFT) {
+					isFiring = false;
 				} else {
 					ship.Stabilizers();
 				}
@@ -181,7 +184,8 @@ void App::init() {
                 this->setZoom(std::max(this->getZoom() - e.wheel.y, 1.0f));
             }
         }
-
+        
+		if(isFiring) ship.Fire();
         ImGui_ImplSdlGL3_NewFrame(window);
 
         ImGui::GetStyle().Colors[ImGuiCol_TitleBgActive] = ImColor(1.0f, 1.0f, 1.0f, 0.5f);
@@ -308,7 +312,8 @@ void App::init() {
 		if(std::abs(ship.GetPosition().y) >= GameState::worldSize.y && std::abs(this->getWorldMousePosition().y) >= std::abs(ship.GetPosition().y)) {
 			ship.SetSpeed(glm::vec2(ship.GetSpeed().x, 0));
 		}
-		
+		Network::send_message("hehehe");
+		Network::handle_events(5);
 		ship.Process();
 		for(auto it = GameState::projectiles.begin(); it != GameState::projectiles.end(); it++) {
 			it->Process();
