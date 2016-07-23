@@ -59,7 +59,7 @@ obj := $(addprefix $(build)/, $(patsubst %.cpp,%.o,$(cpp)))
 
 exe := $(program_name).exe
 
-all: make_dirs $(exe)
+all: make_dirs extract_tmp_files $(exe)
 
 
 extract_tmp_files:
