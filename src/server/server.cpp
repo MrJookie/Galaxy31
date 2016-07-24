@@ -4,8 +4,8 @@
 #include <mutex>
 #include <stdio.h>
 #include "network.hpp"
-#include <mysql++.h>
 ENetHost* host;
+mysqlpp::Connection con;
 using std::cout;
 using std::endl;
 using std::thread;
@@ -89,4 +89,22 @@ void server_start(short port) {
 		t[i].detach();
 	}
     delete[] t;
+}
+
+void mysql_connect(const char *db, const char *server, const char *user, const char *password, unsigned int port) {
+	if(con.connect(db, server, user, password, port)) {
+        cout << "Connected to MySQL server: " << server << ":" << port << endl;
+    } else {
+		cout << con.error() << std::endl;
+		exit(EXIT_FAILURE);
+	}
+}
+
+std::vector<mysqlpp::Row> getAllAccountsVec() {
+	std::vector<mysqlpp::Row> result;
+	
+	mysqlpp::Query query = con.query("SELECT * FROM accounts");
+	query.storein(result);
+	
+	return result;
 }

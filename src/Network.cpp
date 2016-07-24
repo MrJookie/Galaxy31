@@ -68,7 +68,7 @@ namespace Network {
 	
 	
 	void send_message(std::string message) {
-		ENetPacket* packet = enet_packet_create(("msg"+message).c_str(), message.size()+4, 
+		ENetPacket* packet = enet_packet_create((message).c_str(), message.size(), 
 			ENET_PACKET_FLAG_RELIABLE); 
 		enet_host_broadcast(client, Channel::msg, packet);
 	}
