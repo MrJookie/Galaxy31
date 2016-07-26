@@ -10,7 +10,7 @@ Target Server Type    : MYSQL
 Target Server Version : 50505
 File Encoding         : 65001
 
-Date: 2016-07-25 18:02:20
+Date: 2016-07-26 02:43:54
 */
 
 SET FOREIGN_KEY_CHECKS=0;
@@ -39,9 +39,9 @@ CREATE TABLE `abilities` (
 DROP TABLE IF EXISTS `accounts`;
 CREATE TABLE `accounts` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `email` varchar(255) CHARACTER SET latin1 NOT NULL,
-  `username` varchar(10) CHARACTER SET latin1 NOT NULL,
-  `password` char(40) CHARACTER SET latin1 NOT NULL,
+  `email` varchar(255) NOT NULL,
+  `username` varchar(10) NOT NULL,
+  `password` char(40) NOT NULL,
   `active` int(1) NOT NULL,
   `datetime_registered` datetime NOT NULL,
   `datetime_last_login` datetime NOT NULL,
@@ -50,18 +50,11 @@ CREATE TABLE `accounts` (
   `resource_cobalt` int(11) NOT NULL,
   `resource_uranium` int(11) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=8 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 -- ----------------------------
 -- Records of accounts
 -- ----------------------------
-INSERT INTO `accounts` VALUES ('1', 'zippo@windproof.com', 'Zippo', 'lama', '0', '0000-00-00 00:00:00', '0000-00-00 00:00:00', '0', '0', '0', '0');
-INSERT INTO `accounts` VALUES ('2', 'nik@nik.com', 'Nik', 'eee', '0', '0000-00-00 00:00:00', '0000-00-00 00:00:00', '0', '0', '0', '0');
-INSERT INTO `accounts` VALUES ('3', 'bla@glm.com', '', '637d1f5c6e6d1be22ed907eb3d223d858ca396d8', '0', '0000-00-00 00:00:00', '0000-00-00 00:00:00', '0', '0', '0', '0');
-INSERT INTO `accounts` VALUES ('4', 'haha', 'useer', 'pass', '0', '0000-00-00 00:00:00', '0000-00-00 00:00:00', '0', '0', '0', '0');
-INSERT INTO `accounts` VALUES ('5', 'lol', 'useer', 'pass', '0', '0000-00-00 00:00:00', '0000-00-00 00:00:00', '0', '0', '0', '0');
-INSERT INTO `accounts` VALUES ('6', 'lol', 'useer', 'pass', '0', '0000-00-00 00:00:00', '0000-00-00 00:00:00', '0', '0', '0', '0');
-INSERT INTO `accounts` VALUES ('7', 'lol', 'zzz', '3da8e53093dc6f1328d5d7d6333b4803022c77fd', '0', '0000-00-00 00:00:00', '0000-00-00 00:00:00', '0', '0', '0', '0');
 
 -- ----------------------------
 -- Table structure for `chassis`
@@ -82,6 +75,40 @@ CREATE TABLE `chassis` (
 
 -- ----------------------------
 -- Records of chassis
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for `chat_log`
+-- ----------------------------
+DROP TABLE IF EXISTS `chat_log`;
+CREATE TABLE `chat_log` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `src_account_id` int(11) DEFAULT NULL,
+  `dst_account_id` int(11) DEFAULT NULL,
+  `message` varchar(255) DEFAULT NULL,
+  `datetime` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- ----------------------------
+-- Records of chat_log
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for `friendlist`
+-- ----------------------------
+DROP TABLE IF EXISTS `friendlist`;
+CREATE TABLE `friendlist` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `src_account_id` int(11) DEFAULT NULL,
+  `dst_account_id` int(11) DEFAULT NULL,
+  `status` int(1) DEFAULT NULL,
+  `datetime` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- ----------------------------
+-- Records of friendlist
 -- ----------------------------
 
 -- ----------------------------

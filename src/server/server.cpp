@@ -106,8 +106,7 @@ int createAccount(std::string email, std::string userName, std::string password)
     
     mysqlpp::StoreQueryResult res = query.store();
     if(res.num_rows() > 0) {
-		cout << "Could not create new account! Email or username already exists!" << endl;
-		return -1;
+		return 0;
 	} else {
 		query << "INSERT INTO accounts (id, email, username, password, active, datetime_registered) VALUES ("
 			  << "'', "
@@ -122,12 +121,12 @@ int createAccount(std::string email, std::string userName, std::string password)
 		}
 	}
 	
-	return -2;
+	return -1;
 }
 
-mysqlpp::Row getExistingUser(unsigned int id) {
+mysqlpp::Row getExistingUser(unsigned int account_id) {
 	mysqlpp::Query query = con.query();
-    query << "SELECT * FROM accounts WHERE id = " << mysqlpp::escape << id << " LIMIT 1";
+    query << "SELECT * FROM accounts WHERE id = " << mysqlpp::escape << account_id << " LIMIT 1";
     
     mysqlpp::StoreQueryResult res = query.store();
     if(res.num_rows() > 0) {
@@ -139,14 +138,18 @@ mysqlpp::Row getExistingUser(unsigned int id) {
 
 int loginAccount(std::string email, std::string password) {
 	mysqlpp::Query query = con.query();
-    query << "SELECT id FROM accounts WHERE email = '" << mysqlpp::escape << email << "' AND password = SHA1('" << mysqlpp::escape << password << "') LIMIT 1";
+    query << "SELECT id, active FROM accounts WHERE email = '" << mysqlpp::escape << email << "' AND password = SHA1('" << mysqlpp::escape << password << "') LIMIT 1";
     
     mysqlpp::StoreQueryResult res = query.store();
     if(res.num_rows() > 0) {
-		return res[0]["id"];
+		if((int)res[0]["active"] > 0) {
+			return res[0]["id"];
+		} else {
+			return 0;
+		}
 	}
 	
-	return 0;
+	return -1;
 }
 
 std::vector<mysqlpp::Row> getAllAccountsVec() {

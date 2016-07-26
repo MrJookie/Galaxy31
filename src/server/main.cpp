@@ -10,11 +10,26 @@ int main(int argc, char* argv[]) {
 	mysql_connect("test", "89.177.76.215", "root", "Galaxy31");
 	
 	//////////////////
-	createAccount("email@email.com", "username", "plain_password"); //returns user_id ( > 0 ) = ok, -1 = email/username exists, -2 = unspecified error
-	int userID = loginAccount("email@email.com", "plain_password"); //returns user_id ( > 0 ) = ok, 0 = wrong email/password
-	if(userID > 0) {
-		mysqlpp::Row loggedUser = getExistingUser(userID);
-		std::cout << loggedUser["id"] << " | " << loggedUser["email"] << std::endl; //returns all user info in mysqlpp::Row
+	std::cout << "-----------------" << std::endl;
+	int new_account_id = createAccount("email@email.com", "username", "plain_password");
+	if(new_account_id > 0) {
+		std::cout << "Account: New account created!" << std::endl;
+	} else if(new_account_id == 0) {
+		std::cout << "Account: Could not create new account! Email or username already exists!" << std::endl;
+	} else {
+		std::cout << "Account: Unspecified error occured!" << std::endl;
+	}
+	
+	int login_account_id = loginAccount("email@email.com", "plain_password");
+	if(login_account_id > 0) {
+		std::cout << "Account: Login succeed." << std::endl;
+		
+		mysqlpp::Row loggedUser = getExistingUser(login_account_id);
+		std::cout << loggedUser["id"] << " | " << loggedUser["email"] << std::endl;
+	} else if(login_account_id == 0) {
+		std::cout << "Account: Login failed! Account is banned." << std::endl;
+	} else {
+		std::cout << "Account: Login failed! Wrong email or password." << std::endl;
 	}
 	
 	/*
@@ -23,6 +38,7 @@ int main(int argc, char* argv[]) {
 		std::cout << account["email"] << std::endl;
 	}
 	*/
+	std::cout << "-----------------" << std::endl;
 	/////////////////
 	
 	server_start(1234);

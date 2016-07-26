@@ -9,9 +9,10 @@ void mysql_connect(const char *db, const char *server=0, const char *user=0, con
 extern ENetHost* host;
 extern mysqlpp::Connection con;
 
-extern int createAccount(std::string email, std::string userName, std::string password);
-extern int loginAccount(std::string email, std::string password);
-extern mysqlpp::Row getExistingUser(unsigned int id);
+extern int createAccount(std::string email, std::string userName, std::string password); //returns user_id ( > 0 ) = ok, -1 = email/username exists, -2 = unspecified error
+extern int loginAccount(std::string email, std::string password); //returns user_id ( > 0 ) = ok, 0 = login ok but account is banned (accounts.active = 0), -1 = wrong email/password
+extern mysqlpp::Row getExistingUser(unsigned int account_id); //returns all user info in mysqlpp::Row
+
 extern std::vector<mysqlpp::Row> getAllAccountsVec();
 
 #endif
