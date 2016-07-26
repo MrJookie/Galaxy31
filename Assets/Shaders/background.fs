@@ -1,42 +1,33 @@
 #version 330
 
-uniform vec2 iMouse;
-uniform vec2 iResolution;
+uniform vec2 shipPosition;
+uniform vec2 windowSize;
+uniform float time;
 
 out vec4 color;
 
-float Hash( float n )
-{
-	return fract( (1.0 + cos(n)) * 415.92653);
+float Hash(float i){
+	return fract((1.0 + cos(i)) * 415.92653);
 }
 
-float Noise2d( in vec2 x )
-{
-    float xhash = Hash( x.x * 37.0 );
-    float yhash = Hash( x.y * 57.0 );
-    return fract( xhash + yhash );
+float Noise2d(in vec2 i){
+    float x = Hash(i.x * 37.0);
+    float y = Hash(i.y * 57.0);
+    return fract(x + y);
 }
 
 void main() {
-    // Add a camera offset in "FragCoord-space".
-    vec2 vCameraOffset = iMouse.xy;
-    vec2 vSamplePos = ( gl_FragCoord.xy + floor( vCameraOffset ) ) / iResolution.xy;
+    vec2 cameraOffset = shipPosition.xy / 20.0f;
+    vec2 samplePosition = (gl_FragCoord.xy + floor( cameraOffset )) / windowSize.xy;
 
-    vec3 vColor  = vec3(0.0, 0.0, 0.0);
-	
-	// Sky Background Color
-	vColor += vec3( 0.0, 0.0, 0.0 );
+    vec3 finalColor = vec3(0.0);
 
-    // Stars
-    // Note: Choose fThreshhold in the range [0.99, 0.9999].
-    // Higher values (i.e., closer to one) yield a sparser starfield.
-    float fThreshhold = 0.999;
-    float StarVal = Noise2d( vSamplePos );
-    if ( StarVal >= fThreshhold )
-    {
-        StarVal = pow( (StarVal - fThreshhold)/(1.0 - fThreshhold), 6.0 );
-		vColor += vec3( StarVal );
+    float threshold = 0.999;
+    float star = Noise2d(samplePosition);
+    if (star >= threshold) {
+        star = pow((star - threshold)/(1.0 - threshold), 2.0);
+		finalColor += vec3(star * cos(time * star));
     }
 	
-	color = vec4(vColor, 1.0);
+	color = vec4(finalColor, 1.0);
 }

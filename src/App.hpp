@@ -31,6 +31,7 @@ class App {
         void takeScreenshot(int x, int y, int w, int h);
         void takeScreenshotPNG(int x, int y, int w, int h);
         
+        glm::vec2 m_initialWindowSize;
         glm::vec2 m_windowSize;
         glm::vec2 m_screenMousePosition;
         glm::vec2 m_worldMousePosition;

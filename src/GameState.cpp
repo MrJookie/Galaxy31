@@ -9,6 +9,8 @@ namespace GameState {
 	double timeElapsed;
 	float zoom;
 	
+	int objectsDrawn = 0;
+	
 	Asset asset;
 	Camera camera(glm::vec3(0.0f, 0.0f, 0.0f));
 	std::vector<Projectile> projectiles;

@@ -53,6 +53,8 @@ void Sprite::DrawSprite(glm::vec2 size, glm::vec2 position, float rotation) {
 }
 
 void Sprite::DrawSprite() {
+	GameState::objectsDrawn++;
+	
     glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_BLEND);
     

@@ -29,6 +29,7 @@ class Ship : public Object {
 		~Ship();
 		
 		void Process();
+		void Process2();
 		void Draw();
 		void Fire();
 		void Stabilizers();

@@ -1,7 +1,8 @@
 #include "App.hpp"
 #include "Network.hpp"
 App::App() {
-    this->setWindowSize(glm::vec2(800, 600));
+	m_initialWindowSize = glm::vec2(1024, 768);
+    this->setWindowSize(m_initialWindowSize);
 
     m_ticks_previous = SDL_GetTicks();
     m_ticks_current = 0;
@@ -143,7 +144,7 @@ void App::init() {
                         SDL_GetWindowSize(window, &w, &h); //?
                         */
 
-                        this->setWindowSize(glm::vec2(800, 600));
+                        this->setWindowSize(m_initialWindowSize);
 
                         toggleFullscreen = true;
                     }
@@ -180,11 +181,12 @@ void App::init() {
 					ship.Stabilizers();
 				}
             } else if(e.type == SDL_MOUSEWHEEL) {
-                this->setZoom(std::max(this->getZoom() - e.wheel.y, 1.0f));
+				this->setZoom((this->getZoom() - e.wheel.y) > 6 ? this->getZoom() : std::max(this->getZoom() - e.wheel.y, 1.0f));
             }
         }
         
 		if(isFiring) ship.Fire();
+		
         ImGui_ImplSdlGL3_NewFrame(window);
 
         ImGui::GetStyle().Colors[ImGuiCol_TitleBgActive] = ImColor(1.0f, 1.0f, 1.0f, 0.5f);
@@ -203,6 +205,7 @@ void App::init() {
             ImGui::Text("App:m_worldMousePosition: %.0f,%.0f", this->getWorldMousePosition().x, this->getWorldMousePosition().y);
             ImGui::Text("Ship:m_position (center): %.0f,%.0f", ship.GetPosition().x, ship.GetPosition().y);
             ImGui::Text("Ship::m_speed: %.2f", glm::length(ship.GetSpeed()));
+            ImGui::Text("GameState::objectsDrawn: %i", GameState::objectsDrawn);
         }
         //ImGui::End();
         
@@ -236,7 +239,7 @@ void App::init() {
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
         SDL_PumpEvents();
-        const Uint8* state = SDL_GetKeyboardState(NULL);
+        //const Uint8* state = SDL_GetKeyboardState(NULL);
 
         int mousePositionX, mousePositionY;
         SDL_GetRelativeMouseState(&mousePositionX, &mousePositionY);
@@ -260,6 +263,7 @@ void App::init() {
         GameState::deltaTime = this->getDeltaTime();
         GameState::timeElapsed = this->getTimeElapsed();
         GameState::zoom = this->getZoom();
+        GameState::objectsDrawn = 0;
 
         // background
         glUseProgram(GameState::asset.GetShader("background.vs").id);
@@ -291,8 +295,9 @@ void App::init() {
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
         
-        glUniform2f(glGetUniformLocation(GameState::asset.GetShader("background.vs").id, "iMouse"), ship.GetPosition().x, -ship.GetPosition().y);
-        glUniform2f(glGetUniformLocation(GameState::asset.GetShader("background.vs").id, "iResolution"), this->getWindowSize().x, this->getWindowSize().y);
+        glUniform2f(glGetUniformLocation(GameState::asset.GetShader("background.vs").id, "shipPosition"), ship.GetPosition().x, -ship.GetPosition().y);
+        glUniform2f(glGetUniformLocation(GameState::asset.GetShader("background.vs").id, "windowSize"), this->getWindowSize().x, this->getWindowSize().y);
+        glUniform1f(glGetUniformLocation(GameState::asset.GetShader("background.vs").id, "time"), this->getTimeElapsed());
 
         //glDrawArrays(GL_TRIANGLE_STRIP, 0, 6);
         glDrawElements(GL_TRIANGLE_STRIP, 6, GL_UNSIGNED_INT, 0);
@@ -313,7 +318,7 @@ void App::init() {
 		}
 		Network::send_message("hehehe");
 		Network::handle_events(5);
-		ship.Process();
+		ship.Process2();
 		for(auto it = GameState::projectiles.begin(); it != GameState::projectiles.end(); it++) {
 			it->Process();
 			if(it->IsDead()) {

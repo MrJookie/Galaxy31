@@ -15,6 +15,8 @@ namespace GameState {
 	extern double timeElapsed;
 	extern float zoom;
 	
+	extern int objectsDrawn;
+	
 	extern std::vector<Projectile> projectiles;
 	extern Asset asset;
 	extern Camera camera;
