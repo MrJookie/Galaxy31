@@ -9,7 +9,9 @@ void mysql_connect(const char *db, const char *server=0, const char *user=0, con
 extern ENetHost* host;
 extern mysqlpp::Connection con;
 
+extern int createAccount(std::string email, std::string userName, std::string password);
+extern int loginAccount(std::string email, std::string password);
+extern mysqlpp::Row getExistingUser(unsigned int id);
 extern std::vector<mysqlpp::Row> getAllAccountsVec();
-
 
 #endif
