@@ -100,14 +100,14 @@ make_dirs_server:
 server_cpp := \
 		src/server/server.cpp \
 		src/server/main.cpp \
-		src/server/database.cpp 
+		src/server/database.cpp \
 		
 server_exe := Galaxy31_server
 server_build := $(build)/server/
 server_obj := $(addprefix $(server_build)/, $(patsubst %.cpp, %.o, $(server_cpp)))
 server_link := -Llibs/enet-1.3.13 -lenet -lmysqlclient -lmysqlpp
 server_includes := -Ilibs/enet-1.3.13/ -I/usr/include/mysql/ -I/usr/include/mysql++/
-server_flags := -Wno-deprecated-declarations
+server_flags := -Wno-deprecated-declarations -g
 
 server: make_dirs_server extract_tmp_files $(server_exe)
 	

@@ -6,7 +6,5 @@
 void server_start(short port);
 void server_wait_for_packet();
 
-extern ENetHost* host;
-
 
 #endif

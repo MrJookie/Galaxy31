@@ -3,6 +3,7 @@
 #include <queue>
 #include <utility>
 #include <sstream>
+#include <glm/glm.hpp>
 
 // threading
 #include <mutex>
@@ -11,8 +12,9 @@
 
 #include "server.hpp"
 #include "network.hpp"
+#include "../Object.hpp"
 
-ENetHost* host;
+
 
 using std::cout;
 using std::endl;
@@ -21,9 +23,22 @@ const int timeout = 5000;
 std::mutex term;
 int nthread = 0;
 
-void parse_packet(ENetPeer* peer, ENetPacket* pkt);
+// local forwards
+static void parse_packet(ENetPeer* peer, ENetPacket* pkt);
+static void new_client(ENetPeer* peer);
+static std::queue<std::pair<ENetPacket*, ENetPeer*>> packets;
 
-std::queue<std::pair<ENetPacket*, ENetPeer*>> packets;
+struct Player {
+	uint32_t id;
+	Object obj;
+	ENetPeer* peer;
+};
+
+// local data (statics)
+static ENetHost* host;
+static uint32_t last_id = 0;
+static std::vector<Player> players;
+
 
 void server_wait_for_packet() {
     ENetEvent event;
@@ -33,8 +48,8 @@ void server_wait_for_packet() {
         switch(event.type) {
         case ENET_EVENT_TYPE_CONNECT:
             cout << "A new client connected from " << event.peer->address.host << ":" << event.peer->address.port << endl;
-            /* Store any relevant client information here. */
-            event.peer->data = (void*)"Client information";
+            new_client(event.peer);
+            
             break;
         case ENET_EVENT_TYPE_RECEIVE:
             // cout << "A packet of length " << event.packet->dataLength << " containing " << 
@@ -44,7 +59,6 @@ void server_wait_for_packet() {
             /* Clean up the packet now that we're done using it. */
             // parse_packet(event.peer, event.packet);
             packets.emplace(event.packet, event.peer);
-            enet_packet_destroy(event.packet);
 
             break;
 
@@ -59,9 +73,6 @@ void server_wait_for_packet() {
     }
 }
 
-void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
-	cout << "rcv packet: " << pkt->data << endl;
-}
 
 std::mutex mtx;
 void server_work() {
@@ -70,16 +81,26 @@ void server_work() {
 		cout << "started thread " << (nthread++) << endl;
 	}
 	while(1) {
-		std::pair<ENetPacket*, ENetPeer*> packet;
-		{
-			std::unique_lock<std::mutex> l(mtx);
-			packet = packets.front();
-			packets.pop();
-		}
-		
+		std::pair<ENetPacket*, ENetPeer*> packet(0,0);
 		if(packets.size() == 0) {
 			std::this_thread::sleep_for(std::chrono::milliseconds(5));
+			continue;
+		} else {
+			std::unique_lock<std::mutex> l(mtx);
+			if(!packets.empty()) {
+				packet = packets.front();
+				packets.pop();				
+			} else {
+				std::this_thread::sleep_for(std::chrono::milliseconds(5));
+				continue;
+			}
 		}
+		
+		if(packet.first) {
+			parse_packet(packet.second, packet.first);
+			enet_packet_destroy(packet.first);			
+		}
+		
 	}
 }
 
@@ -117,3 +138,37 @@ void server_start(short port) {
     // delete[] t;
 }
 
+void new_client(ENetPeer* peer) {
+	last_id++;
+	std::stringstream bytes;
+	bytes << (uint32_t)PacketType::new_id
+		  << last_id;
+	std::string bs = bytes.str();
+	int len = bs.size();
+	ENetPacket* pkt = enet_packet_create( bs.c_str(), bs.size()+1, ENET_PACKET_FLAG_RELIABLE ); 
+	cout << "len: " << len << endl;
+	// bytes.get((char*)pkt->data, len);
+	
+	pkt->data[len] = 0;
+	cout << pkt->data << endl;
+	enet_peer_send(peer, Channel::control, pkt);
+	
+	Player player;
+	player.id = last_id;
+	player.peer = peer;
+	players.push_back(player);
+}
+
+void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
+	if(pkt == nullptr) return;
+	// cout << "rcv packet: " << pkt->data << endl;
+	PacketType type;
+	switch(type) {
+		case PacketType::update:
+			
+			break;
+		default:
+			break;
+	}
+	
+}

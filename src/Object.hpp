@@ -5,8 +5,8 @@
 
 class Object {
 	public:
-		Object(glm::vec2 size = glm::vec2(0), glm::vec2 position = glm::vec2(0), float rotation = 0, glm::vec2 speed = glm::vec2(0), float acceleration = 0);
-		~Object();
+		Object(glm::vec2 size = glm::vec2(0), glm::vec2 position = glm::vec2(0), float rotation = 0, glm::vec2 speed = glm::vec2(0), float acceleration = 0) {}
+		~Object() {}
 
 		void SetSize(glm::vec2 size);
 		void SetPosition(glm::vec2 position);
