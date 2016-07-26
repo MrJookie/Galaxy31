@@ -99,7 +99,9 @@ make_dirs_server:
 	@mkdir -p $(build)/server/src/server
 server_cpp := \
 		src/server/server.cpp \
-		src/server/main.cpp
+		src/server/main.cpp \
+		src/server/database.cpp 
+		
 server_exe := Galaxy31_server
 server_build := $(build)/server/
 server_obj := $(addprefix $(server_build)/, $(patsubst %.cpp, %.o, $(server_cpp)))

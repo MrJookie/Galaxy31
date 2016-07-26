@@ -1,5 +1,6 @@
 #include <iostream>
 #include "server.hpp"
+#include "database.hpp"
 int main(int argc, char* argv[]) {
 	if (enet_initialize () != 0) {
 		std::cout << "An error occurred while initializing ENet." << std::endl;

@@ -6,4 +6,10 @@ enum Channel {
 	msg
 };
 
+enum PacketType {
+	new_id,
+	update
+};
+
+
 #endif
