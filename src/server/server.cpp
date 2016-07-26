@@ -100,7 +100,8 @@ void mysql_connect(const char *db, const char *server, const char *user, const c
 	}
 }
 
-int createAccount(std::string email, std::string userName, std::string password) {
+//add ip_addr INET_ATON(ip_of_user);
+int createAccount(std::string email, std::string userName, std::string password, std::string ipAddr) {
 	mysqlpp::Query query = con.query();
     query << "SELECT id FROM accounts WHERE email = '" << mysqlpp::escape << email << "' AND username = '" << mysqlpp::escape << userName << "' LIMIT 1";
     
@@ -108,16 +109,37 @@ int createAccount(std::string email, std::string userName, std::string password)
     if(res.num_rows() > 0) {
 		return 0;
 	} else {
-		query << "INSERT INTO accounts (id, email, username, password, active, datetime_registered) VALUES ("
+		query << "INSERT INTO accounts (id, email, username, password, active, ip_addr, datetime_registered) VALUES ("
 			  << "'', "
 			  << "'" << mysqlpp::escape << email << "', "
 			  << "'" << mysqlpp::escape << userName << "', "
 			  << "SHA1('" << mysqlpp::escape << password << "'), "
 			  << "1, "
+			  << "INET_ATON('" << mysqlpp::escape << ipAddr << "'), "
 			  << "NOW() "
 			  << ")";
 		if(query.execute()) {
 			return query.insert_id();
+		}
+	}
+	
+	return -1;
+}
+
+//update ip_addr INET_ATON(ip_of_user);
+int loginAccount(std::string email, std::string password, std::string ipAddr) {
+	mysqlpp::Query query = con.query();
+    query << "SELECT id, active FROM accounts WHERE email = '" << mysqlpp::escape << email << "' AND password = SHA1('" << mysqlpp::escape << password << "') LIMIT 1";
+    
+    mysqlpp::StoreQueryResult res = query.store();
+    if(res.num_rows() > 0) {
+		query << "UPDATE accounts SET ip_addr = INET_ATON('" << mysqlpp::escape << ipAddr << "'), datetime_last_login = NOW()";
+		query.execute();
+		
+		if((int)res[0]["active"] > 0) {
+			return res[0]["id"];
+		} else {
+			return 0;
 		}
 	}
 	
@@ -134,22 +156,6 @@ mysqlpp::Row getExistingUser(unsigned int account_id) {
 	}
 	
 	return mysqlpp::Row();
-}
-
-int loginAccount(std::string email, std::string password) {
-	mysqlpp::Query query = con.query();
-    query << "SELECT id, active FROM accounts WHERE email = '" << mysqlpp::escape << email << "' AND password = SHA1('" << mysqlpp::escape << password << "') LIMIT 1";
-    
-    mysqlpp::StoreQueryResult res = query.store();
-    if(res.num_rows() > 0) {
-		if((int)res[0]["active"] > 0) {
-			return res[0]["id"];
-		} else {
-			return 0;
-		}
-	}
-	
-	return -1;
 }
 
 std::vector<mysqlpp::Row> getAllAccountsVec() {

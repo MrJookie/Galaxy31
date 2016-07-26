@@ -10,7 +10,7 @@ Target Server Type    : MYSQL
 Target Server Version : 50505
 File Encoding         : 65001
 
-Date: 2016-07-26 02:43:54
+Date: 2016-07-26 03:08:34
 */
 
 SET FOREIGN_KEY_CHECKS=0;
@@ -43,6 +43,7 @@ CREATE TABLE `accounts` (
   `username` varchar(10) NOT NULL,
   `password` char(40) NOT NULL,
   `active` int(1) NOT NULL,
+  `ip_addr` varbinary(16) NOT NULL,
   `datetime_registered` datetime NOT NULL,
   `datetime_last_login` datetime NOT NULL,
   `current_ship_id` int(11) NOT NULL,
@@ -146,6 +147,26 @@ CREATE TABLE `mountables` (
 
 -- ----------------------------
 -- Records of mountables
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for `nodes`
+-- ----------------------------
+DROP TABLE IF EXISTS `nodes`;
+CREATE TABLE `nodes` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `ip_addr` varbinary(16) DEFAULT NULL,
+  `status` int(1) DEFAULT NULL,
+  `players_online` int(11) DEFAULT NULL,
+  `cpu_usage` varchar(255) DEFAULT NULL,
+  `mem_usage` varchar(255) DEFAULT NULL,
+  `hdd_usage` varchar(255) DEFAULT NULL,
+  `network_bandwidth` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+-- ----------------------------
+-- Records of nodes
 -- ----------------------------
 
 -- ----------------------------

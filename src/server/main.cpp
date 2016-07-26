@@ -11,7 +11,8 @@ int main(int argc, char* argv[]) {
 	
 	//////////////////
 	std::cout << "-----------------" << std::endl;
-	int new_account_id = createAccount("email@email.com", "username", "plain_password");
+	
+	int new_account_id = createAccount("email@email.com", "username", "plain_password", "127.0.0.1");
 	if(new_account_id > 0) {
 		std::cout << "Account: New account created!" << std::endl;
 	} else if(new_account_id == 0) {
@@ -20,7 +21,7 @@ int main(int argc, char* argv[]) {
 		std::cout << "Account: Unspecified error occured!" << std::endl;
 	}
 	
-	int login_account_id = loginAccount("email@email.com", "plain_password");
+	int login_account_id = loginAccount("email@email.com", "plain_password", "127.0.0.1");
 	if(login_account_id > 0) {
 		std::cout << "Account: Login succeed." << std::endl;
 		
@@ -38,6 +39,7 @@ int main(int argc, char* argv[]) {
 		std::cout << account["email"] << std::endl;
 	}
 	*/
+	
 	std::cout << "-----------------" << std::endl;
 	/////////////////
 	
