@@ -2,13 +2,15 @@
 
 #include <queue>
 #include <utility>
-#include <sstream>
 #include <glm/glm.hpp>
 
 // threading
 #include <mutex>
 #include <thread>
 #include <chrono>
+#include <vector>
+#include <algorithm>
+#include <map>
 
 #include "server.hpp"
 #include "network.hpp"
@@ -23,21 +25,24 @@ const int timeout = 5000;
 std::mutex term;
 int nthread = 0;
 
+
 // local forwards
 static void parse_packet(ENetPeer* peer, ENetPacket* pkt);
-static void new_client(ENetPeer* peer);
+static void handle_new_client(ENetPeer* peer);
+static void remove_client(ENetPeer* peer);
+static void send_states();
+
 static std::queue<std::pair<ENetPacket*, ENetPeer*>> packets;
 
 struct Player {
 	uint32_t id;
 	Object obj;
-	ENetPeer* peer;
 };
 
 // local data (statics)
 static ENetHost* host;
 static uint32_t last_id = 0;
-static std::vector<Player> players;
+static std::map<ENetPeer*, Player> players;
 
 
 void server_wait_for_packet() {
@@ -48,24 +53,16 @@ void server_wait_for_packet() {
         switch(event.type) {
         case ENET_EVENT_TYPE_CONNECT:
             cout << "A new client connected from " << event.peer->address.host << ":" << event.peer->address.port << endl;
-            new_client(event.peer);
-            
+            handle_new_client(event.peer);
             break;
         case ENET_EVENT_TYPE_RECEIVE:
-            // cout << "A packet of length " << event.packet->dataLength << " containing " << 
-				// event.packet->data << " was received from " << event.peer->data << 
-				// " on channel " << (int)event.channelID << endl;
-			
-            /* Clean up the packet now that we're done using it. */
-            // parse_packet(event.peer, event.packet);
             packets.emplace(event.packet, event.peer);
 
             break;
 
         case ENET_EVENT_TYPE_DISCONNECT:
-            cout << event.peer->data << " disconnected " << endl;
-            /* Reset the peer's client information. */
-            event.peer->data = NULL;
+			remove_client(event.peer);
+            enet_peer_reset(event.peer);
             break;
         default:
 			cout << "event: " << event.type << endl;
@@ -75,6 +72,7 @@ void server_wait_for_packet() {
 
 
 std::mutex mtx;
+std::chrono::high_resolution_clock::time_point last_status_update = std::chrono::high_resolution_clock::now();
 void server_work() {
 	{
 		std::unique_lock<std::mutex> l(term);
@@ -101,6 +99,12 @@ void server_work() {
 			enet_packet_destroy(packet.first);			
 		}
 		
+		std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
+		if(now - last_status_update > std::chrono::milliseconds(100)) {
+			send_states();
+			last_status_update = now;
+			// cout << "sending states\n";
+		}
 	}
 }
 
@@ -116,7 +120,7 @@ void server_start(short port) {
     address.port = port;
     server = enet_host_create(&address /* the address to bind the server host to */,
                               32      /* allow up to 32 clients and/or outgoing connections */,
-                              2      /* allow up to 2 channels to be used, 0 and 1 */,
+                              Channel::num_channels      /* allow up to 2 channels to be used, 0 and 1 */,
                               0      /* assume any amount of incoming bandwidth */,
                               0      /* assume any amount of outgoing bandwidth */);
 	host = server;
@@ -138,36 +142,53 @@ void server_start(short port) {
     // delete[] t;
 }
 
-void new_client(ENetPeer* peer) {
+void handle_new_client(ENetPeer* peer) {
 	last_id++;
-	std::stringstream bytes;
-	bytes << (uint32_t)PacketType::new_id
-		  << last_id;
-	std::string bs = bytes.str();
-	int len = bs.size();
-	ENetPacket* pkt = enet_packet_create( bs.c_str(), bs.size()+1, ENET_PACKET_FLAG_RELIABLE ); 
-	cout << "len: " << len << endl;
-	// bytes.get((char*)pkt->data, len);
-	
-	pkt->data[len] = 0;
-	cout << pkt->data << endl;
+	Packet::new_client cl;
+	cl.new_id = last_id;
+	ENetPacket* pkt = enet_packet_create( &cl, sizeof(cl), ENET_PACKET_FLAG_RELIABLE );
 	enet_peer_send(peer, Channel::control, pkt);
 	
 	Player player;
 	player.id = last_id;
-	player.peer = peer;
-	players.push_back(player);
+	players[peer] = player;
+}
+
+void remove_client(ENetPeer* peer) {
+	cout << "removing client " << players[peer].id << endl;
+	players.erase( peer );
+}
+
+void send_states() {
+	int len = sizeof(Packet::update_objects) + sizeof(Object)*players.size();
+	ENetPacket* pkt = enet_packet_create( nullptr, len, 0);
+	int i=0;
+	Packet::update_objects *upd = new (pkt->data) Packet::update_objects;
+	upd->num_objects = players.size();
+	Object* obj = (Object*)(pkt->data + sizeof(Packet::update_objects));
+	for(auto p : players) {
+		obj[i] = p.second.obj;
+		obj[i].SetId(p.second.id);
+		i++;
+	}
+	enet_host_broadcast(host, Channel::data, pkt);
 }
 
 void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
-	if(pkt == nullptr) return;
+	if(pkt == nullptr) { cout << "null pkt!!" << endl; return; }
 	// cout << "rcv packet: " << pkt->data << endl;
-	PacketType type;
-	switch(type) {
-		case PacketType::update:
-			
+	Packet::Packet *ppkt = (Packet::Packet*)pkt->data;
+	switch(ppkt->type) {
+		case PacketType::update_objects: {
+			Player& p = players[peer];
+			Packet::update_objects* packet = (Packet::update_objects*)pkt->data;
+			if(packet->num_objects != 1) return;
+			p.obj = *(Object*)(pkt->data + sizeof(Packet::update_objects));
+			// cout << "receiving states from " << p.id << "\n";
 			break;
+		}
 		default:
+			cout << "received unknown packet! " << (int)ppkt->type << endl;
 			break;
 	}
 	

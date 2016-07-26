@@ -48,7 +48,7 @@ cpp := 	\
 release := release
 
 build := build
-flags := -O2 
+flags := -O2 -g
 CXX := g++
 
 obj := $(addprefix $(build)/, $(patsubst %.cpp,%.o,$(cpp)))

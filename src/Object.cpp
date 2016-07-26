@@ -1,12 +1,6 @@
 #include "Object.hpp"
 #include "GameState.hpp"
 
-Object::Object(glm::vec2 size, glm::vec2 position, float rotation, glm::vec2 speed, float acceleration) : m_size(size), m_position(position), m_rotation(rotation), m_speed(speed), m_acceleration(acceleration) {
-	
-}
-
-Object::~Object() {}
-
 void Object::SetSize(glm::vec2 size) {
     m_size.x = size.x;
     m_size.y = size.y;
@@ -63,6 +57,10 @@ void Object::Process() {
 
 void Object::SetRotationSpeed( float rotation_speed ) {
 	m_rotation_speed = rotation_speed;
+}
+
+void Object::CopyObjectState(Object &obj) {
+	*this = obj;
 }
 
 glm::vec2 Object::local_to_world_coord(const glm::vec2& local_coord) {
