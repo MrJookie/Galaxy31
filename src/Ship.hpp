@@ -2,21 +2,14 @@
 #define SHIP_HPP
 
 #include "Asset.hpp"
-#include "GameState.hpp"
 #include "Object.hpp"
 #include "Sprite.hpp"
 
 class Ship : public Object {
 	public:
 		struct Chassis {
-			Chassis(){}
-			Chassis(std::string _name, std::string _texture, std::string _skin) {
-				name = _name;
-				Asset::Texture tex = GameState::asset.GetTexture(_texture);
-				texture = tex.id;
-				skin = GameState::asset.GetTexture(_skin).id;
-				sprite.SetSize(tex.size);
-			}
+			Chassis();
+			Chassis(std::string _name, std::string _texture, std::string _skin);
 			std::string name;
 			GLuint texture;
 			GLuint skin;

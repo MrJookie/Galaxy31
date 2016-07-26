@@ -1,4 +1,5 @@
 #include "Ship.hpp"
+#include "GameState.hpp"
 #include <glm/gtx/vector_angle.hpp>
 
 Ship::Ship(glm::vec2 position, float rotation, const Chassis& chassis) {
@@ -125,4 +126,16 @@ void Ship::Fire() {
 
 void Ship::Stabilizers() {
 	m_stabilizers_on = !m_stabilizers_on;
+}
+
+
+
+
+Ship::Chassis::Chassis() {}
+Ship::Chassis::Chassis(std::string _name, std::string _texture, std::string _skin) {
+	name = _name;
+	Asset::Texture tex = GameState::asset.GetTexture(_texture);
+	texture = tex.id;
+	skin = GameState::asset.GetTexture(_skin).id;
+	sprite.SetSize(tex.size);
 }
