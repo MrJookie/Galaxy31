@@ -48,8 +48,9 @@ void Object::Accelerate(glm::vec2 acceleration) {
     m_last_acceleration = glm::length(acceleration);
 }
 
-void Object::Process() {
-	double dt = GameState::deltaTime;
+void Object::Process(double dt) {
+	if(dt == 0)
+		dt = GameState::deltaTime;
 	m_position.x = m_position.x + dt * m_speed.x;
 	m_position.y = m_position.y + dt * m_speed.y;
 	m_rotation += m_rotation_speed * dt;

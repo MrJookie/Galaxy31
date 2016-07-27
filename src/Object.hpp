@@ -27,7 +27,7 @@ class Object {
 		
 		void Accelerate(glm::vec2 acceleration);
 		
-		void Process();
+		void Process(double dt = 0);
 		uint GetId() { return id; }
 		void SetId(uint id) { this->id = id; }
 

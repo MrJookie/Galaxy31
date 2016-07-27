@@ -51,6 +51,6 @@ TODO:
 			- multiple servers?
 			- server mysql connection
 		client network
-			- join
+			+ join
 			- chat
 			- sending controls and stats
