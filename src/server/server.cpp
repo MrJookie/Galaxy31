@@ -184,6 +184,7 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 			Packet::update_objects* packet = (Packet::update_objects*)pkt->data;
 			if(packet->num_objects != 1) return;
 			p.obj = *(Object*)(pkt->data + sizeof(Packet::update_objects));
+			p.obj.Process(peer->roundTripTime * 0.001 * 0.5);
 			// cout << "receiving states from " << p.id << "\n";
 			break;
 		}

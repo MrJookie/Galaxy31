@@ -58,6 +58,7 @@ namespace Network {
 		{
 			cout << "Connection to " << ip << ":" << port << " succeeded." << endl;
 			enet_host_flush (client);
+			enet_peer_ping_interval(host, 50);
 		} else {
 			enet_peer_reset (peer);
 			cout << "Connection to " << ip << ":" << port << " failed." << endl;
@@ -100,6 +101,7 @@ namespace Network {
 		
 		if(now - last_time_state_sent > std::chrono::milliseconds(10)) {
 			last_time_state_sent = now;
+			
 		} else {
 			return;
 		}

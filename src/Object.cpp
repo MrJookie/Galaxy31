@@ -1,5 +1,8 @@
 #include "Object.hpp"
+
+#ifndef SERVER
 #include "GameState.hpp"
+#endif
 
 void Object::SetSize(glm::vec2 size) {
     m_size.x = size.x;
@@ -49,8 +52,10 @@ void Object::Accelerate(glm::vec2 acceleration) {
 }
 
 void Object::Process(double dt) {
+	#ifndef SERVER
 	if(dt == 0)
 		dt = GameState::deltaTime;
+	#endif
 	m_position.x = m_position.x + dt * m_speed.x;
 	m_position.y = m_position.y + dt * m_speed.y;
 	m_rotation += m_rotation_speed * dt;
