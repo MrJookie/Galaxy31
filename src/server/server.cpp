@@ -37,6 +37,7 @@ static std::queue<std::pair<ENetPacket*, ENetPeer*>> packets;
 struct Player {
 	uint32_t id;
 	Object obj;
+	std::chrono::high_resolution_clock::time_point last_obj_update;
 };
 
 // local data (statics)
@@ -102,8 +103,9 @@ void server_work() {
 		
 		std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
 		if(now - last_status_update > std::chrono::milliseconds(10)) {
-			send_states();
+			std::unique_lock<std::mutex> l(mtx);
 			last_status_update = now;
+			send_states();
 			// cout << "sending states\n";
 		}
 	}
@@ -167,7 +169,10 @@ void send_states() {
 	Packet::update_objects *upd = new (pkt->data) Packet::update_objects;
 	upd->num_objects = players.size();
 	Object* obj = (Object*)(pkt->data + sizeof(Packet::update_objects));
+	auto now = std::chrono::high_resolution_clock::now();
 	for(auto p : players) {
+		p.second.obj.Process(std::chrono::duration_cast<std::chrono::seconds>(now - p.second.last_obj_update).count());
+		p.second.last_obj_update = now;
 		obj[i] = p.second.obj;
 		obj[i].SetId(p.second.id);
 		i++;
@@ -185,7 +190,8 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 			Packet::update_objects* packet = (Packet::update_objects*)pkt->data;
 			if(packet->num_objects != 1) return;
 			p.obj = *(Object*)(pkt->data + sizeof(Packet::update_objects));
-			p.obj.Process(peer->roundTripTime * 0.001 * 0.5);
+			p.obj.Process((float)peer->roundTripTime * 0.001f * 0.5f);
+			p.last_obj_update = std::chrono::high_resolution_clock::now();
 			// cout << "receiving states from " << p.id << "\n";
 			break;
 		}

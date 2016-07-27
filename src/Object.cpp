@@ -48,7 +48,6 @@ glm::vec2 Object::GetAcceleration() const {
 
 void Object::Accelerate(glm::vec2 acceleration) {
     m_speed += acceleration;
-    m_last_acceleration = glm::length(acceleration);
 }
 
 void Object::Process(float dt) {
@@ -63,6 +62,14 @@ void Object::Process(float dt) {
 
 void Object::SetRotationSpeed( float rotation_speed ) {
 	m_rotation_speed = rotation_speed;
+}
+
+void Object::InterpolateToState(Object &obj, float interpolation) {
+	m_speed += (obj.m_speed - m_speed) * interpolation;
+	m_position += (obj.m_position - m_position) * interpolation;
+	m_rotation = obj.m_rotation;
+	m_rotation_speed = obj.m_rotation_speed;
+	m_acceleration += (obj.m_acceleration - m_acceleration) * interpolation;
 }
 
 void Object::CopyObjectState(Object &obj) {

@@ -17,6 +17,7 @@ class Object {
 		void SetSpeed(glm::vec2 speed);
 		void SetAcceleration(glm::vec2 acceleration);
 		void CopyObjectState(Object &obj);
+		void InterpolateToState(Object &obj, float interpolation);
 		
 		glm::vec2 GetSize() const;
 		glm::vec2 GetPosition() const;
@@ -40,7 +41,6 @@ class Object {
 		glm::vec2 m_speed;
 		
 		glm::vec2 m_acceleration;
-		float m_last_acceleration;
 		
 		glm::vec2 local_to_world_coord(const glm::vec2& local_coord);
 		

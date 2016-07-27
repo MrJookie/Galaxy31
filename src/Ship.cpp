@@ -7,7 +7,6 @@ Ship::Ship(glm::vec2 position, float rotation, const Chassis& chassis) {
 	m_rotation = rotation;
 	m_speed = glm::vec2(0);
 	m_acceleration = {0,0};
-	m_last_acceleration = 0;
 	m_chassis = chassis;
 	m_chassis.sprite = std::move(chassis.sprite);
 	m_chassis.sprite.SetPosition(m_position);
@@ -30,9 +29,9 @@ Ship::~Ship() {}
 void Ship::Draw() {
 	m_chassis.sprite.DrawSprite(m_size, m_position, m_rotation); //chassi only
 	//draw loaded mountables within propulsion on engine mountable
-
-	if(m_last_acceleration > 0.1) {
-        m_engine_propulsion.SetSize(glm::vec2(this->GetSize().x * 0.5, this->GetSize().y * 0.5 * std::max(0.01f, m_last_acceleration * m_engine_propulsion_coefficient) * float(GameState::deltaTime)) );
+	float acceleration = glm::length(this->GetAcceleration()) * 0.5f;
+	if(acceleration > 0.01) {
+        m_engine_propulsion.SetSize(glm::vec2(this->GetSize().x * 0.5, this->GetSize().y * 0.5 * std::max(0.01f,  acceleration * 0.0003f * m_engine_propulsion_coefficient)) );
         float theta = (this->GetRotation() + 90) * 3.141592 / 180.0;
         const glm::vec2 &psize = m_engine_propulsion.GetSize();
         const float A = this->GetSize().y * 0.5 + psize.y*0.5;
@@ -109,11 +108,11 @@ void Ship::Process2() {
 		}
 	} else {
 		// dampening
-		this->SetAcceleration(this->GetAcceleration() *  0.5f);
+		this->SetAcceleration(this->GetAcceleration() *  0.95f);
 	}
 	
 	if(state[SDL_SCANCODE_S]) {
-		this->Accelerate(glm::vec2(0,0));
+		this->SetAcceleration({0,0});
 		this->Accelerate( -this->GetSpeed() * m_brake_coefficient * float(GameState::deltaTime) );
 	}
 

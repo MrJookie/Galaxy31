@@ -143,9 +143,10 @@ namespace Network {
 							chassis = new Ship::Chassis("main_ship", "ship_01_skin.png", "ship_01_skin.png");
 						Ship *s = new Ship({0,0}, 0, *chassis);
 						GameState::ships[o.GetId()] = s;
-						((Object*)s)->Process((double)peer->roundTripTime * 0.5 * 0.001);
 					}
-					GameState::ships[o.GetId()]->CopyObjectState(o);
+					o.Process((float)peer->roundTripTime * 0.5f * 0.001f);
+					// GameState::ships[o.GetId()]->CopyObjectState(o);
+					GameState::ships[o.GetId()]->InterpolateToState(o, 0.1f);
 					const glm::vec2 pos = GameState::ships[o.GetId()]->GetPosition();
 					cout << o.GetId() << ": " << pos.x << ", " << pos.y << endl;
 				}
