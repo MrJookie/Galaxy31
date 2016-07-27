@@ -9,7 +9,6 @@ Sprite::Sprite() : m_size(0), m_position(0), m_rotation(0) {
 		glGenVertexArrays(1, &m_vao);
 		glBindVertexArray(m_vao);
 		
-
 		glGenBuffers(1, &m_vbo);
 		glGenBuffers(1, &m_ebo);
 

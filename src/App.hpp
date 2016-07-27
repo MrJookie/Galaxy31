@@ -1,7 +1,6 @@
 #ifndef APP_HPP
 #define APP_HPP
 
-#include "GameState.hpp"
 #include "Ship.hpp"
 #include <chrono>
 #include <iostream>

@@ -9,6 +9,8 @@ namespace Network {
 	void handle_events(int n);
 	void send_message(std::string message);
 	void flush();
+	
+	void SendOurState();
 };
 
 #endif

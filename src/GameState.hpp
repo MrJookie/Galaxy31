@@ -4,7 +4,10 @@
 #include "Asset.hpp"
 #include "Camera.hpp"
 #include "Projectile.hpp"
+#include "Object.hpp"
+#include "Ship.hpp"
 #include <vector>
+#include <map>
 
 namespace GameState {
 	extern glm::vec2 windowSize;
@@ -20,6 +23,8 @@ namespace GameState {
 	extern std::vector<Projectile> projectiles;
 	extern Asset asset;
 	extern Camera camera;
+	extern Ship *player;
+	extern std::map<uint,Ship*> ships;
 }
 
 #endif

@@ -2,12 +2,13 @@
 #include <enet/enet.h>
 #include <iostream>
 #include <cstring>
-
+#include "GameState.hpp"
+#include <chrono>
 
 using std::cout;
 using std::endl;
+#include "server/network.hpp"
 namespace Network {
-	#include "server/network.hpp"
 	
 	ENetHost *client;
 	ENetPeer *host;
@@ -34,7 +35,7 @@ namespace Network {
 		}
 		address.port = port;
 		
-		client = enet_host_create (NULL, 1, 2, 0, 0);
+		client = enet_host_create (NULL, 1, Channel::num_channels, 0, 0);
 		if (client == NULL)
 		{
 			cout << "An error occurred while trying to create an ENet client host." << endl;
@@ -44,7 +45,7 @@ namespace Network {
 		ENetPeer *peer;
 		ENetEvent event;
 		/* Initiate the connection, allocating the two channels 0 and 1. */
-		peer = enet_host_connect(client, &address, 2, 0);
+		peer = enet_host_connect(client, &address, Channel::num_channels, 0);
 		if (peer == NULL)
 		{
 		   cout << "No available peers for initiating an ENet connection." << endl;
@@ -83,22 +84,9 @@ namespace Network {
 		ENetEvent event;
 		for(int i=0; i < n && enet_host_service(client, &event, 1) > 0; i++) {
 			switch(event.type) {
-			case ENET_EVENT_TYPE_CONNECT:
-				cout << "A new client connected from " << event.peer->address.host << ":" << event.peer->address.port << endl;
-				event.peer->data = (void*)"Client information";
-				break;
 			case ENET_EVENT_TYPE_RECEIVE:
-				cout << "A packet of length " << event.packet->dataLength << " containing " << 
-					event.packet->data << " was received from " << event.peer->data << 
-					" on channel " << event.channelID << endl;
 				parse_packet(event.peer, event.packet);
 				enet_packet_destroy(event.packet);
-
-				break;
-
-			case ENET_EVENT_TYPE_DISCONNECT:
-				cout << event.peer->data << " disconnected " << endl;
-				event.peer->data = NULL;
 				break;
 			default:
 				cout << "event: " << event.type << endl;
@@ -106,18 +94,60 @@ namespace Network {
 		}
 	}
 	
+	std::chrono::high_resolution_clock::time_point last_time_state_sent = std::chrono::high_resolution_clock::now();
+	void SendOurState() {
+		std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
+		
+		if(now - last_time_state_sent > std::chrono::milliseconds(10)) {
+			last_time_state_sent = now;
+		} else {
+			return;
+		}
+			
+		Object* obj = GameState::player;
+		int len = sizeof(Packet::update_objects) + sizeof(Object);
+		ENetPacket* pkt = enet_packet_create(nullptr, len, 0);
+		Packet::update_objects *p = new (pkt->data) Packet::update_objects;
+		p->num_objects = 1;
+		memcpy(pkt->data+sizeof(Packet::update_objects), obj, sizeof(Object));
+		enet_peer_send(host, Channel::data, pkt);
+	}
+	
 	void cleanup() {
 		enet_host_destroy(client);
 	}
 	
+	Ship::Chassis *chassis = nullptr;
 	void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
-		cout << "rcv packet: " << pkt->data << endl;
+		Packet::Packet *bp = (Packet::Packet *)pkt->data;
+		switch(bp->type) {
+			case PacketType::new_client: {
+				Packet::new_client *nc = (Packet::new_client *)pkt->data;
+				cout << "your client id is: " << nc->new_id << endl;
+				GameState::player->SetId(nc->new_id);
+				break;
+			}
+			case PacketType::update_objects: {
+				Packet::update_objects *nc = (Packet::update_objects *)pkt->data;
+				if(nc->num_objects * sizeof(Object) > pkt->dataLength) return;
+				Object* objs = (Object*)(pkt->data+sizeof(Packet::update_objects));
+				cout << "updating objects " << nc->num_objects << endl;
+				for(int i=0; i < nc->num_objects; i++) {
+					Object &o = objs[i];
+					if(GameState::player->GetId() == o.GetId()) continue;
+					if(GameState::ships.find(o.GetId()) == GameState::ships.end()) {
+						cout << "added new ship" << endl;
+						if(!chassis)
+							chassis = new Ship::Chassis("main_ship", "ship_01_skin.png", "ship_01_skin.png");
+						GameState::ships[o.GetId()] = new Ship({0,0}, 0, *chassis);
+					}
+					GameState::ships[o.GetId()]->CopyObjectState(o);
+					const glm::vec2 pos = GameState::ships[o.GetId()]->GetPosition();
+					cout << o.GetId() << ": " << pos.x << ", " << pos.y << endl;
+				}
+				break;
+			}
+		}
 	}
 	
 }
-
-
-
-
-
-

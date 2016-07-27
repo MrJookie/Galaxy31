@@ -1,5 +1,6 @@
 #include "App.hpp"
 #include "Network.hpp"
+#include "GameState.hpp"
 App::App() {
 	m_initialWindowSize = glm::vec2(1024, 768);
     this->setWindowSize(m_initialWindowSize);
@@ -109,6 +110,7 @@ void App::init() {
 
 	Ship::Chassis chassis("main_ship", "ship_01_skin.png", "ship_01_skin.png");
     Ship ship(glm::vec2(0, 0), 0.0, chassis);
+    GameState::player = &ship;
     Ship ship2(glm::vec2(0, 0), 0.0, chassis);
     
     int skipMouseResolution = 0;
@@ -316,9 +318,17 @@ void App::init() {
 		if(std::abs(ship.GetPosition().y) >= GameState::worldSize.y && std::abs(this->getWorldMousePosition().y) >= std::abs(ship.GetPosition().y)) {
 			ship.SetSpeed(glm::vec2(ship.GetSpeed().x, 0));
 		}
-		Network::send_message("hehehe");
+		// Network::send_message("hehehe");
 		Network::handle_events(5);
 		ship.Process2();
+		
+		Network::SendOurState();
+		
+		for(auto obj : GameState::ships) {
+			Object* o = (Object*)obj.second;
+			o->Process();
+		}
+		
 		for(auto it = GameState::projectiles.begin(); it != GameState::projectiles.end(); it++) {
 			it->Process();
 			if(it->IsDead()) {
@@ -334,8 +344,15 @@ void App::init() {
         GameState::camera.SetProjection(projection);
         GameState::camera.SetView(view);
         
+        Network::SendOurState();
+		
+		for(auto obj : GameState::ships) {
+			obj.second->Draw();
+		}
+        
+        
         ship.Draw();
-        ship2.Draw();
+        // ship2.Draw();
         
         for(Projectile& projectile : GameState::projectiles) {
 			projectile.Draw();
