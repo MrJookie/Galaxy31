@@ -44,12 +44,12 @@ static ENetHost* host;
 static uint32_t last_id = 0;
 static std::map<ENetPeer*, Player*> players;
 
-std::mutex mtx;
+std::mutex host_mutex;
 
 void server_wait_for_packet() {
     ENetEvent event;
     /* Wait up to 1000 milliseconds for an event. */
-    std::unique_lock<std::mutex> l(mtx);
+    std::unique_lock<std::mutex> l(host_mutex);
     while(enet_host_service(host, &event, timeout) > 0) {
         switch(event.type) {
         case ENET_EVENT_TYPE_CONNECT:
@@ -68,6 +68,7 @@ void server_wait_for_packet() {
 			cout << "event: " << event.type << endl;
         }
     }
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
 }
 
 
@@ -84,7 +85,7 @@ void server_work() {
 			std::this_thread::sleep_for(std::chrono::milliseconds(5));
 			continue;
 		} else {
-			std::unique_lock<std::mutex> l(mtx);
+			std::unique_lock<std::mutex> l(host_mutex);
 			if(!packets.empty()) {
 				packet = packets.front();
 				packets.pop();				
@@ -101,7 +102,7 @@ void server_work() {
 		
 		std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
 		if(now - last_status_update > std::chrono::milliseconds(50)) {
-			std::unique_lock<std::mutex> l(mtx);
+			std::unique_lock<std::mutex> l(host_mutex);
 			last_status_update = now;
 			send_states();
 			// cout << "sending states\n";
@@ -190,7 +191,7 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 			Packet::update_objects* packet = (Packet::update_objects*)pkt->data;
 			if(packet->num_objects != 1) return;
 			
-			std::unique_lock<std::mutex> l(mtx);
+			std::unique_lock<std::mutex> l(host_mutex);
 			p.obj.push_back( *(Object*)(pkt->data + sizeof(Packet::update_objects)) );
 			// cout << "receiving states from " << p.id << "\n";
 			break;
