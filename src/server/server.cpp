@@ -102,7 +102,7 @@ void server_work() {
 		}
 		
 		std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
-		if(now - last_status_update > std::chrono::milliseconds(10)) {
+		if(now - last_status_update > std::chrono::milliseconds(50)) {
 			std::unique_lock<std::mutex> l(mtx);
 			last_status_update = now;
 			send_states();

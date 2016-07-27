@@ -146,7 +146,7 @@ namespace Network {
 					}
 					o.Process((float)peer->roundTripTime * 0.5f * 0.001f);
 					// GameState::ships[o.GetId()]->CopyObjectState(o);
-					GameState::ships[o.GetId()]->InterpolateToState(o, 0.1f);
+					GameState::ships[o.GetId()]->InterpolateToState(o, 0.08f);
 					const glm::vec2 pos = GameState::ships[o.GetId()]->GetPosition();
 					cout << o.GetId() << ": " << pos.x << ", " << pos.y << endl;
 				}
