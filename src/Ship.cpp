@@ -101,9 +101,7 @@ void Ship::Process2() {
 	
 	// this->Accelerate( -this->GetSpeed() * m_downshift_coefficient * float(GameState::deltaTime) );
 
-	if(glm::length(this->GetSpeed()) > m_max_speed_coefficient) {
-		this->SetSpeed(glm::normalize(this->GetSpeed()) * m_max_speed_coefficient);
-	}
+	
 		
 	if(state[SDL_SCANCODE_W]) {
 		
@@ -120,6 +118,10 @@ void Ship::Process2() {
 	}
 
     Object::Process();
+    
+    if(glm::length(this->GetSpeed()) > m_max_speed_coefficient) {
+		this->SetSpeed(glm::normalize(this->GetSpeed()) * m_max_speed_coefficient);
+	}
 }
 
 void Ship::Fire() {

@@ -32,7 +32,7 @@ App::~App() {
 
 void App::init() {
     Network::initialize();
-    Network::connect("89.177.76.215", 1234);
+    Network::connect("127.0.0.1", 1234);
     if(SDL_Init(SDL_INIT_EVERYTHING) != 0) {
         throw std::string("Failed to initialize SDL: ") + SDL_GetError();
     }
@@ -227,9 +227,10 @@ void App::init() {
 			int pointY = (ship.GetPosition().y / (2 * GameState::worldSize.y) * canvas_size.y) + canvas_size.y/2.0f;
 			draw_list->AddCircleFilled(ImVec2(canvas_pos.x + pointX, canvas_pos.y + pointY), 2.0f, 0xFF00FFFF, 12);
 			
-			for(auto obj : GameState::ships) {
-				int pointX = (obj.second->GetPosition().x / (2 * GameState::worldSize.x) * canvas_size.x) + canvas_size.x/2.0f;
-				int pointY = (obj.second->GetPosition().y / (2 * GameState::worldSize.y) * canvas_size.y) + canvas_size.y/2.0f;
+			for(auto& obj : GameState::ships) {
+				auto& o = obj.second.first;
+				int pointX = (o->GetPosition().x / (2 * GameState::worldSize.x) * canvas_size.x) + canvas_size.x/2.0f;
+				int pointY = (o->GetPosition().y / (2 * GameState::worldSize.y) * canvas_size.y) + canvas_size.y/2.0f;
 				draw_list->AddCircleFilled(ImVec2(canvas_pos.x + pointX, canvas_pos.y + pointY), 2.0f, 0xFF0000FF, 12);
 			}
 
@@ -327,9 +328,31 @@ void App::init() {
 		
 		Network::SendOurState();
 		
-		for(auto obj : GameState::ships) {
-			Object* o = (Object*)obj.second;
-			o->Process();
+		// handle multiplayer states interpolation (this code should be moved elsewhere later)
+		for(auto& obj : GameState::ships) {
+			auto& p = obj.second;
+			
+			while(p.second.size() > 1 && p.second.front().GetTicks() <= p.first->GetTicks()) {
+				// std::cout << "poping : " << p.second.size() << std::endl;
+				p.second.pop();
+			}
+			
+			if(!p.second.empty() && p.second.front().GetTicks() <= p.first->GetTicks()) {
+				// std::cout << "copy state\n";
+				p.first->CopyObjectState(p.second.front());
+				p.second.pop();
+			}
+			
+			
+			if(p.second.empty()) {
+				// cout << "processing\n";
+				((Object*)p.first)->Process();
+			} else {
+				// std::cout << "interpolating [" << p.second.size() << "] : " << (GameState::deltaTime * 1000.0) << "  (" << p.second.front().GetTicks() << ", " << p.first->GetTicks() << ")\n";
+				p.first->InterpolateToState(p.second.front(), (GameState::deltaTime*1000.0 / ((float)p.second.front().GetTicks() - (float)p.first->GetTicks()) ) );
+			}
+			p.first->AddTicks( std::round(GameState::deltaTime * 1000.0) );
+			
 		}
 		
 		for(auto it = GameState::projectiles.begin(); it != GameState::projectiles.end(); it++) {
@@ -348,8 +371,8 @@ void App::init() {
         
         Network::SendOurState();
 		
-		for(auto obj : GameState::ships) {
-			obj.second->Draw();
+		for(auto& obj : GameState::ships) {
+			obj.second.first->Draw();
 		}
         
         

@@ -7,6 +7,8 @@
 #include "Object.hpp"
 #include "Ship.hpp"
 #include <vector>
+#include <utility>
+#include <queue>
 #include <map>
 
 namespace GameState {
@@ -24,7 +26,9 @@ namespace GameState {
 	extern Asset asset;
 	extern Camera camera;
 	extern Ship *player;
-	extern std::map<unsigned int,Ship*> ships;
+	
+	
+	extern std::map< unsigned int, std::pair<Ship*, std::queue<Object>> > ships;
 }
 
 #endif

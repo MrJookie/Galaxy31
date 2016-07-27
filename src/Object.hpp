@@ -31,6 +31,10 @@ class Object {
 		void Process(float dt = 0);
 		unsigned int GetId() { return id; }
 		void SetId(unsigned int id) { this->id = id; }
+		unsigned int GetTicks() { return m_ticks; }
+		unsigned int SetTicks(unsigned int tick) { m_ticks = tick; }
+		unsigned int AddTicks(unsigned int tick) { m_ticks += tick; }
+		void UpdateTicks();
 
 	protected:
 		unsigned int id;
@@ -39,6 +43,7 @@ class Object {
 		float m_rotation;
 		float m_rotation_speed;
 		glm::vec2 m_speed;
+		unsigned int m_ticks;
 		
 		glm::vec2 m_acceleration;
 		

@@ -107,6 +107,7 @@ namespace Network {
 		}
 			
 		Object* obj = GameState::player;
+		obj->UpdateTicks();
 		int len = sizeof(Packet::update_objects) + sizeof(Object);
 		ENetPacket* pkt = enet_packet_create(nullptr, len, 0);
 		Packet::update_objects *p = new (pkt->data) Packet::update_objects;
@@ -119,6 +120,7 @@ namespace Network {
 		enet_host_destroy(client);
 	}
 	
+	int max_queue = 10000;
 	Ship::Chassis *chassis = nullptr;
 	void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 		Packet::Packet *bp = (Packet::Packet *)pkt->data;
@@ -133,24 +135,29 @@ namespace Network {
 				Packet::update_objects *nc = (Packet::update_objects *)pkt->data;
 				if(nc->num_objects * sizeof(Object) > pkt->dataLength) return;
 				Object* objs = (Object*)(pkt->data+sizeof(Packet::update_objects));
-				cout << "updating objects " << nc->num_objects << endl;
+				// cout << "updating objects " << nc->num_objects << endl;
 				for(int i=0; i < nc->num_objects; i++) {
 					Object &o = objs[i];
+					
 					if(GameState::player->GetId() == o.GetId()) continue;
+					
+					
 					if(GameState::ships.find(o.GetId()) == GameState::ships.end()) {
 						cout << "added new ship" << endl;
 						if(!chassis)
 							chassis = new Ship::Chassis("main_ship", "ship_01_skin.png", "ship_01_skin.png");
 						Ship *s = new Ship({0,0}, 0, *chassis);
-						GameState::ships[o.GetId()] = s;
+						s->CopyObjectState(o);
+						GameState::ships[o.GetId()] = std::pair<Ship*, std::queue<Object>>(s, std::queue<Object>());
+					} else {
+						std::queue<Object> &q = GameState::ships[o.GetId()].second;
+						while(q.size() > max_queue)
+							q.pop();
+						
+						q.push(o);
 					}
-					o.Process((float)peer->roundTripTime * 0.5f * 0.001f);
-					// GameState::ships[o.GetId()]->CopyObjectState(o);
-					GameState::ships[o.GetId()]->InterpolateToState(o, 0.05f);
-					const glm::vec2 pos = GameState::ships[o.GetId()]->GetPosition();
-					cout << o.GetId() << ": " << pos.x << ", " << pos.y << endl;
 				}
-				cout << "rtt: " << peer->roundTripTime << endl;
+				// cout << "ping: " << peer->roundTripTime << endl;
 				break;
 			}
 		}

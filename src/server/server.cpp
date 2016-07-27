@@ -36,14 +36,13 @@ static std::queue<std::pair<ENetPacket*, ENetPeer*>> packets;
 
 struct Player {
 	uint32_t id;
-	Object obj;
-	std::chrono::high_resolution_clock::time_point last_obj_update;
+	std::vector<Object> obj;
 };
 
 // local data (statics)
 static ENetHost* host;
 static uint32_t last_id = 0;
-static std::map<ENetPeer*, Player> players;
+static std::map<ENetPeer*, Player*> players;
 
 
 
@@ -59,7 +58,6 @@ void server_wait_for_packet() {
             break;
         case ENET_EVENT_TYPE_RECEIVE:
             packets.emplace(event.packet, event.peer);
-
             break;
 
         case ENET_EVENT_TYPE_DISCONNECT:
@@ -98,7 +96,7 @@ void server_work() {
 		
 		if(packet.first) {
 			parse_packet(packet.second, packet.first);
-			enet_packet_destroy(packet.first);			
+			enet_packet_destroy(packet.first);
 		}
 		
 		std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
@@ -152,32 +150,41 @@ void handle_new_client(ENetPeer* peer) {
 	ENetPacket* pkt = enet_packet_create( &cl, sizeof(cl), ENET_PACKET_FLAG_RELIABLE );
 	enet_peer_send(peer, Channel::control, pkt);
 	
-	Player player;
-	player.id = last_id;
+	Player* player = new Player;
+	player->id = last_id;
 	players[peer] = player;
 }
 
 void remove_client(ENetPeer* peer) {
-	cout << "removing client " << players[peer].id << endl;
+	cout << "removing client " << players[peer]->id << endl;
+	delete players[peer];
 	players.erase( peer );
 }
 
 void send_states() {
-	int len = sizeof(Packet::update_objects) + sizeof(Object)*players.size();
+	int len = sizeof(Packet::update_objects);
+	
+	int num_objects = 0;
+	for(auto& p : players) {
+		num_objects += p.second->obj.size();
+	}
+	len += sizeof(Object) * num_objects;
+	
 	ENetPacket* pkt = enet_packet_create( nullptr, len, 0);
 	int i=0;
 	Packet::update_objects *upd = new (pkt->data) Packet::update_objects;
-	upd->num_objects = players.size();
+	upd->num_objects = num_objects;
 	Object* obj = (Object*)(pkt->data + sizeof(Packet::update_objects));
-	auto now = std::chrono::high_resolution_clock::now();
-	for(auto p : players) {
-		p.second.obj.Process(std::chrono::duration_cast<std::chrono::seconds>(now - p.second.last_obj_update).count());
-		p.second.last_obj_update = now;
-		obj[i] = p.second.obj;
-		obj[i].SetId(p.second.id);
-		i++;
+	for(auto& p : players) {
+		for(auto& o : p.second->obj) {
+			obj[i] = o;
+			obj[i].SetId(p.second->id);
+			i++;
+		}
+		p.second->obj.clear();
 	}
 	enet_host_broadcast(host, Channel::data, pkt);
+	enet_host_flush(host);
 }
 
 void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
@@ -186,12 +193,12 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 	Packet::Packet *ppkt = (Packet::Packet*)pkt->data;
 	switch(ppkt->type) {
 		case PacketType::update_objects: {
-			Player& p = players[peer];
+			Player& p = *players[peer];
 			Packet::update_objects* packet = (Packet::update_objects*)pkt->data;
 			if(packet->num_objects != 1) return;
-			p.obj = *(Object*)(pkt->data + sizeof(Packet::update_objects));
-			p.obj.Process((float)peer->roundTripTime * 0.001f * 0.5f);
-			p.last_obj_update = std::chrono::high_resolution_clock::now();
+			
+			std::unique_lock<std::mutex> l(mtx);
+			p.obj.push_back( *(Object*)(pkt->data + sizeof(Packet::update_objects)) );
 			// cout << "receiving states from " << p.id << "\n";
 			break;
 		}

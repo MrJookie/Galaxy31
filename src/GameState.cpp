@@ -15,5 +15,5 @@ namespace GameState {
 	Camera camera(glm::vec3(0.0f, 0.0f, 0.0f));
 	std::vector<Projectile> projectiles;
 	Ship* player;
-	std::map<unsigned int,Ship*> ships;
+	std::map< unsigned int, std::pair<Ship*, std::queue<Object>> > ships;
 }
