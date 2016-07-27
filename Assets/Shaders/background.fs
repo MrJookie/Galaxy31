@@ -6,13 +6,13 @@ uniform float time;
 
 out vec4 color;
 
-float Hash(float i) {
-	return fract((1.0 + sin(i)));
+float hashIndex(float i) {
+	return fract((1.0 + sin(i)) * 123);
 }
 
-float Noise2d(in vec2 i) {
-    float x = Hash(i.x * 50.0);
-    float y = Hash(i.y * 50.0);
+float randomNoise(in vec2 i) {
+    float x = hashIndex(i.x * 50.0);
+    float y = hashIndex(i.y * 50.0);
     return fract(x + y);
 }
 
@@ -23,7 +23,7 @@ void main() {
     vec3 finalColor = vec3(0.0);
 
     float threshold = 0.999;
-    float star = Noise2d(samplePosition);
+    float star = randomNoise(samplePosition);
     if (star >= threshold) {
         star = pow((star - threshold) / (1.0 - threshold), 2.0);
 		finalColor += vec3(star * cos(time * star));

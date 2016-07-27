@@ -2,14 +2,21 @@
 #define SHIP_HPP
 
 #include "Asset.hpp"
+#include "GameState.hpp"
 #include "Object.hpp"
 #include "Sprite.hpp"
 
 class Ship : public Object {
 	public:
 		struct Chassis {
-			Chassis();
-			Chassis(std::string _name, std::string _texture, std::string _skin);
+			Chassis(){}
+			Chassis(std::string _name, std::string _texture, std::string _skin) {
+				name = _name;
+				Asset::Texture tex = GameState::asset.GetTexture(_texture);
+				texture = tex.id;
+				skin = GameState::asset.GetTexture(_skin).id;
+				sprite.SetSize(tex.size);
+			}
 			std::string name;
 			GLuint texture;
 			GLuint skin;
@@ -18,7 +25,6 @@ class Ship : public Object {
 			Sprite sprite;
 		};
 
-		Ship() {}
 		Ship(glm::vec2 position, float rotation, const Chassis& chassis);
 		~Ship();
 		
@@ -31,6 +37,12 @@ class Ship : public Object {
 	private:
 		Chassis m_chassis;
 		float m_rotation_speed_coefficient;
+		int m_max_distance_acceleration;
+		float m_downshift_coefficient;
+		float m_max_speed_coefficient;
+		float m_acceleration_speed_coefficient;
+		float m_brake_coefficient;
+		float m_engine_propulsion_coefficient;
 		bool m_stabilizers_on;
 		Sprite m_engine_propulsion;
 };
