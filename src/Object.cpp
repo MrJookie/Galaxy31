@@ -22,7 +22,7 @@ void Object::SetSpeed(glm::vec2 speed) {
     m_speed = speed;
 }
 
-void Object::SetAcceleration(float acceleration) {
+void Object::SetAcceleration(glm::vec2 acceleration) {
     m_acceleration = acceleration;
 }
 
@@ -42,7 +42,7 @@ glm::vec2 Object::GetSpeed() const {
     return m_speed;
 }
 
-float Object::GetAcceleration() const {
+glm::vec2 Object::GetAcceleration() const {
     return m_acceleration;
 }
 
@@ -51,13 +51,13 @@ void Object::Accelerate(glm::vec2 acceleration) {
     m_last_acceleration = glm::length(acceleration);
 }
 
-void Object::Process(double dt) {
+void Object::Process(float dt) {
 	#ifndef SERVER
 	if(dt == 0)
 		dt = GameState::deltaTime;
 	#endif
-	m_position.x = m_position.x + dt * m_speed.x;
-	m_position.y = m_position.y + dt * m_speed.y;
+	m_speed += m_acceleration * dt;
+	m_position += m_speed * dt;
 	m_rotation += m_rotation_speed * dt;
 }
 

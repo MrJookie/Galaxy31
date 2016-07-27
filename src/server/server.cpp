@@ -45,6 +45,7 @@ static uint32_t last_id = 0;
 static std::map<ENetPeer*, Player> players;
 
 
+
 void server_wait_for_packet() {
     ENetEvent event;
     /* Wait up to 1000 milliseconds for an event. */

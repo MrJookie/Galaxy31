@@ -6,7 +6,7 @@ Ship::Ship(glm::vec2 position, float rotation, const Chassis& chassis) {
 	m_position = position;
 	m_rotation = rotation;
 	m_speed = glm::vec2(0);
-	m_acceleration = 0.001;
+	m_acceleration = {0,0};
 	m_last_acceleration = 0;
 	m_chassis = chassis;
 	m_chassis.sprite = std::move(chassis.sprite);
@@ -19,7 +19,7 @@ Ship::Ship(glm::vec2 position, float rotation, const Chassis& chassis) {
 	m_max_distance_acceleration = 768;
 	m_downshift_coefficient = 0.8f;
 	m_max_speed_coefficient = 6000.0f;
-	m_acceleration_speed_coefficient = 5000.0f;
+	m_acceleration_speed_coefficient = 10.0f;
 	m_brake_coefficient = 4.0f;
 	m_engine_propulsion_coefficient = 6.2f;
 	m_engine_propulsion.SetTexture(GameState::asset.GetTexture("propulsion.png"));
@@ -104,7 +104,7 @@ void Ship::Process2() {
 
 	if(state[SDL_SCANCODE_W]) {
 		if(glm::length(this->GetSpeed()) < m_max_speed_coefficient) {
-			this->Accelerate(direction * distance * this->GetAcceleration() * m_acceleration_speed_coefficient * float(GameState::deltaTime));
+			this->Accelerate(direction * distance * m_acceleration_speed_coefficient * float(GameState::deltaTime));
 		}
 	}
 	

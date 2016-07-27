@@ -24,7 +24,7 @@ namespace GameState {
 	extern Asset asset;
 	extern Camera camera;
 	extern Ship *player;
-	extern std::map<uint,Ship*> ships;
+	extern std::map<unsigned int,Ship*> ships;
 }
 
 #endif

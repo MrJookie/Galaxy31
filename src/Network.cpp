@@ -149,6 +149,7 @@ namespace Network {
 					const glm::vec2 pos = GameState::ships[o.GetId()]->GetPosition();
 					cout << o.GetId() << ": " << pos.x << ", " << pos.y << endl;
 				}
+				cout << "rtt: " << peer->roundTripTime << endl;
 				break;
 			}
 		}
