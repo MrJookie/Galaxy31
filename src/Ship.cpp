@@ -101,11 +101,14 @@ void Ship::Process2() {
 	
 	// this->Accelerate( -this->GetSpeed() * m_downshift_coefficient * float(GameState::deltaTime) );
 
+	if(glm::length(this->GetSpeed()) > m_max_speed_coefficient) {
+		this->SetSpeed(glm::normalize(this->GetSpeed()) * m_max_speed_coefficient);
+	}
+		
 	if(state[SDL_SCANCODE_W]) {
-		if(glm::length(this->GetSpeed()) < m_max_speed_coefficient) {
-			// this->Accelerate(direction * distance * m_acceleration_speed_coefficient * float(GameState::deltaTime));
-			this->SetAcceleration(direction * distance * m_acceleration_speed_coefficient);
-		}
+		
+		// this->Accelerate(direction * distance * m_acceleration_speed_coefficient * float(GameState::deltaTime));
+		this->SetAcceleration(direction * distance * m_acceleration_speed_coefficient);
 	} else {
 		// dampening
 		this->SetAcceleration(this->GetAcceleration() *  0.95f);

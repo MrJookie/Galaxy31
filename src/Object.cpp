@@ -67,8 +67,8 @@ void Object::SetRotationSpeed( float rotation_speed ) {
 void Object::InterpolateToState(Object &obj, float interpolation) {
 	m_speed += (obj.m_speed - m_speed) * interpolation;
 	m_position += (obj.m_position - m_position) * interpolation;
-	m_rotation = (obj.m_rotation - m_rotation) * interpolation;
-	m_rotation_speed = (obj.m_rotation_speed - m_rotation) * interpolation;
+	m_rotation += (obj.m_rotation - m_rotation) * interpolation;
+	m_rotation_speed = obj.m_rotation_speed;
 	m_acceleration += (obj.m_acceleration - m_acceleration) * interpolation;
 }
 
