@@ -44,12 +44,12 @@ static ENetHost* host;
 static uint32_t last_id = 0;
 static std::map<ENetPeer*, Player*> players;
 
-
+std::mutex mtx;
 
 void server_wait_for_packet() {
     ENetEvent event;
     /* Wait up to 1000 milliseconds for an event. */
-    
+    std::unique_lock<std::mutex> l(mtx);
     while(enet_host_service(host, &event, timeout) > 0) {
         switch(event.type) {
         case ENET_EVENT_TYPE_CONNECT:
@@ -71,7 +71,7 @@ void server_wait_for_packet() {
 }
 
 
-std::mutex mtx;
+
 std::chrono::high_resolution_clock::time_point last_status_update = std::chrono::high_resolution_clock::now();
 void server_work() {
 	{
@@ -113,17 +113,9 @@ void server_work() {
 void server_start(short port) {
     ENetAddress address;
     ENetHost * server;
-    /* Bind the server to the default localhost.     */
-    /* A specific host address can be specified by   */
-    /* enet_address_set_host (&address, "x.x.x.x"); */
     address.host = ENET_HOST_ANY;
-    /* Bind the server to port 1234. */
     address.port = port;
-    server = enet_host_create(&address /* the address to bind the server host to */,
-                              32      /* allow up to 32 clients and/or outgoing connections */,
-                              Channel::num_channels      /* allow up to 2 channels to be used, 0 and 1 */,
-                              0      /* assume any amount of incoming bandwidth */,
-                              0      /* assume any amount of outgoing bandwidth */);
+    server = enet_host_create(&address,32,Channel::num_channels,0,0);
 	host = server;
     if(server == NULL) {
         fprintf(stderr,
@@ -183,6 +175,7 @@ void send_states() {
 		}
 		p.second->obj.clear();
 	}
+	
 	enet_host_broadcast(host, Channel::data, pkt);
 	enet_host_flush(host);
 }
