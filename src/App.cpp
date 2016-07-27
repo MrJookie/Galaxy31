@@ -313,10 +313,12 @@ void App::init() {
         
         //some rounding error? (still moving ship outside of the world, check some corner)
         if(std::abs(ship.GetPosition().x) >= GameState::worldSize.x && std::abs(this->getWorldMousePosition().x) >= std::abs(ship.GetPosition().x)) {
+			// ship.SetAcceleration({0,0});
 			ship.SetSpeed(glm::vec2(0, ship.GetSpeed().y));
 		}
 		
 		if(std::abs(ship.GetPosition().y) >= GameState::worldSize.y && std::abs(this->getWorldMousePosition().y) >= std::abs(ship.GetPosition().y)) {
+			// ship.SetAcceleration({0,0});
 			ship.SetSpeed(glm::vec2(ship.GetSpeed().x, 0));
 		}
 		// Network::send_message("hehehe");

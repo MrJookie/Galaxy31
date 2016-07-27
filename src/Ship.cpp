@@ -19,7 +19,7 @@ Ship::Ship(glm::vec2 position, float rotation, const Chassis& chassis) {
 	m_max_distance_acceleration = 768;
 	m_downshift_coefficient = 0.8f;
 	m_max_speed_coefficient = 6000.0f;
-	m_acceleration_speed_coefficient = 10.0f;
+	m_acceleration_speed_coefficient = 3.0f;
 	m_brake_coefficient = 4.0f;
 	m_engine_propulsion_coefficient = 6.2f;
 	m_engine_propulsion.SetTexture(GameState::asset.GetTexture("propulsion.png"));
@@ -71,7 +71,7 @@ void Ship::Process() {
 		this->Accelerate( -m_speed * 0.2f * float(GameState::deltaTime) );
 	} else {
 		if(distance > (this->GetSize().y * 0.5)) {
-			this->Accelerate(direction * distance * this->GetAcceleration());
+			this->Accelerate(direction * distance * m_acceleration_speed_coefficient*0.001f);
 		}
 	}
 	
@@ -100,12 +100,16 @@ void Ship::Process2() {
 		distance = m_max_distance_acceleration;
 	}
 	
-	this->Accelerate( -this->GetSpeed() * m_downshift_coefficient * float(GameState::deltaTime) );
+	// this->Accelerate( -this->GetSpeed() * m_downshift_coefficient * float(GameState::deltaTime) );
 
 	if(state[SDL_SCANCODE_W]) {
 		if(glm::length(this->GetSpeed()) < m_max_speed_coefficient) {
-			this->Accelerate(direction * distance * m_acceleration_speed_coefficient * float(GameState::deltaTime));
+			// this->Accelerate(direction * distance * m_acceleration_speed_coefficient * float(GameState::deltaTime));
+			this->SetAcceleration(direction * distance * m_acceleration_speed_coefficient);
 		}
+	} else {
+		// dampening
+		this->SetAcceleration(this->GetAcceleration() *  0.5f);
 	}
 	
 	if(state[SDL_SCANCODE_S]) {
