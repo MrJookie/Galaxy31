@@ -100,7 +100,7 @@ void server_work() {
 		}
 		
 		std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
-		if(now - last_status_update > std::chrono::milliseconds(100)) {
+		if(now - last_status_update > std::chrono::milliseconds(10)) {
 			send_states();
 			last_status_update = now;
 			// cout << "sending states\n";

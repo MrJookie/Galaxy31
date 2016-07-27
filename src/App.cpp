@@ -111,7 +111,6 @@ void App::init() {
 	Ship::Chassis chassis("main_ship", "ship_01_skin.png", "ship_01_skin.png");
     Ship ship(glm::vec2(0, 0), 0.0, chassis);
     GameState::player = &ship;
-    Ship ship2(glm::vec2(0, 0), 0.0, chassis);
     
     int skipMouseResolution = 0;
 
@@ -228,10 +227,12 @@ void App::init() {
 			int pointY = (ship.GetPosition().y / (2 * GameState::worldSize.y) * canvas_size.y) + canvas_size.y/2.0f;
 			draw_list->AddCircleFilled(ImVec2(canvas_pos.x + pointX, canvas_pos.y + pointY), 2.0f, 0xFF00FFFF, 12);
 			
-			int point2X = (ship2.GetPosition().x / (2 * GameState::worldSize.x) * canvas_size.x) + canvas_size.x/2.0f;
-			int point2Y = (ship2.GetPosition().y / (2 * GameState::worldSize.y) * canvas_size.y) + canvas_size.y/2.0f;
-			draw_list->AddCircleFilled(ImVec2(canvas_pos.x + point2X, canvas_pos.y + point2Y), 2.0f, 0xFF0000FF, 12);
-			
+			for(auto obj : GameState::ships) {
+				int pointX = (obj.second->GetPosition().x / (2 * GameState::worldSize.x) * canvas_size.x) + canvas_size.x/2.0f;
+				int pointY = (obj.second->GetPosition().y / (2 * GameState::worldSize.y) * canvas_size.y) + canvas_size.y/2.0f;
+				draw_list->AddCircleFilled(ImVec2(canvas_pos.x + pointX, canvas_pos.y + pointY), 2.0f, 0xFF0000FF, 12);
+			}
+
 			draw_list->PushClipRect(canvas_pos, ImVec2(canvas_pos.x+canvas_size.x, canvas_pos.y+canvas_size.y));      // clip lines within the canvas (if we resize it, etc.)
 			draw_list->PopClipRect();
 		}
@@ -336,7 +337,6 @@ void App::init() {
 				if(it == GameState::projectiles.end()) break;
 			}
 		}
-        //ship2.Process();
 
         GameState::camera.SetPosition( glm::vec3(ship.GetPosition().x, ship.GetPosition().y, 0) );
         glm::mat4 projection = glm::ortho(-(float)this->getWindowSize().x*this->getZoom()*0.5, (float)this->getWindowSize().x*this->getZoom()*0.5, (float)this->getWindowSize().y*this->getZoom()*0.5, -(float)this->getWindowSize().y*this->getZoom()*0.5);
@@ -352,7 +352,6 @@ void App::init() {
         
         
         ship.Draw();
-        // ship2.Draw();
         
         for(Projectile& projectile : GameState::projectiles) {
 			projectile.Draw();
