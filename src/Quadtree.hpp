@@ -3,6 +3,7 @@
 
 #include <vector>
 #include "Object.hpp"
+#include "GameState.hpp"
 using std::vector;
 
 class Quadtree {
@@ -27,6 +28,7 @@ public:
 	void				Clear();
 
 	vector<Object*>			GetObjectsAt( double x, double y );
+	void Draw();
 
 private:
 	double				left;
@@ -52,6 +54,9 @@ private:
 	void				createLeaves();
 
 	void				moveObjectsToLeaves();
+	
+	
+	void Draw_Rect(int x, int y, int w, int h);
 	
 };
 

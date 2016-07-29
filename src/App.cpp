@@ -21,9 +21,9 @@ void Draw_Rect(int x, int y, int w, int h) {
     modelMat = glm::translate(modelMat, glm::vec3(glm::vec2(x,y), 0.0f));
     modelMat = glm::scale(modelMat, glm::vec3(glm::vec2(w,h), 1.0f));
 
-    glUniformMatrix4fv(glGetUniformLocation(GameState::asset.GetShader("sprite.vs").id, "model"), 1, GL_FALSE, glm::value_ptr(modelMat));
-    glUniformMatrix4fv(glGetUniformLocation(GameState::asset.GetShader("sprite.vs").id, "view"), 1, GL_FALSE, glm::value_ptr(GameState::camera.GetViewMatrix()));
-    glUniformMatrix4fv(glGetUniformLocation(GameState::asset.GetShader("sprite.vs").id, "projection"), 1, GL_FALSE, glm::value_ptr(GameState::camera.GetProjection()));
+    glUniformMatrix4fv(glGetUniformLocation(GameState::asset.GetShader("shader1.vs").id, "model"), 1, GL_FALSE, glm::value_ptr(modelMat));
+    glUniformMatrix4fv(glGetUniformLocation(GameState::asset.GetShader("shader1.vs").id, "view"), 1, GL_FALSE, glm::value_ptr(GameState::camera.GetViewMatrix()));
+    glUniformMatrix4fv(glGetUniformLocation(GameState::asset.GetShader("shader1.vs").id, "projection"), 1, GL_FALSE, glm::value_ptr(GameState::camera.GetProjection()));
     
     GLfloat positions[] = {
 		0.0,  1.0,
@@ -80,19 +80,19 @@ bool IsPixelAlpha(SDL_Surface *surface, int u , int v)
 
 bool Collides(SDL_Surface *as, int ax, int ay, SDL_Surface *bs, int bx, int by)
 {
-	ax = ax - as->w/2;
+	ax = ax - as->h/2;
 	ay = ay - as->h/2;
 	
-	bx = bx - bs->w/2;
+	bx = bx - bs->h/2;
 	by = by - bs->h/2;
 	
-	Draw_Rect(ax, ay, bs->w, bs->h);
-	Draw_Rect(bx, by, bs->w, bs->h);
+	Draw_Rect(ax, ay, bs->h, bs->h);
+	Draw_Rect(bx, by, bs->h, bs->h);
 	
-	int ax1 = ax + as->w ;
+	int ax1 = ax + as->h ;
 	int ay1 = ay + as->h ;
 
-	int bx1 = bx + bs->w ;
+	int bx1 = bx + bs->h ;
 	int by1 = by + bs->h ;
 
 	if((bx1 < ax) || (ax1 < bx))
@@ -231,7 +231,7 @@ void App::init() {
     Ship ship(glm::vec2(0, 0), 0.0, chassis);
     GameState::player = &ship;
     
-    Quadtree quadtree( -50000, 100000, -50000, 100000, 2 ) ;
+    Quadtree quadtree( -100000, 200000, -100000, 200000, 2 ) ;
     
     std::vector<Ship*> ships;
     
@@ -529,8 +529,6 @@ void App::init() {
 			bool colliding = false;
 			std::vector<Object*> nearObjects = quadtree.GetObjectsAt( ship.GetPosition().x, ship.GetPosition().y );
 			for(auto& object : nearObjects) {
-				object->SetRotation(30);
-
 				if(Collides(surf, ship.GetPosition().x, ship.GetPosition().y, surf, object->GetPosition().x, object->GetPosition().y)) {
 					colliding = true;
 				}
@@ -539,7 +537,7 @@ void App::init() {
             ImGui::Text("Quadtree::GetObjects: %i", nearObjects.size());
             ImGui::Text("Ship::Colliding: %s", colliding ? "true" : "false");
         }
-		
+		quadtree.Draw();
 		quadtree.Clear();
 
         ship.Draw();
