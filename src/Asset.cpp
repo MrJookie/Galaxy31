@@ -48,8 +48,9 @@ void Asset::LoadTexture(std::string fileName) {
 		m_textures[fileName].fileName = fileName;
 		m_textures[fileName].id = textureID;
 		m_textures[fileName].size = glm::vec2(image->w, image->h);
+		m_textures[fileName].image = image;
 
-		SDL_FreeSurface(image);
+		//SDL_FreeSurface(image);
 	} else {
 		//std::cout << "Texture: " << fileName << " already loaded!" << std::endl;
 	}
@@ -180,6 +181,7 @@ Mix_Chunk* Asset::GetSound(std::string fileName) {
 void Asset::FreeAssets() {
 	for(const auto& texture : m_textures) {
 		glDeleteTextures(1, &texture.second.id);
+		SDL_FreeSurface(texture.second.image);
 	}
 	
 	for(const auto& shader : m_shaders) {

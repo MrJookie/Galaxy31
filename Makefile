@@ -43,6 +43,7 @@ cpp := 	\
 		src/Ship.cpp									\
 		src/Projectile.cpp								\
 		src/Network.cpp									\
+		src/Quadtree.cpp								\
 
 
 release := release

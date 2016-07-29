@@ -27,6 +27,7 @@ class Asset {
 			std::string fileName;
 			GLuint id;
 			glm::vec2 size;
+			SDL_Surface* image;
 		};
 		
 		struct Shader {

@@ -26,7 +26,7 @@ void main() {
     float star = randomNoise(samplePosition);
     if (star >= threshold) {
         star = pow((star - threshold) / (1.0 - threshold), 2.0);
-		finalColor += vec3(star * cos(time * star));
+		finalColor += vec3(star * cos((time + 10.0) * star));
     }
 	
 	color = vec4(finalColor, 1.0);

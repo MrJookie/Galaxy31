@@ -21,7 +21,7 @@
 using std::cout;
 using std::endl;
 using std::thread;
-const int timeout = 5000;
+const int timeout = 1;
 std::mutex term;
 int nthread = 0;
 
@@ -95,7 +95,8 @@ void server_work() {
 			}
 		}
 		
-		if(packet.first) {
+		if(packet.second && (packet.second->state & ENET_PEER_STATE_CONNECTED > 0)) {
+		//if(packet.first) {
 			parse_packet(packet.second, packet.first);
 			enet_packet_destroy(packet.first);
 		}

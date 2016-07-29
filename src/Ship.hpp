@@ -27,6 +27,8 @@ class Ship : public Object {
 		void Fire();
 		void Stabilizers();
 		
+		Object* GetObject();
+		
 	private:
 		Chassis m_chassis;
 		float m_rotation_speed_coefficient;
