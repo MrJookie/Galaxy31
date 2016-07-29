@@ -3,6 +3,63 @@
 #include "GameState.hpp"
 #include "Quadtree.hpp"
 
+void Draw_Rect(int x, int y, int w, int h) {
+	GLuint vao, vbo_position, vbo_color;
+	glGenVertexArrays(1, &vao);
+	
+    glBindVertexArray(vao);
+    
+    glGenBuffers(1, &vbo_position);
+    glGenBuffers(1, &vbo_color);
+    
+    glBindVertexArray(0);
+    
+	glUseProgram(GameState::asset.GetShader("shader1.vs").id);
+	glBindVertexArray(vao);
+
+    glm::mat4 modelMat;
+    modelMat = glm::translate(modelMat, glm::vec3(glm::vec2(x,y), 0.0f));
+    modelMat = glm::scale(modelMat, glm::vec3(glm::vec2(w,h), 1.0f));
+
+    glUniformMatrix4fv(glGetUniformLocation(GameState::asset.GetShader("sprite.vs").id, "model"), 1, GL_FALSE, glm::value_ptr(modelMat));
+    glUniformMatrix4fv(glGetUniformLocation(GameState::asset.GetShader("sprite.vs").id, "view"), 1, GL_FALSE, glm::value_ptr(GameState::camera.GetViewMatrix()));
+    glUniformMatrix4fv(glGetUniformLocation(GameState::asset.GetShader("sprite.vs").id, "projection"), 1, GL_FALSE, glm::value_ptr(GameState::camera.GetProjection()));
+    
+    GLfloat positions[] = {
+		0.0,  1.0,
+		0.0,  0.0,
+		1.0,  0.0,
+		1.0,  1.0,
+	};
+
+	GLfloat colors[] = {
+		 1.0, 0.0, 0.0,
+		 1.0, 0.0, 0.0,
+		 1.0, 0.0, 0.0,
+		 1.0, 0.0, 0.0,
+	};
+   
+	glBindBuffer(GL_ARRAY_BUFFER, vbo_position);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(positions), positions, GL_STATIC_DRAW);
+	glEnableVertexAttribArray(0);    
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
+	
+	glBindBuffer(GL_ARRAY_BUFFER, vbo_color);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(colors), colors, GL_STATIC_DRAW);
+	glEnableVertexAttribArray(1);    
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
+
+	glDrawArrays(GL_LINE_LOOP, 0, 4);
+
+	glBindVertexArray(0);
+	glUseProgram(0);
+	
+	glDeleteBuffers(1, &vbo_position);
+    glDeleteBuffers(1, &vbo_color);
+
+    glDeleteVertexArrays(1, &vao);
+}
+
 bool IsPixelAlpha(SDL_Surface *surface, int u , int v)
 {
 	SDL_PixelFormat* pixelFormat = surface->format;
@@ -23,11 +80,20 @@ bool IsPixelAlpha(SDL_Surface *surface, int u , int v)
 
 bool Collides(SDL_Surface *as, int ax, int ay, SDL_Surface *bs, int bx, int by)
 {
-	int ax1 = ax + as->w - 1;
-	int ay1 = ay + as->h - 1;
+	ax = ax - as->w/2;
+	ay = ay - as->h/2;
+	
+	bx = bx - bs->w/2;
+	by = by - bs->h/2;
+	
+	Draw_Rect(ax, ay, bs->w, bs->h);
+	Draw_Rect(bx, by, bs->w, bs->h);
+	
+	int ax1 = ax + as->w ;
+	int ay1 = ay + as->h ;
 
-	int bx1 = bx + bs->w - 1;
-	int by1 = by + bs->h - 1;
+	int bx1 = bx + bs->w ;
+	int by1 = by + bs->h ;
 
 	if((bx1 < ax) || (ax1 < bx))
 		return false;
@@ -279,20 +345,6 @@ void App::init() {
 				quadtree.AddObject( ship->GetObject() );
 				ship->SetRotation(0);
 			}
-			
-            SDL_Surface *surf = GameState::asset.GetTexture("ship_01_skin.png").image;
-            bool colliding = false;
-            
-            std::vector<Object*> nearObjects = quadtree.GetObjectsAt( ship.GetPosition().x, ship.GetPosition().y );
-            for(auto& object : nearObjects) {
-				object->SetRotation(30);
-
-				if(Collides(surf, ship.GetPosition().x, ship.GetPosition().y, surf, object->GetPosition().x, object->GetPosition().y)) {
-					colliding = true;
-				}
-			}
-            ImGui::Text("Quadtree::GetObjects: %i", nearObjects.size());
-            ImGui::Text("Ship::Colliding: %s", colliding ? "true" : "false");
         }
         //ImGui::End();
         
@@ -329,6 +381,7 @@ void App::init() {
 			draw_list->PushClipRect(canvas_pos, ImVec2(canvas_pos.x+canvas_size.x, canvas_pos.y+canvas_size.y));      // clip lines within the canvas (if we resize it, etc.)
 			draw_list->PopClipRect();
 		}
+
 
         glViewport(0, 0, this->getWindowSize().x, this->getWindowSize().y);
         glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
@@ -471,22 +524,23 @@ void App::init() {
 			ship->Draw();
 		}
 		
-		/*
-        std::vector<Object*> nearObjects = quadtree.GetObjectsAt( ship.GetPosition().x, ship.GetPosition().y );
-        std::cout << nearObjects.size() << std::endl;
-        for(const auto& obj : nearObjects) {
-			//std::cout << "near objects: " << obj->GetPosition().x << ", " << obj->GetPosition().y << std::endl;
-		}
-		*/
+		{
+            SDL_Surface *surf = GameState::asset.GetTexture("ship_01_skin.png").image;
+			bool colliding = false;
+			std::vector<Object*> nearObjects = quadtree.GetObjectsAt( ship.GetPosition().x, ship.GetPosition().y );
+			for(auto& object : nearObjects) {
+				object->SetRotation(30);
+
+				if(Collides(surf, ship.GetPosition().x, ship.GetPosition().y, surf, object->GetPosition().x, object->GetPosition().y)) {
+					colliding = true;
+				}
+			}
+
+            ImGui::Text("Quadtree::GetObjects: %i", nearObjects.size());
+            ImGui::Text("Ship::Colliding: %s", colliding ? "true" : "false");
+        }
 		
 		quadtree.Clear();
-		
-		glm::mat4 modelMat(1.0f);
-		glUniformMatrix4fv(glGetUniformLocation(GameState::asset.GetShader("shader1.vs").id, "model"), 1, GL_FALSE, glm::value_ptr(modelMat));
-		glUniformMatrix4fv(glGetUniformLocation(GameState::asset.GetShader("shader1.vs").id, "view"), 1, GL_FALSE, glm::value_ptr(GameState::camera.GetViewMatrix()));
-		glUniformMatrix4fv(glGetUniformLocation(GameState::asset.GetShader("shader1.vs").id, "projection"), 1, GL_FALSE, glm::value_ptr(GameState::camera.GetProjection()));
-		
-		
 
         ship.Draw();
         
