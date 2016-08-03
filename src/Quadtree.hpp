@@ -11,9 +11,7 @@ class Quadtree {
 	public:
 		Quadtree(int left, int right, int top, int down, unsigned int maxObjects = 2, Quadtree* parent = nullptr);
 		~Quadtree();
-		
-		void GetAllObjects(Quadtree* parent, std::unordered_map<Object*, Quadtree*>& returnObjects);
-		
+				
 		void AddObject(Object* object);
 		void QueryRectangle(int x, int y, int w, int h, std::unordered_map<Object*, Quadtree*>& returnObjects);
 		void Draw();
@@ -27,7 +25,7 @@ class Quadtree {
 		int m_down;
 		bool m_isLeaf;
 		unsigned int m_maxObjects;
-
+		
 		std::vector<Object*> m_objects;
 		std::vector<std::unique_ptr<Quadtree>> m_children;
 		Quadtree* m_parent;

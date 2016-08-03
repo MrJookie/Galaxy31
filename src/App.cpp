@@ -325,7 +325,6 @@ void App::init() {
         glUniform2f(glGetUniformLocation(GameState::asset.GetShader("background.vs").id, "windowSize"), this->getWindowSize().x, this->getWindowSize().y);
         glUniform1f(glGetUniformLocation(GameState::asset.GetShader("background.vs").id, "time"), this->getTimeElapsed());
 
-        //glDrawArrays(GL_TRIANGLE_STRIP, 0, 6);
         glDrawElements(GL_TRIANGLE_STRIP, 6, GL_UNSIGNED_INT, 0);
         
         glBindVertexArray(0);
@@ -334,6 +333,7 @@ void App::init() {
         glUseProgram(0);
         //
         
+        // world boundaries
         if(ship.GetPosition().x > GameState::worldSize.x) {
 			ship.SetSpeed(glm::vec2(0, ship.GetSpeed().y));
 			ship.SetPosition(glm::vec2(GameState::worldSize.x, ship.GetPosition().y));
@@ -353,6 +353,7 @@ void App::init() {
 			ship.SetSpeed(glm::vec2(ship.GetSpeed().x, 0));
 			ship.SetPosition(glm::vec2(ship.GetPosition().x, -GameState::worldSize.y));
 		}
+		//
 
 		Network::handle_events(5);
 		ship.Process2();
@@ -406,7 +407,7 @@ void App::init() {
 			obj.second.first->Draw();
 		}
 		
-		//////quadtree
+		// quadtree
 		std::unordered_map<Object*, Quadtree*> drawObjects;
 		quadtree.QueryRectangle(ship.GetPosition().x - GameState::windowSize.x/2*GameState::zoom, ship.GetPosition().y - GameState::windowSize.y/2*GameState::zoom, GameState::windowSize.x*GameState::zoom, GameState::windowSize.y*GameState::zoom, drawObjects);
 		for(auto& object : drawObjects) {
@@ -418,19 +419,13 @@ void App::init() {
 		for(auto& object : nearObjects) {
 			quadtree.DrawRect(object.first->GetPosition().x - object.first->GetSize().x/2, object.first->GetPosition().y - object.first->GetSize().y/2, object.first->GetSize().x, object.first->GetSize().y, glm::vec3(255, 255, 255));
 		}
-		
-		std::unordered_map<Object*, Quadtree*> allObjects;
-		quadtree.GetAllObjects(nullptr, allObjects);
-		for(auto& object : allObjects) {
-			quadtree.DrawRect(object.first->GetPosition().x - object.first->GetSize().x/2, object.first->GetPosition().y - object.first->GetSize().y/2, object.first->GetSize().x, object.first->GetSize().y, glm::vec3(120, 255, 50));
-		}
-					
+
 		ImGui::Text("Quadtree::DrawnOnScreen: %i", drawObjects.size()); //doesnt count player's ship and propulsion
 		ImGui::Text("Quadtree::GetObjects: %i", nearObjects.size());
         
 		quadtree.Draw();
 		quadtree.Clear();
-		//////
+		//
 		
         ship.Draw();
   
