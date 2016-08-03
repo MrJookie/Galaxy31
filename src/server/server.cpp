@@ -184,6 +184,7 @@ void send_states() {
 
 void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 	if(pkt == nullptr) { cout << "null pkt!!" << endl; return; }
+	if(players.find(peer) == players.end()) return;
 	// cout << "rcv packet: " << pkt->data << endl;
 	Packet::Packet *ppkt = (Packet::Packet*)pkt->data;
 	switch(ppkt->type) {

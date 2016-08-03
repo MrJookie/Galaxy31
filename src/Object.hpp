@@ -28,6 +28,8 @@ class Object {
 		
 		void Accelerate(glm::vec2 acceleration);
 		
+		virtual void Draw() {};
+		
 		void Process(float dt = 0);
 		unsigned int GetId() { return id; }
 		void SetId(unsigned int id) { this->id = id; }

@@ -26,6 +26,7 @@ cpp := 	\
 		src/Asset.cpp									\
 		src/Projectile.cpp								\
 		src/Network.cpp									\
+		src/Quadtree.cpp								\
 
 program_name := Galaxy31
 

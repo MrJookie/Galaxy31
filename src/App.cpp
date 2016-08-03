@@ -3,122 +3,6 @@
 #include "GameState.hpp"
 #include "Quadtree.hpp"
 
-void Draw_Rect(int x, int y, int w, int h) {
-	GLuint vao, vbo_position, vbo_color;
-	glGenVertexArrays(1, &vao);
-	
-    glBindVertexArray(vao);
-    
-    glGenBuffers(1, &vbo_position);
-    glGenBuffers(1, &vbo_color);
-    
-    glBindVertexArray(0);
-    
-	glUseProgram(GameState::asset.GetShader("shader1.vs").id);
-	glBindVertexArray(vao);
-
-    glm::mat4 modelMat;
-    modelMat = glm::translate(modelMat, glm::vec3(glm::vec2(x,y), 0.0f));
-    modelMat = glm::scale(modelMat, glm::vec3(glm::vec2(w,h), 1.0f));
-
-    glUniformMatrix4fv(glGetUniformLocation(GameState::asset.GetShader("shader1.vs").id, "model"), 1, GL_FALSE, glm::value_ptr(modelMat));
-    glUniformMatrix4fv(glGetUniformLocation(GameState::asset.GetShader("shader1.vs").id, "view"), 1, GL_FALSE, glm::value_ptr(GameState::camera.GetViewMatrix()));
-    glUniformMatrix4fv(glGetUniformLocation(GameState::asset.GetShader("shader1.vs").id, "projection"), 1, GL_FALSE, glm::value_ptr(GameState::camera.GetProjection()));
-    
-    GLfloat positions[] = {
-		0.0,  1.0,
-		0.0,  0.0,
-		1.0,  0.0,
-		1.0,  1.0,
-	};
-
-	GLfloat colors[] = {
-		 1.0, 0.0, 0.0,
-		 1.0, 0.0, 0.0,
-		 1.0, 0.0, 0.0,
-		 1.0, 0.0, 0.0,
-	};
-   
-	glBindBuffer(GL_ARRAY_BUFFER, vbo_position);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(positions), positions, GL_STATIC_DRAW);
-	glEnableVertexAttribArray(0);    
-	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
-	
-	glBindBuffer(GL_ARRAY_BUFFER, vbo_color);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(colors), colors, GL_STATIC_DRAW);
-	glEnableVertexAttribArray(1);    
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
-
-	glDrawArrays(GL_LINE_LOOP, 0, 4);
-
-	glBindVertexArray(0);
-	glUseProgram(0);
-	
-	glDeleteBuffers(1, &vbo_position);
-    glDeleteBuffers(1, &vbo_color);
-
-    glDeleteVertexArrays(1, &vao);
-}
-
-bool IsPixelAlpha(SDL_Surface *surface, int u , int v)
-{
-	SDL_PixelFormat* pixelFormat = surface->format;
-	int bpp = pixelFormat->BytesPerPixel;
-
-	Uint8 *p = (Uint8 *)surface->pixels + v * surface->pitch + u * bpp;
-
-    Uint32 pixelColor = *p;     
-    Uint8 red, green, blue, alpha;
-
-    SDL_GetRGBA(pixelColor, pixelFormat, &red, &green, &blue, &alpha);
-    
-    //std::cout << "alpha: " << (int)alpha << std::endl;  
-
-    if(alpha == 0) return true;
-    else return false;
-}
-
-bool Collides(SDL_Surface *as, int ax, int ay, SDL_Surface *bs, int bx, int by)
-{
-	ax = ax - as->h/2;
-	ay = ay - as->h/2;
-	
-	bx = bx - bs->h/2;
-	by = by - bs->h/2;
-	
-	Draw_Rect(ax, ay, bs->h, bs->h);
-	Draw_Rect(bx, by, bs->h, bs->h);
-	
-	int ax1 = ax + as->h ;
-	int ay1 = ay + as->h ;
-
-	int bx1 = bx + bs->h ;
-	int by1 = by + bs->h ;
-
-	if((bx1 < ax) || (ax1 < bx))
-		return false;
-	if((by1 < ay) || (ay1 < by))
-		return false;
-
-	int inter_x0 = std::max(ax, bx);
-	int inter_x1 = std::min(ax1, bx1);
-
-	int inter_y0 = std::max(ay, by);
-	int inter_y1 = std::min(ay1, by1);
-
-	for(int y = inter_y0 ; y <= inter_y1 ; y++)
-	{
-		for(int x = inter_x0 ; x <= inter_x1 ; x++)
-		{
-			if((IsPixelAlpha(as, x-ax, y-ay))
-			&& (IsPixelAlpha(bs, x-bx, y-by)))
-				return true;
-		}
-	}
-	
-	return false;
-}
-
 App::App() {
 	m_initialWindowSize = glm::vec2(1024, 768);
     this->setWindowSize(m_initialWindowSize);
@@ -231,10 +115,10 @@ void App::init() {
     Ship ship(glm::vec2(0, 0), 0.0, chassis);
     GameState::player = &ship;
     
-    Quadtree quadtree( -100000, 200000, -100000, 200000, 2 ) ;
+    Quadtree quadtree( -GameState::worldSize.x, GameState::worldSize.x, -GameState::worldSize.y, GameState::worldSize.x, 6 ) ;
     
     std::vector<Ship*> ships;
-    
+
     for(int x = 0; x < 20; ++x) {
 		for(int y = 0; y < 20; y++) {
 			Ship* ship = new Ship({x*500, y*500}, 0.0, chassis);
@@ -315,7 +199,7 @@ void App::init() {
 					ship.Stabilizers();
 				}
             } else if(e.type == SDL_MOUSEWHEEL) {
-				this->setZoom((this->getZoom() - e.wheel.y) > 6 ? this->getZoom() : std::max(this->getZoom() - e.wheel.y, 1.0f));
+				this->setZoom((this->getZoom() - e.wheel.y) > 30 ? this->getZoom() : std::max(this->getZoom() - e.wheel.y, 1.0f));
             }
         }
         
@@ -342,8 +226,7 @@ void App::init() {
             ImGui::Text("GameState::objectsDrawn: %i", GameState::objectsDrawn);
             
             for(auto& ship : ships) {
-				quadtree.AddObject( ship->GetObject() );
-				ship->SetRotation(0);
+				quadtree.AddObject(ship->GetObject());
 			}
         }
         //ImGui::End();
@@ -370,12 +253,6 @@ void App::init() {
 				int pointX = (o->GetPosition().x / (2 * GameState::worldSize.x) * canvas_size.x) + canvas_size.x/2.0f;
 				int pointY = (o->GetPosition().y / (2 * GameState::worldSize.y) * canvas_size.y) + canvas_size.y/2.0f;
 				draw_list->AddCircleFilled(ImVec2(canvas_pos.x + pointX, canvas_pos.y + pointY), 2.0f, 0xFF0000FF, 12);
-			}
-			
-			for(auto& ship : ships) {
-				int pointX = (ship->GetPosition().x / (2 * GameState::worldSize.x) * canvas_size.x) + canvas_size.x/2.0f;
-				int pointY = (ship->GetPosition().y / (2 * GameState::worldSize.y) * canvas_size.y) + canvas_size.y/2.0f;
-				draw_list->AddCircleFilled(ImVec2(canvas_pos.x + pointX, canvas_pos.y + pointY), 2.0f, 0xFF00FFFF, 12);
 			}
 
 			draw_list->PushClipRect(canvas_pos, ImVec2(canvas_pos.x+canvas_size.x, canvas_pos.y+canvas_size.y));      // clip lines within the canvas (if we resize it, etc.)
@@ -457,17 +334,26 @@ void App::init() {
         glUseProgram(0);
         //
         
-        //some rounding error? (still moving ship outside of the world, check some corner)
-        if(std::abs(ship.GetPosition().x) >= GameState::worldSize.x && std::abs(this->getWorldMousePosition().x) >= std::abs(ship.GetPosition().x)) {
-			// ship.SetAcceleration({0,0});
+        if(ship.GetPosition().x > GameState::worldSize.x) {
 			ship.SetSpeed(glm::vec2(0, ship.GetSpeed().y));
+			ship.SetPosition(glm::vec2(GameState::worldSize.x, ship.GetPosition().y));
+		}
+
+		if(ship.GetPosition().x < -GameState::worldSize.x) {
+			ship.SetSpeed(glm::vec2(0, ship.GetSpeed().y));
+			ship.SetPosition(glm::vec2(-GameState::worldSize.x, ship.GetPosition().y));
 		}
 		
-		if(std::abs(ship.GetPosition().y) >= GameState::worldSize.y && std::abs(this->getWorldMousePosition().y) >= std::abs(ship.GetPosition().y)) {
-			// ship.SetAcceleration({0,0});
+		if(ship.GetPosition().y > GameState::worldSize.y) {
 			ship.SetSpeed(glm::vec2(ship.GetSpeed().x, 0));
+			ship.SetPosition(glm::vec2(ship.GetPosition().x, GameState::worldSize.y));
 		}
-		// Network::send_message("hehehe");
+
+		if(ship.GetPosition().y < -GameState::worldSize.y) {
+			ship.SetSpeed(glm::vec2(ship.GetSpeed().x, 0));
+			ship.SetPosition(glm::vec2(ship.GetPosition().x, -GameState::worldSize.y));
+		}
+
 		Network::handle_events(5);
 		ship.Process2();
 		
@@ -519,28 +405,36 @@ void App::init() {
 		for(auto& obj : GameState::ships) {
 			obj.second.first->Draw();
 		}
-
-		for(auto& ship : ships) {
-			ship->Draw();
+		
+		//////quadtree
+		std::unordered_map<Object*, Quadtree*> drawObjects;
+		quadtree.QueryRectangle(ship.GetPosition().x - GameState::windowSize.x/2*GameState::zoom, ship.GetPosition().y - GameState::windowSize.y/2*GameState::zoom, GameState::windowSize.x*GameState::zoom, GameState::windowSize.y*GameState::zoom, drawObjects);
+		for(auto& object : drawObjects) {
+			object.first->Draw();
 		}
 		
-		{
-            SDL_Surface *surf = GameState::asset.GetTexture("ship_01_skin.png").image;
-			bool colliding = false;
-			std::vector<Object*> nearObjects = quadtree.GetObjectsAt( ship.GetPosition().x, ship.GetPosition().y );
-			for(auto& object : nearObjects) {
-				if(Collides(surf, ship.GetPosition().x, ship.GetPosition().y, surf, object->GetPosition().x, object->GetPosition().y)) {
-					colliding = true;
-				}
-			}
-
-            ImGui::Text("Quadtree::GetObjects: %i", nearObjects.size());
-            ImGui::Text("Ship::Colliding: %s", colliding ? "true" : "false");
-        }
+		std::unordered_map<Object*, Quadtree*> nearObjects;
+		quadtree.QueryRectangle(ship.GetPosition().x - ship.GetSize().x/2, ship.GetPosition().y - ship.GetSize().y/2, ship.GetSize().x, ship.GetSize().y, nearObjects);
+		for(auto& object : nearObjects) {
+			quadtree.DrawRect(object.first->GetPosition().x - object.first->GetSize().x/2, object.first->GetPosition().y - object.first->GetSize().y/2, object.first->GetSize().x, object.first->GetSize().y, glm::vec3(255, 255, 255));
+		}
+		
+		std::unordered_map<Object*, Quadtree*> allObjects;
+		quadtree.GetAllObjects(nullptr, allObjects);
+		for(auto& object : allObjects) {
+			quadtree.DrawRect(object.first->GetPosition().x - object.first->GetSize().x/2, object.first->GetPosition().y - object.first->GetSize().y/2, object.first->GetSize().x, object.first->GetSize().y, glm::vec3(120, 255, 50));
+		}
+					
+		ImGui::Text("Quadtree::DrawnOnScreen: %i", drawObjects.size()); //doesnt count player's ship and propulsion
+		ImGui::Text("Quadtree::GetObjects: %i", nearObjects.size());
+        
 		quadtree.Draw();
 		quadtree.Clear();
-
+		//////
+		
         ship.Draw();
+  
+        quadtree.DrawRect(ship.GetPosition().x - ship.GetSize().x/2, ship.GetPosition().y - ship.GetSize().y/2, ship.GetSize().x, ship.GetSize().y, glm::vec3(0, 255, 0));
         
         for(Projectile& projectile : GameState::projectiles) {
 			projectile.Draw();

@@ -1,33 +1,18 @@
 #include "Quadtree.hpp"
 
-Quadtree::Quadtree() :
-left( 0 ),
-right( 0 ),
-top( 0 ),
-down( 0 ),
-nodes( 0 ),
-isLeaf( true )
-{
+Quadtree::Quadtree(int left, int right, int top, int down, unsigned int maxObjects, Quadtree* parent) {
+	m_left = left;
+	m_right = right;
+	m_top = top;
+	m_down = down;
+	m_maxObjects = maxObjects;
+	m_isLeaf = true;
+	m_parent = parent;
 }
 
-Quadtree::Quadtree( double _left, double _right, double _top, double _down, unsigned int _numObjectsToGrow ) :
-left( _left ),
-right( _right ),
-top( _top ),
-down( _down ),
-numObjectsToGrow( _numObjectsToGrow ),
-nodes( 0 ),
-isLeaf( true )
-{
-}
+Quadtree::~Quadtree() {}
 
-Quadtree::~Quadtree()
-{
-	if ( !isLeaf )
-		delete [] nodes;
-}
-
-void Quadtree::Draw_Rect(int x, int y, int w, int h) {
+void Quadtree::DrawRect(int x, int y, int w, int h, glm::vec3 color) {
 	GLuint vao, vbo_position, vbo_color;
 	glGenVertexArrays(1, &vao);
 	
@@ -57,10 +42,10 @@ void Quadtree::Draw_Rect(int x, int y, int w, int h) {
 	};
 
 	GLfloat colors[] = {
-		 1.0, 0.0, 0.0,
-		 1.0, 0.0, 0.0,
-		 1.0, 0.0, 0.0,
-		 1.0, 0.0, 0.0,
+		 color.r, color.g, color.b,
+		 color.r, color.g, color.b,
+		 color.r, color.g, color.b,
+		 color.r, color.g, color.b,
 	};
    
 	glBindBuffer(GL_ARRAY_BUFFER, vbo_position);
@@ -85,104 +70,107 @@ void Quadtree::Draw_Rect(int x, int y, int w, int h) {
 }
 
 void Quadtree::Draw() {
-	Draw_Rect(left, top, right-left, down-top);
+	this->DrawRect(m_left, m_top, m_right-m_left, m_down-m_top, glm::vec3(255, 0, 0));
 
-	if ( !isLeaf ) {
-		for ( int n = 0; n < NodeCount; ++n ) {
-			nodes[n].Draw();
-		}
+	for(auto& child : m_children) {
+		child->Draw();
 	}
 }
 
-void Quadtree::AddObject( Object *object )
-{
-	if ( isLeaf ) {
-		objects.push_back( object );
-		bool reachedMaxObjects = ( objects.size() == numObjectsToGrow );
-		if ( reachedMaxObjects ) {
+void Quadtree::AddObject(Object* object) {
+	if(m_isLeaf) {
+		m_objects.push_back(object);
+
+		if(m_objects.size() == m_maxObjects + 1) {
 			createLeaves();
 			moveObjectsToLeaves();
-			isLeaf = false;
+			m_isLeaf = false;
 		}
+		
 		return;
 	}
-
-	for ( int n = 0; n < NodeCount; ++n ) {
-		if ( nodes[n].contains( object ) ) {
-			nodes[n].AddObject( object );
-			return;
-		}
-	}
-
-	objects.push_back( object );
-}
-
-void Quadtree::Clear()
-{
-	objects.clear();
-
-	if ( !isLeaf ) {
-		for ( int n = 0; n < NodeCount; ++n ) {
-			nodes[n].Clear();
+	
+	for(auto& child : m_children) {
+		if(child->contains(object)) {
+			child->AddObject(object);
 		}
 	}
 }
 
-vector<Object*> Quadtree::GetObjectsAt( double x, double y )
-{
-	if ( isLeaf ) {
-		return objects;
-	}
+void Quadtree::Clear() {
+	m_objects.clear();
 
-	vector<Object*> returnedObjects;
-	vector<Object*> childObjects;
-
-	if ( !objects.empty() )
-		returnedObjects.insert( returnedObjects.end(), objects.begin(), objects.end() );
-
-	for ( int n = 0; n < NodeCount; ++n ) {
-		if ( nodes[n].contains( x, y ) ) {
-			childObjects = nodes[n].GetObjectsAt( x, y );
-			returnedObjects.insert( returnedObjects.end(), childObjects.begin(), childObjects.end() );
-			break;
-		}
+	for(auto& child : m_children) {
+		//child->Clear();
+		child.reset();
 	}
 	
-	return returnedObjects;
+	m_isLeaf = true;
 }
 
-bool Quadtree::contains( Object *object )
-{
-	return 	(object->GetPosition().x > left &&
-		(object->GetPosition().x + object->GetSize().x) < right &&
-		object->GetPosition().y > top &&
-		(object->GetPosition().y + object->GetSize().y) < down);
+void Quadtree::QueryRectangle(int x, int y, int w, int h, std::unordered_map<Object*, Quadtree*>& returnObjects) {
+	if(intersects(x, y, w, h) ) {	
+		for(auto& object : m_objects) {
+				if(intersects(x, y, w, h)) {
+					returnObjects[object] = m_parent;
+				}
+		}
+		
+		for(auto& child : m_children) {
+			child->QueryRectangle(x, y, w, h, returnObjects);
+		}
+	}
 }
 
-bool Quadtree::contains( double x, double y )
-{
-	return 	( x >= left && x <= right ) &&
-		( y >= top && y <= down );
+void Quadtree::GetAllObjects(Quadtree* parent, std::unordered_map<Object*, Quadtree*>& returnObjects) {
+	if(parent == nullptr) {
+		
+		for(auto& object : m_objects) {
+			returnObjects[object] = m_parent;
+		}
+		
+	}
 }
 
-void Quadtree::createLeaves()
-{
-	nodes = new Quadtree[4];
-	nodes[NW] = Quadtree( left, (left+right)/2, top, (top+down)/2, numObjectsToGrow );
-	nodes[NE] = Quadtree( (left+right)/2, right, top, (top+down)/2, numObjectsToGrow );
-	nodes[SW] = Quadtree( left, (left+right)/2, (top+down)/2, down, numObjectsToGrow );
-	nodes[SE] = Quadtree( (left+right)/2, right, (top+down)/2, down, numObjectsToGrow );
+bool Quadtree::contains(Object* object) {
+	int x = object->GetPosition().x - object->GetSize().x/2;
+	int y = object->GetPosition().y - object->GetSize().y/2;
+	int w = object->GetSize().x;
+	int h = object->GetSize().y;
+	
+	if(x > m_left && x < m_right && y > m_top && y < m_down) {
+        return true;
+    } else if(x+w > m_left && x+w < m_right && y > m_top && y < m_down) {
+        return true;
+    } else if (x > m_left && x < m_right && y+h > m_top && y+h < m_down) {
+        return true;
+    } else if (x+w > m_left && x+w < m_right && y+h > m_top && y+h < m_down) {
+        return true;
+    }
+    
+    return false;
 }
 
-void Quadtree::moveObjectsToLeaves()
-{
-	for ( int n = 0; n < NodeCount; ++n ) {
-		for ( unsigned int m = 0; m < objects.size(); ++m ) {
-			if ( nodes[n].contains( objects[m] ) ) {
-				nodes[n].AddObject( objects[m] );
-				objects.erase( objects.begin() + m );
-				--m;
+bool Quadtree::intersects(int x, int y, int w, int h) {
+	return !(m_down < y || m_top > y+h || m_right < x || m_left > x+w);
+}
+
+void Quadtree::createLeaves() {
+	m_children.resize(4);
+	m_children[0] = std::make_unique<Quadtree>(m_left, (m_left+m_right)/2, m_top, (m_top+m_down)/2, m_maxObjects, this);
+	m_children[1] = std::make_unique<Quadtree>((m_left+m_right)/2, m_right, m_top, (m_top+m_down)/2, m_maxObjects, this);
+	m_children[2] = std::make_unique<Quadtree>(m_left, (m_left+m_right)/2, (m_top+m_down)/2, m_down, m_maxObjects, this);
+	m_children[3] = std::make_unique<Quadtree>((m_left+m_right)/2, m_right, (m_top+m_down)/2, m_down, m_maxObjects, this);
+}
+
+void Quadtree::moveObjectsToLeaves() {    
+    while(m_objects.size()) {
+		for(auto& child : m_children) {
+			if(child->contains(m_objects[0])) {
+				child->AddObject(m_objects[0]);
 			}
 		}
+        
+        m_objects.erase(m_objects.begin());
 	}
 }
