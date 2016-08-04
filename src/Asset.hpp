@@ -1,20 +1,43 @@
 #ifndef ASSET_HPP
 #define ASSET_HPP
 
+//remove
 #include <imgui.h>
 #include "imgui_impl_sdl_gl3.h"
 //~ #include <GL/gl3w.h>
 
+//opengl
 #include <GL/glew.h>
 
+//sdl
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include <SDL2/SDL_mixer.h>
 
+//stl
 #include <unordered_map>
 
+//glm
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+
+//gui
+#include "Gui.hpp"
+#include "Control.hpp"
+#include "controls/Button.hpp"
+#include "controls/ScrollBar.hpp"
+#include "controls/Container.hpp"
+#include "controls/ComboBox.hpp"
+#include "controls/GridContainer.hpp"
+#include "controls/TextBox.hpp"
+#include "controls/RadioButton.hpp"
+#include "controls/ListBox.hpp"
+#include "controls/Label.hpp"
+#include "controls/TrackBar.hpp"
+#include "controls/Canvas.hpp"
+#include "controls/CheckBox.hpp"
+#include "controls/WidgetMover.hpp"
+#include "common/SDL/Drawing.hpp"
 
 //later pack files and access just by filenames and hardcode filepaths
 

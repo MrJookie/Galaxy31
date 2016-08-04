@@ -5,6 +5,8 @@
 #include <chrono>
 #include <iostream>
 
+using namespace ng;
+
 class App {
     public:
         App();

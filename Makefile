@@ -15,7 +15,7 @@ link64bit :=    -lSDL2 \
 				-L$(tmp_link) -lenet
 
 
-link := $(link64bit)
+link := $(link64bit) -Llibs/GUI -lgui
 
 
 
@@ -24,6 +24,7 @@ arch := -m$(cpu_arch)
 includes := -Ilibs 				 \
 			-Ilibs/imgui 		 \
 			-I/usr/include/SDL2  \
+			-Ilibs/GUI/UI -DUSE_SDL \
 			
 ImGui := libs/imgui/imgui_impl_sdl_gl3.cpp  \
 		 libs/imgui/imgui.cpp				\
@@ -57,7 +58,7 @@ obj := $(addprefix $(build)/, $(patsubst %.cpp,%.o,$(cpp)))
 	
 .PHONY: all make_dirs extract_tmp_files
 
-all: make_dirs $(exe) extract_tmp_files 
+all: make_dirs libs/GUI/libgui.a $(exe) extract_tmp_files 
 
 .ONESHELL:
 extract_tmp_files:
@@ -85,7 +86,11 @@ make_dirs:
 	@mkdir -p $(build)/src/
 	@mkdir -p $(build)/libs/imgui/
 
-
+clean_gui:
+	cd libs/GUI/ && make clean
+	
+libs/GUI/libgui.a:
+	+make -C libs/GUI/ sdl_lib
 	
 $(exe): $(obj)
 	$(CXX) $^ -o $(exe) $(link) $(arch) -pthread

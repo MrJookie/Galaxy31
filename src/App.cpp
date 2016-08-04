@@ -100,17 +100,28 @@ void App::init() {
     //load all textures here
     GameState::asset.LoadTexture("ship_01_skin.png");
     GameState::asset.LoadTexture("propulsion.png");
-    
-    //std::cout << GameState::asset.GetTexture("Assets/Textures/ship_01_skin.png") << std::endl;
-    //std::cout << GameState::asset.GetTexture("Assets/Textures/propulsion.png") << std::endl;
-    
+
     GameState::asset.LoadShader("background.vs", "background.fs");
     GameState::asset.LoadShader("sprite.vs", "sprite.fs");
     GameState::asset.LoadShader("shader1.vs", "shader1.fs");
     
-    //std::cout << GameState::asset.GetShader("Assets/Shaders/background.vs") << std::endl;
-    //std::cout << GameState::asset.GetShader("Assets/Shaders/sprite.vs") << std::endl;
-
+    //gui
+    GuiEngine gui;
+	gui.LoadXml("gui.xml");
+	
+	Drawing::SetResolution( this->getWindowSize().x, this->getWindowSize().y );
+	Drawing::Init();
+	
+	gui.ApplyAnchoring();
+	
+	TextBox* tb_debug = (TextBox*)gui.GetControlById("debug");
+	//tb_debug->SetText("text");
+	//tb_debug->SetRect(0, 0, 100, 50);
+	
+	Canvas* cv_minimap = (Canvas*)gui.GetControlById("minimap");
+	//cv_minimap->SetRect(0, 0, 100, 50);
+	//cv_minimap->put_pixel(x, y, color) public?, add transparency/transparent bg image?
+	
 	Ship::Chassis chassis("main_ship", "ship_01_skin.png", "ship_01_skin.png");
     Ship ship(glm::vec2(0, 0), 0.0, chassis);
     GameState::player = &ship;
@@ -258,11 +269,13 @@ void App::init() {
 			draw_list->PushClipRect(canvas_pos, ImVec2(canvas_pos.x+canvas_size.x, canvas_pos.y+canvas_size.y));      // clip lines within the canvas (if we resize it, etc.)
 			draw_list->PopClipRect();
 		}
-
-
+		
+		Drawing::SetResolution( this->getWindowSize().x, this->getWindowSize().y );
         glViewport(0, 0, this->getWindowSize().x, this->getWindowSize().y);
         glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+        
+        gui.OnEvent(e);
 
         SDL_PumpEvents();
         //const Uint8* state = SDL_GetKeyboardState(NULL);
@@ -425,17 +438,29 @@ void App::init() {
         
 		quadtree.Draw();
 		quadtree.Clear();
+		quadtree.DrawRect(ship.GetPosition().x - ship.GetSize().x/2, ship.GetPosition().y - ship.GetSize().y/2, ship.GetSize().x, ship.GetSize().y, glm::vec3(0, 255, 0));
 		//
 		
         ship.Draw();
-  
-        quadtree.DrawRect(ship.GetPosition().x - ship.GetSize().x/2, ship.GetPosition().y - ship.GetSize().y/2, ship.GetSize().x, ship.GetSize().y, glm::vec3(0, 255, 0));
         
         for(Projectile& projectile : GameState::projectiles) {
 			projectile.Draw();
 		}
+
+        std::string debugString(
+			"App:m_windowSize: " + std::to_string(this->getWindowSize().x) + "x" + std::to_string(this->getWindowSize().y)  + "\n" +
+			"App:m_screenMousePosition: " + std::to_string(this->getScreenMousePosition().x) + "," + std::to_string(this->getScreenMousePosition().y)  + "\n" +
+			"App:m_worldMousePosition: " + std::to_string(this->getWorldMousePosition().x) + "," + std::to_string(this->getWorldMousePosition().y)  + "\n" +
+			"Ship:m_position (center): " + std::to_string(ship.GetPosition().x) + "," + std::to_string(ship.GetPosition().y)  + "\n" +
+			"Ship::m_speed: " + std::to_string(glm::length(ship.GetSpeed()))  + "\n" +
+			"GameState::objectsDrawn: " + std::to_string(GameState::objectsDrawn)  + "\n" +
+			"Quadtree::DrawnOnScreen: " + std::to_string((drawObjects.size())) + "\n" +
+			"Quadtree::GetObjects: " + std::to_string((nearObjects.size()))
+		);
+        tb_debug->SetText(debugString);
         
         ImGui::Render();
+        gui.Render();
 
         SDL_GL_SwapWindow(window);
 
