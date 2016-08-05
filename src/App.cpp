@@ -119,8 +119,11 @@ void App::init() {
 	//tb_debug->SetRect(0, 0, 100, 50);
 	
 	Canvas* cv_minimap = (Canvas*)gui.GetControlById("minimap");
-	//cv_minimap->SetRect(0, 0, 100, 50);
-	//cv_minimap->put_pixel(x, y, color) public?, add transparency/transparent bg image?
+	cv_minimap->SetBackgroundColor(0xff000000);
+	cv_minimap->SetPixelColor(0x00ff0000);
+	cv_minimap->PutPixel(1,1);
+	cv_minimap->SetPixelColor(0x0000ff00);
+	cv_minimap->PutPixel(2,2);
 	
 	Ship::Chassis chassis("main_ship", "ship_01_skin.png", "ship_01_skin.png");
     Ship ship(glm::vec2(0, 0), 0.0, chassis);
@@ -148,6 +151,8 @@ void App::init() {
 
         while(SDL_PollEvent(&e)) {
             ImGui_ImplSdlGL3_ProcessEvent(&e);
+            gui.OnEvent(e);
+
             if(e.type == SDL_QUIT) {
                 running = false;
             } else if(e.type == SDL_KEYDOWN) {
@@ -194,7 +199,7 @@ void App::init() {
                 }
                 break;
                 }
-            } else if(e.type == SDL_MOUSEBUTTONDOWN) {
+            } else if(e.type == SDL_MOUSEBUTTONDOWN && gui.GetSelectedControl() == nullptr) {
 				if(e.button.button == SDL_BUTTON_LEFT) {
 					Ship* ship = new Ship(this->getWorldMousePosition(), 0.0, chassis);
 					ships.push_back(ship);
@@ -203,7 +208,7 @@ void App::init() {
 				} else {
 					ship.Stabilizers();
 				}
-            } else if(e.type == SDL_MOUSEBUTTONUP) {
+            } else if(e.type == SDL_MOUSEBUTTONUP && gui.GetSelectedControl() == nullptr) {
 				if(e.button.button == SDL_BUTTON_LEFT) {
 					isFiring = false;
 				} else {
@@ -270,13 +275,10 @@ void App::init() {
 			draw_list->PopClipRect();
 		}
 		
-		Drawing::SetResolution( this->getWindowSize().x, this->getWindowSize().y );
         glViewport(0, 0, this->getWindowSize().x, this->getWindowSize().y);
         glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
         
-        gui.OnEvent(e);
-
         SDL_PumpEvents();
         //const Uint8* state = SDL_GetKeyboardState(NULL);
 
