@@ -26,7 +26,6 @@ App::~App() {
     Mix_CloseAudio();
     Mix_Quit();
     Network::cleanup();
-    ImGui_ImplSdlGL3_Shutdown();
     SDL_GL_DeleteContext(glContext);
     SDL_DestroyWindow(window);
     SDL_Quit();
@@ -77,9 +76,6 @@ void App::init() {
 
     glewExperimental = GL_TRUE;
     glewInit();
-    //gl3wInit();
-
-    ImGui_ImplSdlGL3_Init(window);
 
     printf("Vendor:   %s\n", glGetString(GL_VENDOR));
     printf("Renderer: %s\n", glGetString(GL_RENDERER));
@@ -115,15 +111,12 @@ void App::init() {
 	gui.ApplyAnchoring();
 	
 	TextBox* tb_debug = (TextBox*)gui.GetControlById("debug");
-	//tb_debug->SetText("text");
 	//tb_debug->SetRect(0, 0, 100, 50);
+	//tb_debug->SetBackgroundColor(0);
 	
 	Canvas* cv_minimap = (Canvas*)gui.GetControlById("minimap");
-	cv_minimap->SetBackgroundColor(0xff000000);
-	cv_minimap->SetPixelColor(0x00ff0000);
-	cv_minimap->PutPixel(1,1);
-	cv_minimap->SetPixelColor(0x0000ff00);
-	cv_minimap->PutPixel(2,2);
+	cv_minimap->SetReadOnly(true);
+	cv_minimap->SetBackgroundColor(0);
 	
 	Ship::Chassis chassis("main_ship", "ship_01_skin.png", "ship_01_skin.png");
     Ship ship(glm::vec2(0, 0), 0.0, chassis);
@@ -150,7 +143,6 @@ void App::init() {
         SDL_Event e;
 
         while(SDL_PollEvent(&e)) {
-            ImGui_ImplSdlGL3_ProcessEvent(&e);
             gui.OnEvent(e);
 
             if(e.type == SDL_QUIT) {
@@ -221,60 +213,6 @@ void App::init() {
         
 		if(isFiring) ship.Fire();
 		
-        ImGui_ImplSdlGL3_NewFrame(window);
-
-        ImGui::GetStyle().Colors[ImGuiCol_TitleBgActive] = ImColor(1.0f, 1.0f, 1.0f, 0.5f);
-        ImGui::GetStyle().WindowRounding = 2.0f;
-        ImGui::GetStyle().Colors[ImGuiCol_WindowBg] = ImColor(1.0f, 1.0f, 1.0f, 0.25f);
-
-        //ImGui::SetNextWindowPos(ImVec2(0,0));
-        //ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize);
-        //ImGui::Begin("text", NULL, ImVec2(0,0), 0.0f, ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoScrollWithMouse);
-        {
-            //static float f = 0.0f;
-            //ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
-            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-            ImGui::Text("App:m_windowSize: %.0fx%.0f", this->getWindowSize().x, this->getWindowSize().y);
-            ImGui::Text("App:m_screenMousePosition: %.0f,%.0f", this->getScreenMousePosition().x, this->getScreenMousePosition().y);
-            ImGui::Text("App:m_worldMousePosition: %.0f,%.0f", this->getWorldMousePosition().x, this->getWorldMousePosition().y);
-            ImGui::Text("Ship:m_position (center): %.0f,%.0f", ship.GetPosition().x, ship.GetPosition().y);
-            ImGui::Text("Ship::m_speed: %.2f", glm::length(ship.GetSpeed()));
-            ImGui::Text("GameState::objectsDrawn: %i", GameState::objectsDrawn);
-            
-            for(auto& ship : ships) {
-				quadtree.AddObject(ship->GetObject());
-			}
-        }
-        //ImGui::End();
-        
-        {
-			ImDrawList* draw_list = ImGui::GetWindowDrawList();
-			static ImVector<ImVec2> points;
-
-			ImVec2 canvas_pos = ImGui::GetCursorScreenPos();            // ImDrawList API uses screen coordinates!
-			ImVec2 canvas_size = ImGui::GetContentRegionAvail();        // Resize canvas to what's available
-			/*
-			if (canvas_size.x < 50.0f) canvas_size.x = 50.0f;
-			if (canvas_size.y < 50.0f) canvas_size.y = 50.0f;
-			*/
-			//draw_list->AddRectFilledMultiColor(canvas_pos, ImVec2(canvas_pos.x + canvas_size.x, canvas_pos.y + canvas_size.y), ImColor(50,50,50), ImColor(50,50,60), ImColor(60,60,70), ImColor(50,50,60));
-			draw_list->AddRect(canvas_pos, ImVec2(canvas_pos.x + canvas_size.x, canvas_pos.y + canvas_size.y), ImColor(255,255,255));
-			
-			int pointX = (ship.GetPosition().x / (2 * GameState::worldSize.x) * canvas_size.x) + canvas_size.x/2.0f;
-			int pointY = (ship.GetPosition().y / (2 * GameState::worldSize.y) * canvas_size.y) + canvas_size.y/2.0f;
-			draw_list->AddCircleFilled(ImVec2(canvas_pos.x + pointX, canvas_pos.y + pointY), 2.0f, 0xFF00FFFF, 12);
-			
-			for(auto& obj : GameState::ships) {
-				auto& o = obj.second.first;
-				int pointX = (o->GetPosition().x / (2 * GameState::worldSize.x) * canvas_size.x) + canvas_size.x/2.0f;
-				int pointY = (o->GetPosition().y / (2 * GameState::worldSize.y) * canvas_size.y) + canvas_size.y/2.0f;
-				draw_list->AddCircleFilled(ImVec2(canvas_pos.x + pointX, canvas_pos.y + pointY), 2.0f, 0xFF0000FF, 12);
-			}
-
-			draw_list->PushClipRect(canvas_pos, ImVec2(canvas_pos.x+canvas_size.x, canvas_pos.y+canvas_size.y));      // clip lines within the canvas (if we resize it, etc.)
-			draw_list->PopClipRect();
-		}
-		
         glViewport(0, 0, this->getWindowSize().x, this->getWindowSize().y);
         glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
@@ -305,6 +243,24 @@ void App::init() {
         GameState::timeElapsed = this->getTimeElapsed();
         GameState::zoom = this->getZoom();
         GameState::objectsDrawn = 0;
+        
+        cv_minimap->Clear(0);
+        
+        // draw my ship on radar
+        int pointX = (ship.GetPosition().x / (2 * GameState::worldSize.x) * cv_minimap->GetRect().w) + cv_minimap->GetRect().w/2.0f;
+		int pointY = (ship.GetPosition().y / (2 * GameState::worldSize.y) * cv_minimap->GetRect().h) + cv_minimap->GetRect().h/2.0f;
+        cv_minimap->SetPixelColor(0xFFFFFF00);
+		cv_minimap->PutPixel(pointX, pointY);
+		
+		// draw enemy ships on radar
+		for(auto& obj : GameState::ships) {
+			auto& o = obj.second.first;
+			
+			int pointX = (o->GetPosition().x / (2 * GameState::worldSize.x) * cv_minimap->GetRect().w) + cv_minimap->GetRect().w/2.0f;
+			int pointY = (o->GetPosition().y / (2 * GameState::worldSize.y) * cv_minimap->GetRect().h) + cv_minimap->GetRect().h/2.0f;
+			cv_minimap->SetPixelColor(0xFFFF0000);
+			cv_minimap->PutPixel(pointX, pointY);
+		}
 
         // background
         glUseProgram(GameState::asset.GetShader("background.vs").id);
@@ -422,6 +378,10 @@ void App::init() {
 			obj.second.first->Draw();
 		}
 		
+		for(auto& ship : ships) {
+			quadtree.AddObject(ship->GetObject());
+		}
+		
 		// quadtree
 		std::unordered_map<Object*, Quadtree*> drawObjects;
 		quadtree.QueryRectangle(ship.GetPosition().x - GameState::windowSize.x/2*GameState::zoom, ship.GetPosition().y - GameState::windowSize.y/2*GameState::zoom, GameState::windowSize.x*GameState::zoom, GameState::windowSize.y*GameState::zoom, drawObjects);
@@ -434,9 +394,6 @@ void App::init() {
 		for(auto& object : nearObjects) {
 			quadtree.DrawRect(object.first->GetPosition().x - object.first->GetSize().x/2, object.first->GetPosition().y - object.first->GetSize().y/2, object.first->GetSize().x, object.first->GetSize().y, glm::vec3(255, 255, 255));
 		}
-
-		ImGui::Text("Quadtree::DrawnOnScreen: %i", drawObjects.size()); //doesnt count player's ship and propulsion
-		ImGui::Text("Quadtree::GetObjects: %i", nearObjects.size());
         
 		quadtree.Draw();
 		quadtree.Clear();
@@ -460,8 +417,7 @@ void App::init() {
 			"Quadtree::GetObjects: " + std::to_string((nearObjects.size()))
 		);
         tb_debug->SetText(debugString);
-        
-        ImGui::Render();
+
         gui.Render();
 
         SDL_GL_SwapWindow(window);

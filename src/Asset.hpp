@@ -1,11 +1,6 @@
 #ifndef ASSET_HPP
 #define ASSET_HPP
 
-//remove
-#include <imgui.h>
-#include "imgui_impl_sdl_gl3.h"
-//~ #include <GL/gl3w.h>
-
 //opengl
 #include <GL/glew.h>
 

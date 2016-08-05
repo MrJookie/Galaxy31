@@ -22,18 +22,12 @@ link := $(link64bit) -Llibs/GUI -lgui
 arch := -m$(cpu_arch)
 
 includes := -Ilibs 				 \
-			-Ilibs/imgui 		 \
 			-I/usr/include/SDL2  \
 			-Ilibs/GUI/UI -DUSE_SDL \
-			
-ImGui := libs/imgui/imgui_impl_sdl_gl3.cpp  \
-		 libs/imgui/imgui.cpp				\
-		 libs/imgui/imgui_draw.cpp
 
 hpp :=	\
 		
 cpp := 	\
-		$(ImGui)										\
 		src/Main.cpp									\
 		src/GameState.cpp								\
 		src/App.cpp										\
@@ -84,7 +78,6 @@ clean:
 make_dirs:
 	@mkdir -p $(build)
 	@mkdir -p $(build)/src/
-	@mkdir -p $(build)/libs/imgui/
 
 clean_gui:
 	cd libs/GUI/ && make clean
