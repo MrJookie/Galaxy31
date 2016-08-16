@@ -119,6 +119,7 @@ void App::init() {
 	//Drawing::SetResolution( this->getWindowSize().x, this->getWindowSize().y );
 	//Drawing::Init();
 	
+	GameState::gui.SetDefaultFont("Assets/Fonts/DroidSansMono.ttf");
 	GameState::gui.LoadXml("Assets/gui.xml");
 	GameState::gui.ApplyAnchoring();
 	
@@ -146,15 +147,14 @@ void App::init() {
 			m_drawLogin = false;
 			m_drawRegister = false;
 			m_drawPassRestore = false;
-			m_drawLobby = true;
-			m_drawGame = false;
+			m_drawLobby = false; //swap with drawGame
+			m_drawGame = true;
 		} else {
 			//draw tooltip
 			GameState::gui.GetControlById("login_incorrect")->SetVisible(true);
 		}
 	});
-	
-	/*
+
 	Button &bt_login_register = *((Button*)GameState::gui.GetControlById("login_register"));
 	bt_login_register.SubscribeEvent(Button::event::click, [&](Control* c) {
 		m_drawLogin = false;
@@ -172,7 +172,6 @@ void App::init() {
 		m_drawLobby = false;
 		m_drawGame = false;
 	});
-	*/
 	
 	Ship::Chassis chassis("main_ship", "ship_01_skin.png", "ship_01_skin.png");
     Ship ship(glm::vec2(0, 0), 0.0, chassis);
@@ -298,15 +297,22 @@ void App::init() {
         GameState::zoom = this->getZoom();
         GameState::objectsDrawn = 0;
         
-		if(m_drawLogin) {
-			GameState::gui.GetControlById("login")->SetVisible(true);
+		if(m_drawGame) {
+			GameState::gui.GetControlById("login")->SetVisible(false);
 			GameState::gui.GetControlById("register")->SetVisible(false);
 			//GameState::gui.GetControlById("passrestore")->SetVisible(false);
 			//GameState::gui.GetControlById("lobby")->SetVisible(false);
-			GameState::gui.GetControlById("game")->SetVisible(false);
+			GameState::gui.GetControlById("game")->SetVisible(true);
 		} else if(m_drawRegister) {
 			GameState::gui.GetControlById("login")->SetVisible(false);
 			GameState::gui.GetControlById("register")->SetVisible(true);
+			//GameState::gui.GetControlById("passrestore")->SetVisible(false);
+			//GameState::gui.GetControlById("lobby")->SetVisible(false);
+			GameState::gui.GetControlById("game")->SetVisible(false);
+		} else {
+			//draw login
+			GameState::gui.GetControlById("login")->SetVisible(true);
+			GameState::gui.GetControlById("register")->SetVisible(false);
 			//GameState::gui.GetControlById("passrestore")->SetVisible(false);
 			//GameState::gui.GetControlById("lobby")->SetVisible(false);
 			GameState::gui.GetControlById("game")->SetVisible(false);
@@ -347,6 +353,9 @@ void App::init() {
         glUniform1f(glGetUniformLocation(GameState::asset.GetShader("background.vs").id, "time"), this->getTimeElapsed());
 
         glDrawElements(GL_TRIANGLE_STRIP, 6, GL_UNSIGNED_INT, 0);
+        
+        glDeleteBuffers(1, &VBO);
+        glDeleteBuffers(1, &EBO);
         
         glBindVertexArray(0);
         glDeleteVertexArrays(1, &VAO);
@@ -415,7 +424,6 @@ void App::init() {
 					p.second.pop();
 				}
 				
-				
 				if(p.second.empty()) {
 					// cout << "processing\n";
 					((Object*)p.first)->Process();
@@ -463,12 +471,12 @@ void App::init() {
 			std::unordered_map<Object*, Quadtree*> nearObjects;
 			quadtree.QueryRectangle(ship.GetPosition().x - ship.GetSize().x/2, ship.GetPosition().y - ship.GetSize().y/2, ship.GetSize().x, ship.GetSize().y, nearObjects);
 			for(auto& object : nearObjects) {
-				quadtree.DrawRect(object.first->GetPosition().x - object.first->GetSize().x/2, object.first->GetPosition().y - object.first->GetSize().y/2, object.first->GetSize().x, object.first->GetSize().y, glm::vec3(255, 255, 255));
+				quadtree.DrawRect(object.first->GetPosition().x - object.first->GetSize().x/2, object.first->GetPosition().y - object.first->GetSize().y/2, object.first->GetSize().x, object.first->GetSize().y, glm::vec4(1, 1, 1, 1));
 			}
 			
 			quadtree.Draw();
 			quadtree.Clear();
-			quadtree.DrawRect(ship.GetPosition().x - ship.GetSize().x/2, ship.GetPosition().y - ship.GetSize().y/2, ship.GetSize().x, ship.GetSize().y, glm::vec3(0, 255, 0));
+			quadtree.DrawRect(ship.GetPosition().x - ship.GetSize().x/2, ship.GetPosition().y - ship.GetSize().y/2, ship.GetSize().x, ship.GetSize().y, glm::vec4(0, 1, 0, 0.5));
 			//
 			
 			ship.Draw();

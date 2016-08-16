@@ -12,7 +12,7 @@ Quadtree::Quadtree(int left, int right, int top, int down, unsigned int maxObjec
 
 Quadtree::~Quadtree() {}
 
-void Quadtree::DrawRect(int x, int y, int w, int h, glm::vec3 color) {
+void Quadtree::DrawRect(int x, int y, int w, int h, glm::vec4 color) {
 	GLuint vao, vbo_position, vbo_color;
 	glGenVertexArrays(1, &vao);
 	
@@ -42,10 +42,10 @@ void Quadtree::DrawRect(int x, int y, int w, int h, glm::vec3 color) {
 	};
 
 	GLfloat colors[] = {
-		 color.r, color.g, color.b,
-		 color.r, color.g, color.b,
-		 color.r, color.g, color.b,
-		 color.r, color.g, color.b,
+		 color.r, color.g, color.b, color.a,
+		 color.r, color.g, color.b, color.a,
+		 color.r, color.g, color.b, color.a,
+		 color.r, color.g, color.b, color.a,
 	};
    
 	glBindBuffer(GL_ARRAY_BUFFER, vbo_position);
@@ -56,7 +56,7 @@ void Quadtree::DrawRect(int x, int y, int w, int h, glm::vec3 color) {
 	glBindBuffer(GL_ARRAY_BUFFER, vbo_color);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(colors), colors, GL_STATIC_DRAW);
 	glEnableVertexAttribArray(1);    
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
+	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
 
 	glDrawArrays(GL_LINE_LOOP, 0, 4);
 
@@ -70,7 +70,7 @@ void Quadtree::DrawRect(int x, int y, int w, int h, glm::vec3 color) {
 }
 
 void Quadtree::Draw() {
-	this->DrawRect(m_left, m_top, m_right-m_left, m_down-m_top, glm::vec3(255, 0, 0));
+	this->DrawRect(m_left, m_top, m_right-m_left, m_down-m_top, glm::vec4(1, 0, 0, 1));
 
 	for(auto& child : m_children) {
 		child->Draw();
