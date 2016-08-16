@@ -3,8 +3,8 @@
 		<widget rect="0,0,200,400" id="login">
 			<textbox font="Assets/Fonts/DroidSansMono.ttf,13" id="login_incorrect" multiline="false" terminal_mode="false" rect="0,0,200,28" value="Error logging in!" color="#00FF0000" backgroundcolor="#33FF0000" bordercolor="#FFFF0000" hoverbordercolor="#FFFF0000" visible="false" readonly="true"></textbox>
 			
-			<textbox font="Assets/Fonts/DroidSansMono.ttf,13" id="login_email" multiline="false" terminal_mode="false" rect="0,40,200,28" value="" placeholder="your@email.com" backgroundcolor="#00000000" bordercolor="#FF1228D1" hoverbordercolor="#FF12AAAA"></textbox>
-			<textbox font="Assets/Fonts/DroidSansMono.ttf,13" id="login_password" multiline="false" terminal_mode="false" rect="0,80,200,28" value="password" backgroundcolor="#00000000" bordercolor="#FF1228D1" hoverbordercolor="#FF12AAAA"></textbox>
+			<textbox font="Assets/Fonts/DroidSansMono.ttf,13" id="login_email" multiline="false" terminal_mode="false" rect="0,40,200,28" value="your@email.com" placeholder="your@email.com" backgroundcolor="#00000000" bordercolor="#FF1228D1" hoverbordercolor="#FF12AAAA"></textbox>
+			<textbox font="Assets/Fonts/DroidSansMono.ttf,13" id="login_password" multiline="false" terminal_mode="false" rect="0,80,200,28" value="" placeholder="password" backgroundcolor="#00000000" bordercolor="#FF1228D1" hoverbordercolor="#FF12AAAA"></textbox>
 			<button font="Assets/Fonts/DroidSansMono.ttf,13" id="login_submit" rect="0,120,200,28" value="login" backgroundcolor="#331228D1" bordercolor="#FF1228D1" hoverbordercolor="#FF12AAAA" visible="true" downcolor="#FFFFFF00" upcolor="#FFFFFFFF" />
 		
 			<button font="Assets/Fonts/DroidSansMono.ttf,13" id="login_pass_restore" rect="0,160,200,28" value="Forgot password?" backgroundcolor="#00000000" bordercolor="#00000000" hoverbordercolor="#FF12AAAA" visible="true" downcolor="#FFFFFF00" upcolor="#FFFFFFFF" />
