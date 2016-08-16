@@ -11,6 +11,7 @@ namespace GameState {
 	
 	int objectsDrawn = 0;
 	
+	ng::GuiEngine gui;
 	Asset asset;
 	Camera camera(glm::vec3(0.0f, 0.0f, 0.0f));
 	std::vector<Projectile> projectiles;

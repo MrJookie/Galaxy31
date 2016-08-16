@@ -61,7 +61,13 @@ void App::init() {
 		throw std::string("Failed to initialize SDL_mixer");
 	}
 	if(Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 1024)==-1) {
-		throw std::string("Mix_OpenAudio: ") + Mix_GetError();
+		/*
+		 * ALSA lib pcm_dmix.c:1079:(snd_pcm_dmix_open) unable to open slave
+		 * Mix_OpenAudio: ALSA: Couldn't open audio device: File descriptor in bad state
+		 * Even tho ALSA lib complains, Mix_OpenAudio throws an error, but if its not thrown, music continue to play and everything works correctly.
+		 * Commented during development
+		*/
+		//throw std::string("Mix_OpenAudio: ") + Mix_GetError();
 	}
 	Mix_PlayMusic(GameState::asset.GetMusic("loop.ogg"), -1);
 	Mix_VolumeMusic(MIX_MAX_VOLUME);
@@ -102,21 +108,23 @@ void App::init() {
     GameState::asset.LoadShader("shader1.vs", "shader1.fs");
     
     //gui
-    GuiEngine gui;
-	gui.LoadXml("gui.xml");
+    GameState::gui = ng::GuiEngine(this->getWindowSize().x, this->getWindowSize().y);
+	//GameState::gui->SetSize(this->getWindowSize().x, this->getWindowSize().y);
+	//Drawing::SetResolution( this->getWindowSize().x, this->getWindowSize().y );
+	//Drawing::Init();
 	
-	Drawing::SetResolution( this->getWindowSize().x, this->getWindowSize().y );
-	Drawing::Init();
+	GameState::gui.LoadXml("gui.xml");
+	GameState::gui.ApplyAnchoring();
 	
-	gui.ApplyAnchoring();
-	
-	TextBox* tb_debug = (TextBox*)gui.GetControlById("debug");
+	TextBox* tb_debug = (TextBox*)GameState::gui.GetControlById("game_debug");
 	//tb_debug->SetRect(0, 0, 100, 50);
 	//tb_debug->SetBackgroundColor(0);
 	
-	Canvas* cv_minimap = (Canvas*)gui.GetControlById("minimap");
-	cv_minimap->SetReadOnly(true);
-	cv_minimap->SetBackgroundColor(0);
+	Canvas* cv_minimap = (Canvas*)GameState::gui.GetControlById("game_minimap");
+	//cv_minimap->SetReadOnly(true);
+	//cv_minimap->SetBackgroundColor(0);
+	
+	loginScreen();
 	
 	Ship::Chassis chassis("main_ship", "ship_01_skin.png", "ship_01_skin.png");
     Ship ship(glm::vec2(0, 0), 0.0, chassis);
@@ -143,7 +151,7 @@ void App::init() {
         SDL_Event e;
 
         while(SDL_PollEvent(&e)) {
-            gui.OnEvent(e);
+            GameState::gui.OnEvent(e);
 
             if(e.type == SDL_QUIT) {
                 running = false;
@@ -191,7 +199,7 @@ void App::init() {
                 }
                 break;
                 }
-            } else if(e.type == SDL_MOUSEBUTTONDOWN && gui.GetSelectedControl() == nullptr) {
+            } else if(e.type == SDL_MOUSEBUTTONDOWN && GameState::gui.GetSelectedControl() == nullptr) {
 				if(e.button.button == SDL_BUTTON_LEFT) {
 					Ship* ship = new Ship(this->getWorldMousePosition(), 0.0, chassis);
 					ships.push_back(ship);
@@ -200,7 +208,7 @@ void App::init() {
 				} else {
 					ship.Stabilizers();
 				}
-            } else if(e.type == SDL_MOUSEBUTTONUP && gui.GetSelectedControl() == nullptr) {
+            } else if(e.type == SDL_MOUSEBUTTONUP && GameState::gui.GetSelectedControl() == nullptr) {
 				if(e.button.button == SDL_BUTTON_LEFT) {
 					isFiring = false;
 				} else {
@@ -247,8 +255,8 @@ void App::init() {
         cv_minimap->Clear(0);
         
         // draw my ship on radar
-        int pointX = (ship.GetPosition().x / (2 * GameState::worldSize.x) * cv_minimap->GetRect().w) + cv_minimap->GetRect().w/2.0f;
-		int pointY = (ship.GetPosition().y / (2 * GameState::worldSize.y) * cv_minimap->GetRect().h) + cv_minimap->GetRect().h/2.0f;
+        int pointX = (ship.GetPosition().x / (2 * GameState::worldSize.x) * (cv_minimap->GetRect().w-5)) + (cv_minimap->GetRect().w-5)/2.0f; //-4 is for pixelsize
+		int pointY = (ship.GetPosition().y / (2 * GameState::worldSize.y) * (cv_minimap->GetRect().h-5)) + (cv_minimap->GetRect().h-5)/2.0f;
         cv_minimap->SetPixelColor(0xFFFFFF00);
 		cv_minimap->PutPixel(pointX, pointY);
 		
@@ -379,7 +387,7 @@ void App::init() {
 		}
 		
 		for(auto& ship : ships) {
-			quadtree.AddObject(ship->GetObject());
+			//quadtree.AddObject(ship->GetObject());
 		}
 		
 		// quadtree
@@ -417,8 +425,8 @@ void App::init() {
 			"Quadtree::GetObjects: " + std::to_string((nearObjects.size()))
 		);
         tb_debug->SetText(debugString);
-
-        gui.Render();
+        
+        GameState::gui.Render();
 
         SDL_GL_SwapWindow(window);
 
@@ -494,4 +502,22 @@ double App::getTimeElapsed() const {
 
 float App::getZoom() const {
 	return m_zooming;
+}
+
+void App::loginScreen() {
+	//GameState::gui.GetControlById("game")->SetVisible(false);
+	GameState::gui.SubscribeEvent("login_submit", EVENT_BUTTON_CLICK, [&](Control* c) {
+		TextBox* tb_login_username = (TextBox*)GameState::gui.GetControlById("login_username");
+		TextBox* tb_login_password = (TextBox*)GameState::gui.GetControlById("login_password");
+		
+		if(this->TODOserver_doLogin(tb_login_username->GetText(), tb_login_password->GetText())) {
+			GameState::gui.GetControlById("login")->SetVisible(false);
+		} else {
+			
+		}
+	});
+}
+
+bool App::TODOserver_doLogin(std::string username, std::string password) {
+	return false;
 }

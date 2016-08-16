@@ -23,9 +23,10 @@ namespace GameState {
 	extern int objectsDrawn;
 	
 	extern std::vector<Projectile> projectiles;
+	extern ng::GuiEngine gui;
 	extern Asset asset;
 	extern Camera camera;
-	extern Ship *player;
+	extern Ship* player;
 	
 	
 	extern std::map< unsigned int, std::pair<Ship*, std::queue<Object>> > ships;

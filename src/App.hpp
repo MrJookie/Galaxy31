@@ -17,6 +17,9 @@ class App {
         void loop(); 
         void showFPS();
         
+        void loginScreen();
+        bool TODOserver_doLogin(std::string username, std::string password);
+        
         void setWindowSize(glm::vec2 windowSize);
         void setScreenMousePosition(glm::vec2 screenMousePosition);
         void setWorldMousePosition(glm::vec2 worldMousePosition);
