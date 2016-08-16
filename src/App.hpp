@@ -17,8 +17,7 @@ class App {
         void loop(); 
         void showFPS();
         
-        void loginScreen();
-        bool TODOserver_doLogin(std::string username, std::string password);
+        bool TODOserver_doLogin(std::string email, std::string password);
         
         void setWindowSize(glm::vec2 windowSize);
         void setScreenMousePosition(glm::vec2 screenMousePosition);
@@ -52,6 +51,12 @@ class App {
         
         std::chrono::high_resolution_clock::time_point m_chrono_start;
         double m_chrono_elapsed;
+        
+        bool m_drawLogin;
+		bool m_drawRegister;
+		bool m_drawPassRestore;
+		bool m_drawLobby;
+		bool m_drawGame;
         
         SDL_Window* window;
         SDL_GLContext glContext;

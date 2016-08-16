@@ -17,6 +17,12 @@ App::App() {
 
     m_chrono_start = std::chrono::high_resolution_clock::now();
     m_chrono_elapsed = 0;
+    
+    m_drawLogin = false;
+	m_drawRegister = false;
+	m_drawPassRestore = false;
+	m_drawLobby = false;
+	m_drawGame = false;
 
     this->init();
 }
@@ -123,8 +129,49 @@ void App::init() {
 	Canvas* cv_minimap = (Canvas*)GameState::gui.GetControlById("game_minimap");
 	//cv_minimap->SetReadOnly(true);
 	//cv_minimap->SetBackgroundColor(0);
+
+	m_drawLogin = true;
 	
-	loginScreen();
+	Button &bt_login_submit = *((Button*)GameState::gui.GetControlById("login_submit"));
+	bt_login_submit.SubscribeEvent(Button::event::click, [&](Control* c) {
+		Button* bt = (Button*)c;
+		//bt->SetText("zzzz");
+		
+		TextBox* tb_login_email = (TextBox*)GameState::gui.GetControlById("login_email");
+		TextBox* tb_login_password = (TextBox*)GameState::gui.GetControlById("login_password");
+		
+		if(this->TODOserver_doLogin(tb_login_email->GetText(), tb_login_password->GetText())) {
+			//draw lobby, on click PLAY draw game
+			GameState::gui.GetControlById("login")->SetVisible(false);
+			
+			m_drawLogin = false;
+			m_drawRegister = false;
+			m_drawPassRestore = false;
+			m_drawLobby = true;
+			m_drawGame = false;
+		} else {
+			//draw tooltip
+			GameState::gui.GetControlById("login_incorrect")->SetVisible(true);
+		}
+	});
+	
+	Button &bt_login_register = *((Button*)GameState::gui.GetControlById("login_register"));
+	bt_login_register.SubscribeEvent(Button::event::click, [&](Control* c) {
+		m_drawLogin = false;
+		m_drawRegister = true;
+		m_drawPassRestore = false;
+		m_drawLobby = false;
+		m_drawGame = false;
+	});
+	
+	Button &bt_register_login = *((Button*)GameState::gui.GetControlById("register_login"));
+	bt_register_login.SubscribeEvent(Button::event::click, [&](Control* c) {
+		m_drawLogin = true;
+		m_drawRegister = false;
+		m_drawPassRestore = false;
+		m_drawLobby = false;
+		m_drawGame = false;
+	});
 	
 	Ship::Chassis chassis("main_ship", "ship_01_skin.png", "ship_01_skin.png");
     Ship ship(glm::vec2(0, 0), 0.0, chassis);
@@ -218,8 +265,6 @@ void App::init() {
 				this->setZoom((this->getZoom() - e.wheel.y) > 30 ? this->getZoom() : std::max(this->getZoom() - e.wheel.y, 1.0f));
             }
         }
-        
-		if(isFiring) ship.Fire();
 		
         glViewport(0, 0, this->getWindowSize().x, this->getWindowSize().y);
         glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
@@ -252,25 +297,21 @@ void App::init() {
         GameState::zoom = this->getZoom();
         GameState::objectsDrawn = 0;
         
-        cv_minimap->Clear(0);
-        
-        // draw my ship on radar
-        int pointX = (ship.GetPosition().x / (2 * GameState::worldSize.x) * (cv_minimap->GetRect().w-5)) + (cv_minimap->GetRect().w-5)/2.0f; //-4 is for pixelsize
-		int pointY = (ship.GetPosition().y / (2 * GameState::worldSize.y) * (cv_minimap->GetRect().h-5)) + (cv_minimap->GetRect().h-5)/2.0f;
-        cv_minimap->SetPixelColor(0xFFFFFF00);
-		cv_minimap->PutPixel(pointX, pointY);
-		
-		// draw enemy ships on radar
-		for(auto& obj : GameState::ships) {
-			auto& o = obj.second.first;
-			
-			int pointX = (o->GetPosition().x / (2 * GameState::worldSize.x) * cv_minimap->GetRect().w) + cv_minimap->GetRect().w/2.0f;
-			int pointY = (o->GetPosition().y / (2 * GameState::worldSize.y) * cv_minimap->GetRect().h) + cv_minimap->GetRect().h/2.0f;
-			cv_minimap->SetPixelColor(0xFFFF0000);
-			cv_minimap->PutPixel(pointX, pointY);
+		if(m_drawLogin) {
+			GameState::gui.GetControlById("login")->SetVisible(true);
+			GameState::gui.GetControlById("register")->SetVisible(false);
+			//GameState::gui.GetControlById("passrestore")->SetVisible(false);
+			//GameState::gui.GetControlById("lobby")->SetVisible(false);
+			GameState::gui.GetControlById("game")->SetVisible(false);
+		} else if(m_drawRegister) {
+			GameState::gui.GetControlById("login")->SetVisible(false);
+			GameState::gui.GetControlById("register")->SetVisible(true);
+			//GameState::gui.GetControlById("passrestore")->SetVisible(false);
+			//GameState::gui.GetControlById("lobby")->SetVisible(false);
+			GameState::gui.GetControlById("game")->SetVisible(false);
 		}
-
-        // background
+		
+		// background
         glUseProgram(GameState::asset.GetShader("background.vs").id);
 
         GLuint VAO, VBO, EBO;
@@ -312,119 +353,141 @@ void App::init() {
         glUseProgram(0);
         //
         
-        // world boundaries
-        if(ship.GetPosition().x > GameState::worldSize.x) {
-			ship.SetSpeed(glm::vec2(0, ship.GetSpeed().y));
-			ship.SetPosition(glm::vec2(GameState::worldSize.x, ship.GetPosition().y));
-		}
-
-		if(ship.GetPosition().x < -GameState::worldSize.x) {
-			ship.SetSpeed(glm::vec2(0, ship.GetSpeed().y));
-			ship.SetPosition(glm::vec2(-GameState::worldSize.x, ship.GetPosition().y));
-		}
-		
-		if(ship.GetPosition().y > GameState::worldSize.y) {
-			ship.SetSpeed(glm::vec2(ship.GetSpeed().x, 0));
-			ship.SetPosition(glm::vec2(ship.GetPosition().x, GameState::worldSize.y));
-		}
-
-		if(ship.GetPosition().y < -GameState::worldSize.y) {
-			ship.SetSpeed(glm::vec2(ship.GetSpeed().x, 0));
-			ship.SetPosition(glm::vec2(ship.GetPosition().x, -GameState::worldSize.y));
-		}
-		//
-
-		Network::handle_events(5);
-		ship.Process2();
-		
-		Network::SendOurState();
-		
-		// handle multiplayer states interpolation (this code should be moved elsewhere later)
-		for(auto& obj : GameState::ships) {
-			auto& p = obj.second;
+        if(m_drawGame) {
+			cv_minimap->Clear(0);
 			
-			while(p.second.size() > 1 && p.second.front().GetTicks() <= p.first->GetTicks()) {
-				// std::cout << "poping : " << p.second.size() << std::endl;
-				p.second.pop();
+			// draw my ship on radar
+			int pointX = (ship.GetPosition().x / (2 * GameState::worldSize.x) * (cv_minimap->GetRect().w-5)) + (cv_minimap->GetRect().w-5)/2.0f; //-4 is for pixelsize
+			int pointY = (ship.GetPosition().y / (2 * GameState::worldSize.y) * (cv_minimap->GetRect().h-5)) + (cv_minimap->GetRect().h-5)/2.0f;
+			cv_minimap->SetPixelColor(0xFFFFFF00);
+			cv_minimap->PutPixel(pointX, pointY);
+			
+			// draw enemy ships on radar
+			for(auto& obj : GameState::ships) {
+				auto& o = obj.second.first;
+				
+				int pointX = (o->GetPosition().x / (2 * GameState::worldSize.x) * cv_minimap->GetRect().w) + cv_minimap->GetRect().w/2.0f;
+				int pointY = (o->GetPosition().y / (2 * GameState::worldSize.y) * cv_minimap->GetRect().h) + cv_minimap->GetRect().h/2.0f;
+				cv_minimap->SetPixelColor(0xFFFF0000);
+				cv_minimap->PutPixel(pointX, pointY);
 			}
 			
-			if(!p.second.empty() && p.second.front().GetTicks() <= p.first->GetTicks()) {
-				// std::cout << "copy state\n";
-				p.first->CopyObjectState(p.second.front());
-				p.second.pop();
+			// world boundaries
+			if(ship.GetPosition().x > GameState::worldSize.x) {
+				ship.SetSpeed(glm::vec2(0, ship.GetSpeed().y));
+				ship.SetPosition(glm::vec2(GameState::worldSize.x, ship.GetPosition().y));
 			}
-			
-			
-			if(p.second.empty()) {
-				// cout << "processing\n";
-				((Object*)p.first)->Process();
-			} else {
-				// std::cout << "interpolating [" << p.second.size() << "] : " << (GameState::deltaTime * 1000.0) << "  (" << p.second.front().GetTicks() << ", " << p.first->GetTicks() << ")\n";
-				p.first->InterpolateToState(p.second.front(), (GameState::deltaTime*1000.0 / ((float)p.second.front().GetTicks() - (float)p.first->GetTicks()) ) );
-			}
-			p.first->AddTicks( std::round(GameState::deltaTime * 1000.0) );
-			
-		}
-		
-		for(auto it = GameState::projectiles.begin(); it != GameState::projectiles.end(); it++) {
-			it->Process();
-			if(it->IsDead()) {
-				it = GameState::projectiles.erase(it);
-				if(it == GameState::projectiles.end()) break;
-			}
-		}
 
-        GameState::camera.SetPosition( glm::vec3(ship.GetPosition().x, ship.GetPosition().y, 0) );
-        glm::mat4 projection = glm::ortho(-(float)this->getWindowSize().x*this->getZoom()*0.5, (float)this->getWindowSize().x*this->getZoom()*0.5, (float)this->getWindowSize().y*this->getZoom()*0.5, -(float)this->getWindowSize().y*this->getZoom()*0.5);
-        glm::mat4 view = GameState::camera.GetViewMatrix();
-        GameState::camera.SetProjection(projection);
-        GameState::camera.SetView(view);
-        
-        Network::SendOurState();
-		
-		for(auto& obj : GameState::ships) {
-			obj.second.first->Draw();
-		}
-		
-		for(auto& ship : ships) {
-			//quadtree.AddObject(ship->GetObject());
-		}
-		
-		// quadtree
-		std::unordered_map<Object*, Quadtree*> drawObjects;
-		quadtree.QueryRectangle(ship.GetPosition().x - GameState::windowSize.x/2*GameState::zoom, ship.GetPosition().y - GameState::windowSize.y/2*GameState::zoom, GameState::windowSize.x*GameState::zoom, GameState::windowSize.y*GameState::zoom, drawObjects);
-		for(auto& object : drawObjects) {
-			object.first->Draw();
-		}
-		
-		std::unordered_map<Object*, Quadtree*> nearObjects;
-		quadtree.QueryRectangle(ship.GetPosition().x - ship.GetSize().x/2, ship.GetPosition().y - ship.GetSize().y/2, ship.GetSize().x, ship.GetSize().y, nearObjects);
-		for(auto& object : nearObjects) {
-			quadtree.DrawRect(object.first->GetPosition().x - object.first->GetSize().x/2, object.first->GetPosition().y - object.first->GetSize().y/2, object.first->GetSize().x, object.first->GetSize().y, glm::vec3(255, 255, 255));
-		}
-        
-		quadtree.Draw();
-		quadtree.Clear();
-		quadtree.DrawRect(ship.GetPosition().x - ship.GetSize().x/2, ship.GetPosition().y - ship.GetSize().y/2, ship.GetSize().x, ship.GetSize().y, glm::vec3(0, 255, 0));
-		//
-		
-        ship.Draw();
-        
-        for(Projectile& projectile : GameState::projectiles) {
-			projectile.Draw();
-		}
+			if(ship.GetPosition().x < -GameState::worldSize.x) {
+				ship.SetSpeed(glm::vec2(0, ship.GetSpeed().y));
+				ship.SetPosition(glm::vec2(-GameState::worldSize.x, ship.GetPosition().y));
+			}
+			
+			if(ship.GetPosition().y > GameState::worldSize.y) {
+				ship.SetSpeed(glm::vec2(ship.GetSpeed().x, 0));
+				ship.SetPosition(glm::vec2(ship.GetPosition().x, GameState::worldSize.y));
+			}
 
-        std::string debugString(
-			"App:m_windowSize: " + std::to_string(this->getWindowSize().x) + "x" + std::to_string(this->getWindowSize().y)  + "\n" +
-			"App:m_screenMousePosition: " + std::to_string(this->getScreenMousePosition().x) + "," + std::to_string(this->getScreenMousePosition().y)  + "\n" +
-			"App:m_worldMousePosition: " + std::to_string(this->getWorldMousePosition().x) + "," + std::to_string(this->getWorldMousePosition().y)  + "\n" +
-			"Ship:m_position (center): " + std::to_string(ship.GetPosition().x) + "," + std::to_string(ship.GetPosition().y)  + "\n" +
-			"Ship::m_speed: " + std::to_string(glm::length(ship.GetSpeed()))  + "\n" +
-			"GameState::objectsDrawn: " + std::to_string(GameState::objectsDrawn)  + "\n" +
-			"Quadtree::DrawnOnScreen: " + std::to_string((drawObjects.size())) + "\n" +
-			"Quadtree::GetObjects: " + std::to_string((nearObjects.size()))
-		);
-        tb_debug->SetText(debugString);
+			if(ship.GetPosition().y < -GameState::worldSize.y) {
+				ship.SetSpeed(glm::vec2(ship.GetSpeed().x, 0));
+				ship.SetPosition(glm::vec2(ship.GetPosition().x, -GameState::worldSize.y));
+			}
+			//
+
+			Network::handle_events(5);
+			ship.Process2();
+			
+			Network::SendOurState();
+			
+			// handle multiplayer states interpolation (this code should be moved elsewhere later)
+			for(auto& obj : GameState::ships) {
+				auto& p = obj.second;
+				
+				while(p.second.size() > 1 && p.second.front().GetTicks() <= p.first->GetTicks()) {
+					// std::cout << "poping : " << p.second.size() << std::endl;
+					p.second.pop();
+				}
+				
+				if(!p.second.empty() && p.second.front().GetTicks() <= p.first->GetTicks()) {
+					// std::cout << "copy state\n";
+					p.first->CopyObjectState(p.second.front());
+					p.second.pop();
+				}
+				
+				
+				if(p.second.empty()) {
+					// cout << "processing\n";
+					((Object*)p.first)->Process();
+				} else {
+					// std::cout << "interpolating [" << p.second.size() << "] : " << (GameState::deltaTime * 1000.0) << "  (" << p.second.front().GetTicks() << ", " << p.first->GetTicks() << ")\n";
+					p.first->InterpolateToState(p.second.front(), (GameState::deltaTime*1000.0 / ((float)p.second.front().GetTicks() - (float)p.first->GetTicks()) ) );
+				}
+				p.first->AddTicks( std::round(GameState::deltaTime * 1000.0) );
+				
+			}
+			
+			if(isFiring) ship.Fire();
+			
+			for(auto it = GameState::projectiles.begin(); it != GameState::projectiles.end(); it++) {
+				it->Process();
+				if(it->IsDead()) {
+					it = GameState::projectiles.erase(it);
+					if(it == GameState::projectiles.end()) break;
+				}
+			}
+
+			GameState::camera.SetPosition( glm::vec3(ship.GetPosition().x, ship.GetPosition().y, 0) );
+			glm::mat4 projection = glm::ortho(-(float)this->getWindowSize().x*this->getZoom()*0.5, (float)this->getWindowSize().x*this->getZoom()*0.5, (float)this->getWindowSize().y*this->getZoom()*0.5, -(float)this->getWindowSize().y*this->getZoom()*0.5);
+			glm::mat4 view = GameState::camera.GetViewMatrix();
+			GameState::camera.SetProjection(projection);
+			GameState::camera.SetView(view);
+			
+			Network::SendOurState();
+			
+			for(auto& obj : GameState::ships) {
+				obj.second.first->Draw();
+			}
+			
+			for(auto& ship : ships) {
+				//quadtree.AddObject(ship->GetObject());
+			}
+			
+			// quadtree
+			std::unordered_map<Object*, Quadtree*> drawObjects;
+			quadtree.QueryRectangle(ship.GetPosition().x - GameState::windowSize.x/2*GameState::zoom, ship.GetPosition().y - GameState::windowSize.y/2*GameState::zoom, GameState::windowSize.x*GameState::zoom, GameState::windowSize.y*GameState::zoom, drawObjects);
+			for(auto& object : drawObjects) {
+				object.first->Draw();
+			}
+			
+			std::unordered_map<Object*, Quadtree*> nearObjects;
+			quadtree.QueryRectangle(ship.GetPosition().x - ship.GetSize().x/2, ship.GetPosition().y - ship.GetSize().y/2, ship.GetSize().x, ship.GetSize().y, nearObjects);
+			for(auto& object : nearObjects) {
+				quadtree.DrawRect(object.first->GetPosition().x - object.first->GetSize().x/2, object.first->GetPosition().y - object.first->GetSize().y/2, object.first->GetSize().x, object.first->GetSize().y, glm::vec3(255, 255, 255));
+			}
+			
+			quadtree.Draw();
+			quadtree.Clear();
+			quadtree.DrawRect(ship.GetPosition().x - ship.GetSize().x/2, ship.GetPosition().y - ship.GetSize().y/2, ship.GetSize().x, ship.GetSize().y, glm::vec3(0, 255, 0));
+			//
+			
+			ship.Draw();
+			
+			for(Projectile& projectile : GameState::projectiles) {
+				projectile.Draw();
+			}
+
+			std::string debugString(
+				"App:m_windowSize: " + std::to_string(this->getWindowSize().x) + "x" + std::to_string(this->getWindowSize().y)  + "\n" +
+				"App:m_screenMousePosition: " + std::to_string(this->getScreenMousePosition().x) + "," + std::to_string(this->getScreenMousePosition().y)  + "\n" +
+				"App:m_worldMousePosition: " + std::to_string(this->getWorldMousePosition().x) + "," + std::to_string(this->getWorldMousePosition().y)  + "\n" +
+				"Ship:m_position (center): " + std::to_string(ship.GetPosition().x) + "," + std::to_string(ship.GetPosition().y)  + "\n" +
+				"Ship::m_speed: " + std::to_string(glm::length(ship.GetSpeed()))  + "\n" +
+				"GameState::objectsDrawn: " + std::to_string(GameState::objectsDrawn)  + "\n" +
+				"Quadtree::DrawnOnScreen: " + std::to_string((drawObjects.size())) + "\n" +
+				"Quadtree::GetObjects: " + std::to_string((nearObjects.size()))
+			);
+			tb_debug->SetText(debugString);
+		}
         
         GameState::gui.Render();
 
@@ -504,20 +567,10 @@ float App::getZoom() const {
 	return m_zooming;
 }
 
-void App::loginScreen() {
-	//GameState::gui.GetControlById("game")->SetVisible(false);
-	GameState::gui.SubscribeEvent("login_submit", EVENT_BUTTON_CLICK, [&](Control* c) {
-		TextBox* tb_login_username = (TextBox*)GameState::gui.GetControlById("login_username");
-		TextBox* tb_login_password = (TextBox*)GameState::gui.GetControlById("login_password");
-		
-		if(this->TODOserver_doLogin(tb_login_username->GetText(), tb_login_password->GetText())) {
-			GameState::gui.GetControlById("login")->SetVisible(false);
-		} else {
-			
-		}
-	});
-}
-
-bool App::TODOserver_doLogin(std::string username, std::string password) {
+bool App::TODOserver_doLogin(std::string email, std::string password) {
+	if(email == "your@email.com1" && password == "password") {
+		return true;
+	}
+	
 	return false;
 }
