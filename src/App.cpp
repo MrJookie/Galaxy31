@@ -135,8 +135,7 @@ void App::init() {
 	
 	Button &bt_login_submit = *((Button*)GameState::gui.GetControlById("login_submit"));
 	bt_login_submit.SubscribeEvent(Button::event::click, [&](Control* c) {
-		Button* bt = (Button*)c;
-		//bt->SetText("zzzz");
+		//Button* bt = (Button*)c;
 		
 		TextBox* tb_login_email = (TextBox*)GameState::gui.GetControlById("login_email");
 		TextBox* tb_login_password = (TextBox*)GameState::gui.GetControlById("login_password");
@@ -150,8 +149,18 @@ void App::init() {
 			m_drawLobby = false; //swap with drawGame
 			m_drawGame = true;
 		} else {
-			//draw tooltip
-			GameState::gui.GetControlById("login_incorrect")->SetVisible(true);
+			GameState::gui.GetControlById("login_error")->SetVisible(true);
+		}
+	});
+	
+	Button &bt_pass_restore_submit = *((Button*)GameState::gui.GetControlById("pass_restore_submit"));
+	bt_pass_restore_submit.SubscribeEvent(Button::event::click, [&](Control* c) {
+		//Button* bt = (Button*)c;
+		
+		TextBox* tb_pass_restore_email = (TextBox*)GameState::gui.GetControlById("pass_restore_email");
+		
+		if(this->TODOserver_doPassRestore(tb_pass_restore_email->GetText())) {
+			GameState::gui.GetControlById("pass_restore_ok")->SetVisible(true);
 		}
 	});
 
@@ -164,8 +173,26 @@ void App::init() {
 		m_drawGame = false;
 	});
 	
+	Button &bt_login_pass_restore = *((Button*)GameState::gui.GetControlById("login_pass_restore"));
+	bt_login_pass_restore.SubscribeEvent(Button::event::click, [&](Control* c) {
+		m_drawLogin = false;
+		m_drawRegister = false;
+		m_drawPassRestore = true;
+		m_drawLobby = false;
+		m_drawGame = false;
+	});
+	
 	Button &bt_register_login = *((Button*)GameState::gui.GetControlById("register_login"));
 	bt_register_login.SubscribeEvent(Button::event::click, [&](Control* c) {
+		m_drawLogin = true;
+		m_drawRegister = false;
+		m_drawPassRestore = false;
+		m_drawLobby = false;
+		m_drawGame = false;
+	});
+	
+	Button &bt_pass_restore_login = *((Button*)GameState::gui.GetControlById("pass_restore_login"));
+	bt_pass_restore_login.SubscribeEvent(Button::event::click, [&](Control* c) {
 		m_drawLogin = true;
 		m_drawRegister = false;
 		m_drawPassRestore = false;
@@ -300,20 +327,26 @@ void App::init() {
 		if(m_drawGame) {
 			GameState::gui.GetControlById("login")->SetVisible(false);
 			GameState::gui.GetControlById("register")->SetVisible(false);
-			//GameState::gui.GetControlById("passrestore")->SetVisible(false);
+			GameState::gui.GetControlById("pass_restore")->SetVisible(false);
 			//GameState::gui.GetControlById("lobby")->SetVisible(false);
 			GameState::gui.GetControlById("game")->SetVisible(true);
 		} else if(m_drawRegister) {
 			GameState::gui.GetControlById("login")->SetVisible(false);
 			GameState::gui.GetControlById("register")->SetVisible(true);
-			//GameState::gui.GetControlById("passrestore")->SetVisible(false);
+			GameState::gui.GetControlById("pass_restore")->SetVisible(false);
+			//GameState::gui.GetControlById("lobby")->SetVisible(false);
+			GameState::gui.GetControlById("game")->SetVisible(false);
+		} else if(m_drawPassRestore) {
+			GameState::gui.GetControlById("login")->SetVisible(false);
+			GameState::gui.GetControlById("register")->SetVisible(false);
+			GameState::gui.GetControlById("pass_restore")->SetVisible(true);
 			//GameState::gui.GetControlById("lobby")->SetVisible(false);
 			GameState::gui.GetControlById("game")->SetVisible(false);
 		} else {
 			//draw login
 			GameState::gui.GetControlById("login")->SetVisible(true);
 			GameState::gui.GetControlById("register")->SetVisible(false);
-			//GameState::gui.GetControlById("passrestore")->SetVisible(false);
+			GameState::gui.GetControlById("pass_restore")->SetVisible(false);
 			//GameState::gui.GetControlById("lobby")->SetVisible(false);
 			GameState::gui.GetControlById("game")->SetVisible(false);
 		}
@@ -582,4 +615,10 @@ bool App::TODOserver_doLogin(std::string email, std::string password) {
 	}
 	
 	return false;
+}
+
+bool App::TODOserver_doPassRestore(std::string email) {
+	//if email was not restored <10 mins ago, return true; else false;
+	
+	return true;
 }
