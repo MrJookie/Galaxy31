@@ -74,6 +74,7 @@ clean:
 	rm -rf release
 	rm -f $(exe)
 	rm -rf /tmp/Galaxy31
+	rm -rf /tmp/Galaxy31_server
 
 make_dirs:
 	@mkdir -p $(build)

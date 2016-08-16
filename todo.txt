@@ -6,7 +6,7 @@ TODO:
 		- asteroid resources (multiple resource types to gather from asteroids)
 		- asteroid destroying, leaving scrap
 		+ camera zoom in/out
-		- minimap
+		+ minimap
 		- minimap zooming in/out
 		+ basic weapons
 		- collision with asteroids and other ships

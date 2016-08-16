@@ -571,6 +571,26 @@ bool App::TODOserver_doLogin(std::string email, std::string password) {
 	if(email == "your@email.com1" && password == "password") {
 		return true;
 	}
-	
+}
+
+/*
+void App::loginScreen() {
+	GameState::gui.GetControlById("game")->SetVisible(false);
+	GameState::gui.SubscribeEvent("login_submit", Button::event::click, [&](Control* c) {
+		TextBox* tb_login_username = (TextBox*)GameState::gui.GetControlById("login_username");
+		TextBox* tb_login_password = (TextBox*)GameState::gui.GetControlById("login_password");
+		
+		if(this->TODOserver_doLogin(tb_login_username->GetText(), tb_login_password->GetText())) {
+			GameState::gui.GetControlById("login")->SetVisible(false);
+		} else {
+			
+		}
+	});
+}
+*/
+
+/*
+bool App::TODOserver_doLogin(std::string username, std::string password) {
 	return false;
 }
+*/
