@@ -15,7 +15,7 @@ link64bit :=    -lSDL2 \
 				-L$(tmp_link) -lenet
 
 
-link := $(link64bit) -Llibs/GUI -lgui
+link := $(link64bit) -Llibs/GUI -lgui -lcryptopp
 
 
 
@@ -106,7 +106,7 @@ server_cpp := \
 server_exe := Galaxy31_server
 server_build := $(build)/server/
 server_obj := $(addprefix $(server_build)/, $(patsubst %.cpp, %.o, $(server_cpp)))
-server_link := -Llibs/enet-1.3.13 -lenet -lmysqlclient -lmysqlpp
+server_link := -Llibs/enet-1.3.13 -lenet -lmysqlclient -lmysqlpp -lcryptopp
 server_includes := -Ilibs/enet-1.3.13/ -I/usr/include/mysql/ -I/usr/include/mysql++/
 server_flags := -Wno-deprecated-declarations -g -DSERVER
 

@@ -100,8 +100,6 @@ void Ship::Process2() {
 	}
 	
 	// this->Accelerate( -this->GetSpeed() * m_downshift_coefficient * float(GameState::deltaTime) );
-
-	
 		
 	if(state[SDL_SCANCODE_W]) {
 		

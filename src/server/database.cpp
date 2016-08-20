@@ -6,6 +6,7 @@ using std::cout;
 using std::endl;
 
 void mysql_connect(const char *db, const char *server, const char *user, const char *password, unsigned int port) {
+	con.set_option(new mysqlpp::MultiStatementsOption(true));
 	if(con.connect(db, server, user, password, port)) {
         cout << "Connected to MySQL server: " << server << ":" << port << endl;
     } else {
@@ -41,19 +42,27 @@ int createAccount(std::string email, std::string userName, std::string password,
 }
 
 //update ip_addr INET_ATON(ip_of_user);
-int loginAccount(std::string email, std::string password, std::string ipAddr) {
+int loginAccount(std::string email, std::string password, std::string ipAddress, int challenge) {
 	mysqlpp::Query query = con.query();
-    query << "SELECT id, active FROM accounts WHERE email = '" << mysqlpp::escape << email << "' AND password = SHA1('" << mysqlpp::escape << password << "') LIMIT 1";
+    query << "SELECT id, active, password FROM accounts WHERE email = '" << mysqlpp::escape << email << "' LIMIT 1";
     
     mysqlpp::StoreQueryResult res = query.store();
     if(res.num_rows() > 0) {
-		query << "UPDATE accounts SET ip_addr = INET_ATON('" << mysqlpp::escape << ipAddr << "'), datetime_last_login = NOW()";
-		query.execute();
-		
-		if((int)res[0]["active"] > 0) {
-			return res[0]["id"];
-		} else {
-			return 0;
+		CryptoPP::SHA1 sha1;
+		std::string db_pass(res[0]["password"]);
+		std::string source = db_pass + std::to_string(challenge);
+		std::string hash = "";
+		CryptoPP::StringSource(source, true, new CryptoPP::HashFilter(sha1, new CryptoPP::HexEncoder(new CryptoPP::StringSink(hash), false)));
+	  
+		if(hash == password) {
+			query << "UPDATE accounts SET ip_addr = INET_ATON('" << mysqlpp::escape << ipAddress << "'), datetime_last_login = NOW()";
+			query.execute();
+			
+			if((int)res[0]["active"] > 0) {
+				return res[0]["id"];
+			} else {
+				return 0;
+			}
 		}
 	}
 	

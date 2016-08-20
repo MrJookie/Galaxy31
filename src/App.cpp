@@ -17,12 +17,6 @@ App::App() {
 
     m_chrono_start = std::chrono::high_resolution_clock::now();
     m_chrono_elapsed = 0;
-    
-    m_drawLogin = false;
-	m_drawRegister = false;
-	m_drawPassRestore = false;
-	m_drawLobby = false;
-	m_drawGame = false;
 
     this->init();
 }
@@ -130,27 +124,21 @@ void App::init() {
 	Canvas* cv_minimap = (Canvas*)GameState::gui.GetControlById("game_minimap");
 	//cv_minimap->SetReadOnly(true);
 	//cv_minimap->SetBackgroundColor(0);
-
-	m_drawLogin = true;
 	
+	GameState::activePage = "login";
+
 	Button &bt_login_submit = *((Button*)GameState::gui.GetControlById("login_submit"));
 	bt_login_submit.SubscribeEvent(Button::event::click, [&](Control* c) {
 		//Button* bt = (Button*)c;
 		
+		TextBox* tb_login_status = (TextBox*)GameState::gui.GetControlById("login_status");
 		TextBox* tb_login_email = (TextBox*)GameState::gui.GetControlById("login_email");
 		TextBox* tb_login_password = (TextBox*)GameState::gui.GetControlById("login_password");
-		
-		if(this->TODOserver_doLogin(tb_login_email->GetText(), tb_login_password->GetText())) {
-			//draw lobby, on click PLAY draw game
-			
-			m_drawLogin = false;
-			m_drawRegister = false;
-			m_drawPassRestore = false;
-			m_drawLobby = false; //swap with drawGame
-			m_drawGame = true;
-		} else {
-			GameState::gui.GetControlById("login_error")->SetVisible(true);
-		}
+
+		tb_login_status->SetText("Logging in...");
+		tb_login_status->SetVisible(true);
+
+		Network::SendAuthentication(tb_login_email->GetText(), tb_login_password->GetText());
 	});
 	
 	Button &bt_pass_restore_submit = *((Button*)GameState::gui.GetControlById("pass_restore_submit"));
@@ -166,40 +154,24 @@ void App::init() {
 
 	Button &bt_login_register = *((Button*)GameState::gui.GetControlById("login_register"));
 	bt_login_register.SubscribeEvent(Button::event::click, [&](Control* c) {
-		m_drawLogin = false;
-		m_drawRegister = true;
-		m_drawPassRestore = false;
-		m_drawLobby = false;
-		m_drawGame = false;
+		GameState::activePage = "register";
 	});
 	
 	Button &bt_login_pass_restore = *((Button*)GameState::gui.GetControlById("login_pass_restore"));
 	bt_login_pass_restore.SubscribeEvent(Button::event::click, [&](Control* c) {
-		m_drawLogin = false;
-		m_drawRegister = false;
-		m_drawPassRestore = true;
-		m_drawLobby = false;
-		m_drawGame = false;
+		GameState::activePage = "pass_restore";
 	});
 	
 	Button &bt_register_login = *((Button*)GameState::gui.GetControlById("register_login"));
 	bt_register_login.SubscribeEvent(Button::event::click, [&](Control* c) {
-		m_drawLogin = true;
-		m_drawRegister = false;
-		m_drawPassRestore = false;
-		m_drawLobby = false;
-		m_drawGame = false;
+		GameState::activePage = "login";
 	});
 	
 	Button &bt_pass_restore_login = *((Button*)GameState::gui.GetControlById("pass_restore_login"));
 	bt_pass_restore_login.SubscribeEvent(Button::event::click, [&](Control* c) {
-		m_drawLogin = true;
-		m_drawRegister = false;
-		m_drawPassRestore = false;
-		m_drawLobby = false;
-		m_drawGame = false;
+		GameState::activePage = "login";
 	});
-	
+		
 	Ship::Chassis chassis("main_ship", "ship_01_skin.png", "ship_01_skin.png");
     Ship ship(glm::vec2(0, 0), 0.0, chassis);
     GameState::player = &ship;
@@ -324,33 +296,29 @@ void App::init() {
         GameState::zoom = this->getZoom();
         GameState::objectsDrawn = 0;
         
-		if(m_drawGame) {
-			GameState::gui.GetControlById("login")->SetVisible(false);
-			GameState::gui.GetControlById("register")->SetVisible(false);
-			GameState::gui.GetControlById("pass_restore")->SetVisible(false);
-			//GameState::gui.GetControlById("lobby")->SetVisible(false);
-			GameState::gui.GetControlById("game")->SetVisible(true);
-		} else if(m_drawRegister) {
-			GameState::gui.GetControlById("login")->SetVisible(false);
-			GameState::gui.GetControlById("register")->SetVisible(true);
-			GameState::gui.GetControlById("pass_restore")->SetVisible(false);
-			//GameState::gui.GetControlById("lobby")->SetVisible(false);
-			GameState::gui.GetControlById("game")->SetVisible(false);
-		} else if(m_drawPassRestore) {
-			GameState::gui.GetControlById("login")->SetVisible(false);
-			GameState::gui.GetControlById("register")->SetVisible(false);
-			GameState::gui.GetControlById("pass_restore")->SetVisible(true);
-			//GameState::gui.GetControlById("lobby")->SetVisible(false);
-			GameState::gui.GetControlById("game")->SetVisible(false);
-		} else {
-			//draw login
+        Network::IsConnected();
+        Network::handle_events(5);
+        
+        if(GameState::activePage == "login") {
 			GameState::gui.GetControlById("login")->SetVisible(true);
 			GameState::gui.GetControlById("register")->SetVisible(false);
 			GameState::gui.GetControlById("pass_restore")->SetVisible(false);
 			//GameState::gui.GetControlById("lobby")->SetVisible(false);
 			GameState::gui.GetControlById("game")->SetVisible(false);
+		} else if(GameState::activePage == "register") {
+			GameState::gui.GetControlById("login")->SetVisible(false);
+			GameState::gui.GetControlById("register")->SetVisible(true);
+			GameState::gui.GetControlById("pass_restore")->SetVisible(false);
+			//GameState::gui.GetControlById("lobby")->SetVisible(false);
+			GameState::gui.GetControlById("game")->SetVisible(false);
+		} else if(GameState::activePage == "pass_restore") {
+			GameState::gui.GetControlById("login")->SetVisible(false);
+			GameState::gui.GetControlById("register")->SetVisible(false);
+			GameState::gui.GetControlById("pass_restore")->SetVisible(true);
+			//GameState::gui.GetControlById("lobby")->SetVisible(false);
+			GameState::gui.GetControlById("game")->SetVisible(false);
 		}
-		
+
 		// background
         glUseProgram(GameState::asset.GetShader("background.vs").id);
 
@@ -396,7 +364,10 @@ void App::init() {
         glUseProgram(0);
         //
         
-        if(m_drawGame) {
+        if(GameState::activePage == "game") {
+			GameState::gui.GetControlById("game")->SetVisible(true);
+			GameState::gui.GetControlById("login")->SetVisible(false);
+			
 			cv_minimap->Clear(0);
 			
 			// draw my ship on radar
@@ -437,10 +408,8 @@ void App::init() {
 			}
 			//
 
-			Network::handle_events(5);
+			//Network::handle_events(5);
 			ship.Process2();
-			
-			Network::SendOurState();
 			
 			// handle multiplayer states interpolation (this code should be moved elsewhere later)
 			for(auto& obj : GameState::ships) {
@@ -484,7 +453,7 @@ void App::init() {
 			GameState::camera.SetProjection(projection);
 			GameState::camera.SetView(view);
 			
-			Network::SendOurState();
+			//Network::SendOurState();
 			
 			for(auto& obj : GameState::ships) {
 				obj.second.first->Draw();
@@ -509,10 +478,14 @@ void App::init() {
 			
 			quadtree.Draw();
 			quadtree.Clear();
-			quadtree.DrawRect(ship.GetPosition().x - ship.GetSize().x/2, ship.GetPosition().y - ship.GetSize().y/2, ship.GetSize().x, ship.GetSize().y, glm::vec4(0, 1, 0, 0.5));
+			quadtree.DrawRect(ship.GetPosition().x - ship.GetSize().x/2, ship.GetPosition().y - ship.GetSize().y/2, ship.GetSize().x, ship.GetSize().y, glm::vec4(0, 1, 0, 1));
 			//
 			
 			ship.Draw();
+			
+			TextBox* tb_game_user_name = (TextBox*)GameState::gui.GetControlById("game_user_name");
+			tb_game_user_name->SetText(GameState::user_name);
+			//tb_game_user_name->SetRect(ship.GetPosition().x - ship.GetSize().x/2, ship.GetPosition().y - ship.GetSize().y/2, 200, 28);
 			
 			for(Projectile& projectile : GameState::projectiles) {
 				projectile.Draw();
@@ -609,15 +582,7 @@ float App::getZoom() const {
 	return m_zooming;
 }
 
-bool App::TODOserver_doLogin(std::string email, std::string password) {
-	if(email == "your@email.com1" && password == "password") {
-		return true;
-	}
-	
-	return false;
-}
-
-bool App::TODOserver_doPassRestore(std::string email) {
+bool App::TODOserver_doPassRestore(std::string user_email) {
 	//if email was not restored <10 mins ago, return true; else false;
 	
 	return true;

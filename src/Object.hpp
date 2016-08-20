@@ -40,6 +40,7 @@ class Object {
 
 	protected:
 		unsigned int id;
+		
 		glm::vec2 m_size;
 		glm::vec2 m_position;
 		float m_rotation;

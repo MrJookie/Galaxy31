@@ -28,6 +28,7 @@ class Ship : public Object {
 		void Stabilizers();
 		
 		Object* GetObject();
+		//move here all account_user info
 		
 	private:
 		Chassis m_chassis;

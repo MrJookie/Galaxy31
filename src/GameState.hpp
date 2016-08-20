@@ -19,6 +19,7 @@ namespace GameState {
 	extern double deltaTime;
 	extern double timeElapsed;
 	extern float zoom;
+	extern std::string activePage;
 	
 	extern int objectsDrawn;
 	
@@ -28,8 +29,12 @@ namespace GameState {
 	extern Camera camera;
 	extern Ship* player;
 	
-	
 	extern std::map< unsigned int, std::pair<Ship*, std::queue<Object>> > ships;
+	
+	//move to Ship
+	extern int account_challenge;
+	extern unsigned int user_id;
+	extern std::string user_name;
 }
 
 #endif

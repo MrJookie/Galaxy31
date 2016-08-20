@@ -13,7 +13,9 @@ enum Channel {
 enum PacketType {
 	new_client,
 	update_objects,
-	new_ship
+	new_ship,
+	authenticate,
+	authorize
 };
 
 namespace Packet {
@@ -25,6 +27,7 @@ namespace Packet {
 	struct new_client : public Packet {
 		new_client() : Packet(PacketType::new_client) {}
 		int new_id;
+		int challenge;
 	};
 
 	struct update_objects : public Packet {
@@ -34,7 +37,18 @@ namespace Packet {
 	
 	struct new_ship : public Packet {
 		new_ship() : Packet(PacketType::new_ship) {}
-		
+	};
+	
+	struct authenticate : public Packet {
+		authenticate() : Packet(PacketType::authenticate) {}
+		char user_email[41];
+		char user_password[41];
+	};
+	
+	struct authorize : public Packet {
+		authorize() : Packet(PacketType::authorize) {}
+		unsigned int user_id;
+		char user_name[11];
 	};
 }
 

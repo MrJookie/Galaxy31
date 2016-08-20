@@ -9,7 +9,6 @@ using std::cout;
 using std::endl;
 #include "server/network.hpp"
 namespace Network {
-	
 	ENetHost *client;
 	ENetPeer *host;
 	
@@ -42,7 +41,7 @@ namespace Network {
 			return false;
 		}
 		
-		ENetPeer *peer;
+		ENetPeer* peer;
 		ENetEvent event;
 		/* Initiate the connection, allocating the two channels 0 and 1. */
 		peer = enet_host_connect(client, &address, Channel::num_channels, 0);
@@ -67,16 +66,38 @@ namespace Network {
 		return true;
 	}
 	
-	
-	
+	/*
 	void send_message(std::string message) {
 		ENetPacket* packet = enet_packet_create((message).c_str(), message.size(), 
 			ENET_PACKET_FLAG_RELIABLE); 
 		enet_host_broadcast(client, Channel::msg, packet);
 	}
+	*/
 	
 	void flush() {
 		enet_host_flush(client);
+	}
+	
+	std::chrono::high_resolution_clock::time_point then = std::chrono::high_resolution_clock::now();
+	bool IsConnected() {
+		std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
+		if(now - then > std::chrono::milliseconds(1000)) {
+			then = now;
+		} else {
+			return true;
+		}
+		
+		ENetPacket* pkt = enet_packet_create("ping", strlen("ping") + 1, ENET_PACKET_FLAG_RELIABLE);
+                                          
+		if(enet_peer_send(host, Channel::control, pkt) == 0) {
+			std::cout << "connected!" << std::endl;
+			
+			return true;
+		}
+		
+		std::cout << "not connected!" << std::endl;
+		
+		return false;
 	}
 	
 	// process n events (set n to big number to process all events)
@@ -101,7 +122,6 @@ namespace Network {
 		
 		if(now - last_time_state_sent > std::chrono::milliseconds(10)) {
 			last_time_state_sent = now;
-			
 		} else {
 			return;
 		}
@@ -116,6 +136,34 @@ namespace Network {
 		enet_peer_send(host, Channel::data, pkt);
 	}
 	
+	void SendAuthentication(std::string user_email, std::string user_password) {
+		CryptoPP::SHA1 sha1;
+		std::string source = user_password;
+		std::string hash = "";
+		CryptoPP::StringSource(source, true, new CryptoPP::HashFilter(sha1, new CryptoPP::HexEncoder(new CryptoPP::StringSink(hash), false)));
+		
+		std::string hashChallenge = hash + std::to_string(GameState::account_challenge);
+		std::string finalHash = "";
+		CryptoPP::StringSource(hashChallenge, true, new CryptoPP::HashFilter(sha1, new CryptoPP::HexEncoder(new CryptoPP::StringSink(finalHash), false)));
+		user_password = finalHash;
+		
+		int len = sizeof(Packet::authenticate);
+		
+		ENetPacket* pkt = enet_packet_create(nullptr, len, ENET_PACKET_FLAG_RELIABLE);
+		Packet::authenticate *p = new (pkt->data) Packet::authenticate();
+		
+		// && user_password.length() < sizeof(p->user_password)) // not needed, since sha1 is 40 chars always, thus will fit 40+1 null terminator
+		if(user_email.length() < sizeof(p->user_email)) {
+			strcpy(p->user_email, user_email.c_str());
+			strcpy(p->user_password, user_password.c_str());
+						
+			enet_peer_send(host, Channel::control, pkt);
+			flush();
+		} else {
+			enet_packet_destroy(pkt);
+		}
+	}
+	
 	void cleanup() {
 		enet_host_destroy(client);
 	}
@@ -126,17 +174,18 @@ namespace Network {
 		Packet::Packet *bp = (Packet::Packet *)pkt->data;
 		switch(bp->type) {
 			case PacketType::new_client: {
-				Packet::new_client *nc = (Packet::new_client *)pkt->data;
-				cout << "your client id is: " << nc->new_id << endl;
-				GameState::player->SetId(nc->new_id);
+				Packet::new_client *p = (Packet::new_client *)pkt->data;
+				cout << "your client id is: " << p->new_id << ", challenge: " << p->challenge << endl;
+				GameState::player->SetId(p->new_id);
+				GameState::account_challenge = p->challenge; //move this?
 				break;
 			}
 			case PacketType::update_objects: {
-				Packet::update_objects *nc = (Packet::update_objects *)pkt->data;
-				if(nc->num_objects * sizeof(Object) > pkt->dataLength) return;
+				Packet::update_objects *p = (Packet::update_objects *)pkt->data;
+				if(p->num_objects * sizeof(Object) > pkt->dataLength) return;
 				Object* objs = (Object*)(pkt->data+sizeof(Packet::update_objects));
 				// cout << "updating objects " << nc->num_objects << endl;
-				for(int i=0; i < nc->num_objects; i++) {
+				for(int i=0; i < p->num_objects; i++) {
 					Object &o = objs[i];
 					
 					if(GameState::player->GetId() == o.GetId()) continue;
@@ -158,6 +207,25 @@ namespace Network {
 					}
 				}
 				// cout << "ping: " << peer->roundTripTime << endl;
+				break;
+			}
+			case PacketType::authorize: {
+				Packet::authorize *p = (Packet::authorize *)pkt->data;
+				
+				GameState::user_id = p->user_id;
+				GameState::user_name = p->user_name;
+
+				if(p->user_id > 0) {
+					TextBox* tb_game_account = (TextBox*)GameState::gui.GetControlById("game_account"); //move this?
+					tb_game_account->SetText("Logged in as: " + std::to_string(GameState::user_id) + " | " + GameState::user_name);
+					
+					GameState::activePage = "game";
+				} else {
+					TextBox* tb_login_status = (TextBox*)GameState::gui.GetControlById("login_status"); //move this?
+					tb_login_status->SetText("Error logging in!");
+					
+					GameState::activePage = "login";
+				}
 				break;
 			}
 		}

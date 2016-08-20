@@ -15,7 +15,7 @@
 #include "server.hpp"
 #include "network.hpp"
 #include "../Object.hpp"
-
+#include "database.hpp"
 
 
 using std::cout;
@@ -36,6 +36,7 @@ static std::queue<std::pair<ENetPacket*, ENetPeer*>> packets;
 
 struct Player {
 	uint32_t id;
+	int challenge;
 	std::vector<Object> obj;
 };
 
@@ -59,7 +60,6 @@ void server_wait_for_packet() {
         case ENET_EVENT_TYPE_RECEIVE:
             packets.emplace(event.packet, event.peer);
             break;
-
         case ENET_EVENT_TYPE_DISCONNECT:
 			remove_client(event.peer);
             enet_peer_reset(event.peer);
@@ -138,15 +138,22 @@ void server_start(short port) {
 }
 
 void handle_new_client(ENetPeer* peer) {
+	srand (time(NULL));
+	int challenge = rand() % 9999999 + 1000000;
+	
 	last_id++;
 	Packet::new_client cl;
 	cl.new_id = last_id;
+	cl.challenge = challenge;
 	ENetPacket* pkt = enet_packet_create( &cl, sizeof(cl), ENET_PACKET_FLAG_RELIABLE );
 	enet_peer_send(peer, Channel::control, pkt);
 	
 	Player* player = new Player;
 	player->id = last_id;
+	player->challenge = challenge;
 	players[peer] = player;
+	
+	cout << "challenge: " << challenge << endl;
 }
 
 void remove_client(ENetPeer* peer) {
@@ -182,6 +189,18 @@ void send_states() {
 	enet_host_flush(host);
 }
 
+void send_authorize(ENetPeer* peer, unsigned int id = 0, std::string user_name = "") {
+	int len = sizeof(Packet::authorize);
+		
+	ENetPacket* pkt = enet_packet_create(nullptr, len, ENET_PACKET_FLAG_RELIABLE);
+	Packet::authorize *p = new (pkt->data) Packet::authorize();
+	p->user_id = id;
+	strcpy(p->user_name, user_name.c_str());
+	
+	enet_peer_send(peer, Channel::control, pkt);
+	enet_host_flush(host);
+}
+
 void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 	if(pkt == nullptr) { cout << "null pkt!!" << endl; return; }
 	if(players.find(peer) == players.end()) return;
@@ -196,6 +215,26 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 			std::unique_lock<std::mutex> l(host_mutex);
 			p.obj.push_back( *(Object*)(pkt->data + sizeof(Packet::update_objects)) );
 			// cout << "receiving states from " << p.id << "\n";
+			break;
+		}
+		case PacketType::authenticate: {
+			Packet::authenticate* packet = (Packet::authenticate*)pkt->data;
+			
+            char ipAddr[256];
+            enet_address_get_host_ip(&peer->address, ipAddr, sizeof(ipAddr));
+            std::string ipAddress(ipAddr);
+			
+			int login_account_id = loginAccount(packet->user_email, packet->user_password, ipAddress, players[peer]->challenge);
+			if(login_account_id > 0) {
+				mysqlpp::Row loggedUser = getExistingUser(login_account_id);
+				
+				unsigned int user_id = loggedUser["id"];
+				std::string user_name(loggedUser["username"]);
+				
+				send_authorize(peer, user_id, user_name); //ok
+			} else {
+				send_authorize(peer); //err
+			}
 			break;
 		}
 		default:

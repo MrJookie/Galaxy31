@@ -8,8 +8,10 @@ int main(int argc, char* argv[]) {
 	}
 	atexit (enet_deinitialize);
 	
-	/*
 	mysql_connect("test", "89.177.76.215", "root", "Galaxy31");
+	
+	/*
+	//mysql_connect("test", "89.177.76.215", "root", "Galaxy31");
 	
 	//////////////////
 	std::cout << "-----------------" << std::endl;
