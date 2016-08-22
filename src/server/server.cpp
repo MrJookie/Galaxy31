@@ -224,6 +224,7 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
             enet_address_get_host_ip(&peer->address, ipAddr, sizeof(ipAddr));
             std::string ipAddress(ipAddr);
 			
+			//std::unique_lock<std::mutex> l(host_mutex);
 			int login_account_id = loginAccount(packet->user_email, packet->user_password, ipAddress, players[peer]->challenge);
 			if(login_account_id > 0) {
 				mysqlpp::Row loggedUser = getExistingUser(login_account_id);

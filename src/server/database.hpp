@@ -4,11 +4,6 @@
 #include <vector>
 #include <mysql++.h>
 
-//crypto
-#include <cryptopp/sha.h>
-#include <cryptopp/filters.h>
-#include <cryptopp/hex.h>
-
 extern mysqlpp::Connection con;
 
 int createAccount(std::string email, std::string userName, std::string password, std::string ipAddr); //returns user_id ( > 0 ) = ok, -1 = email/username exists, -2 = unspecified error

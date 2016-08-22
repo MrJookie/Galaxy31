@@ -1,18 +1,32 @@
 #include "database.hpp"
 
+//crypto
+#include <cryptopp/sha.h>
+#include <cryptopp/filters.h>
+#include <cryptopp/hex.h>
+
 mysqlpp::Connection con;
 
 using std::cout;
 using std::endl;
 
 void mysql_connect(const char *db, const char *server, const char *user, const char *password, unsigned int port) {
-	con.set_option(new mysqlpp::MultiStatementsOption(true));
+	//con.set_option(new mysqlpp::ReconnectOption(true));
+	//con.set_option(new mysqlpp::ConnectTimeoutOption(5));
+	
+	//con.set_option(new mysqlpp::MultiStatementsOption(true));
 	if(con.connect(db, server, user, password, port)) {
         cout << "Connected to MySQL server: " << server << ":" << port << endl;
     } else {
 		cout << con.error() << std::endl;
 		exit(EXIT_FAILURE);
 	}
+	
+	if(!con.thread_aware()) {
+        cout << "Mysql++ not compiled with threading support" << endl;
+    } else {
+        cout << "Mysql++ compiled with threading support" << endl;
+    }
 }
 
 //add ip_addr INET_ATON(ip_of_user);
@@ -55,7 +69,7 @@ int loginAccount(std::string email, std::string password, std::string ipAddress,
 		CryptoPP::StringSource(source, true, new CryptoPP::HashFilter(sha1, new CryptoPP::HexEncoder(new CryptoPP::StringSink(hash), false)));
 	  
 		if(hash == password) {
-			query << "UPDATE accounts SET ip_addr = INET_ATON('" << mysqlpp::escape << ipAddress << "'), datetime_last_login = NOW()";
+			query << "UPDATE accounts SET ip_addr = INET_ATON('" << mysqlpp::escape << ipAddress << "'), datetime_last_login = NOW() WHERE id = " << mysqlpp::escape << res[0]["id"];
 			query.execute();
 			
 			if((int)res[0]["active"] > 0) {

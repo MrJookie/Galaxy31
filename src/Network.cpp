@@ -5,6 +5,16 @@
 #include "GameState.hpp"
 #include <chrono>
 
+//gui
+#include "controls/TextBox.hpp"
+
+//crypto
+#include <cryptopp/sha.h>
+#include <cryptopp/filters.h>
+#include <cryptopp/hex.h>
+
+using namespace ng;
+
 using std::cout;
 using std::endl;
 #include "server/network.hpp"
@@ -76,28 +86,6 @@ namespace Network {
 	
 	void flush() {
 		enet_host_flush(client);
-	}
-	
-	std::chrono::high_resolution_clock::time_point then = std::chrono::high_resolution_clock::now();
-	bool IsConnected() {
-		std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
-		if(now - then > std::chrono::milliseconds(1000)) {
-			then = now;
-		} else {
-			return true;
-		}
-		
-		ENetPacket* pkt = enet_packet_create("ping", strlen("ping") + 1, ENET_PACKET_FLAG_RELIABLE);
-                                          
-		if(enet_peer_send(host, Channel::control, pkt) == 0) {
-			std::cout << "connected!" << std::endl;
-			
-			return true;
-		}
-		
-		std::cout << "not connected!" << std::endl;
-		
-		return false;
 	}
 	
 	// process n events (set n to big number to process all events)

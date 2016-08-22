@@ -171,6 +171,12 @@ void App::init() {
 	bt_pass_restore_login.SubscribeEvent(Button::event::click, [&](Control* c) {
 		GameState::activePage = "login";
 	});
+	
+	Terminal &tm_game_chat = *((Terminal*)GameState::gui.GetControlById("game_terminal"));
+	tm_game_chat.SubscribeEvent(Terminal::event::command, [](Control* c) {
+		Terminal* t = (Terminal*)c;
+		std::cout << "command: " << t->GetText() << std::endl;
+	});
 		
 	Ship::Chassis chassis("main_ship", "ship_01_skin.png", "ship_01_skin.png");
     Ship ship(glm::vec2(0, 0), 0.0, chassis);
@@ -296,7 +302,6 @@ void App::init() {
         GameState::zoom = this->getZoom();
         GameState::objectsDrawn = 0;
         
-        Network::IsConnected();
         Network::handle_events(5);
         
         if(GameState::activePage == "login") {
@@ -453,7 +458,7 @@ void App::init() {
 			GameState::camera.SetProjection(projection);
 			GameState::camera.SetView(view);
 			
-			//Network::SendOurState();
+			Network::SendOurState();
 			
 			for(auto& obj : GameState::ships) {
 				obj.second.first->Draw();

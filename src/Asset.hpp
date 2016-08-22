@@ -32,6 +32,8 @@
 #include "controls/Canvas.hpp"
 #include "controls/CheckBox.hpp"
 #include "controls/WidgetMover.hpp"
+#include "controls/Terminal.hpp"
+#include "controls/Form.hpp"
 #include "common/SDL/Drawing.hpp"
 
 //later pack files and access just by filenames and hardcode filepaths

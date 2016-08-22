@@ -2,6 +2,7 @@
 	<theme>
 		<button font="Assets/Fonts/DroidSansMono.ttf,13" backgroundcolor="#331228D1" bordercolor="#FF1228D1" hoverbordercolor="#FF12AAAA" downcolor="#FF12AAAA" upcolor="#FFFFFFFF" />
 		<textbox font="Assets/Fonts/DroidSansMono.ttf,13" backgroundcolor="#00000000" bordercolor="#FF1228D1" hoverbordercolor="#FF12AAAA" multiline="false" terminal_mode="false" />
+		<terminal font="Assets/Fonts/DroidSansMono.ttf,13" />
 	</theme>
 	<anchor pos="L+50%-100,T+50%-109">
 		<widget rect="0,0,200,218" id="login">
@@ -61,5 +62,9 @@
 		</anchor>
 		
 		<textbox id="game_user_name" multiline="false" terminal_mode="false" rect="0,0,200,28" value="My ship" readonly="true" backgroundcolor="#00111111" bordercolor="#FF00FF000" hoverbordercolor="#00000000" />
+		
+		<anchor pos="L,B">
+			<terminal rect="0,0,400,300" id="game_terminal" />
+		</anchor>
 	</widget>
 </gui>
