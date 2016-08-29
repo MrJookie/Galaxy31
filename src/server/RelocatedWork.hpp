@@ -30,6 +30,11 @@ class RelocatedWork {
 			return !m_work.empty();
 		}
 		
+		bool HasResult() {
+			std::unique_lock<std::mutex> l(m_mutex);
+			return !m_continue.empty();
+		}
+		
 		void Continue() {
 			while(!m_continue.empty()) {
 				std::function<void()> continue_func;

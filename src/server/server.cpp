@@ -80,7 +80,7 @@ void server_work(RelocatedWork* w) {
 		cout << "started thread " << (nthread++) << endl;
 	}
 	while(1) {
-		if(w->HasWork()) {
+		if(w->HasResult()) {
 			w->Continue();
 		}
 		
