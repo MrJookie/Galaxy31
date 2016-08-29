@@ -33,7 +33,7 @@ App::~App() {
 
 void App::init() {
     Network::initialize();
-    Network::connect("89.177.76.215", 1234);
+    Network::connect("127.0.0.1", 1234);
     if(SDL_Init(SDL_INIT_EVERYTHING) != 0) {
         throw std::string("Failed to initialize SDL: ") + SDL_GetError();
     }

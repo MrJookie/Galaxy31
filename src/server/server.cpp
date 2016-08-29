@@ -80,6 +80,10 @@ void server_work(RelocatedWork* w) {
 		cout << "started thread " << (nthread++) << endl;
 	}
 	while(1) {
+		if(w->HasWork()) {
+			w->Continue();
+		}
+		
 		std::pair<ENetPacket*, ENetPeer*> packet(0,0);
 		if(packets.size() == 0) {
 			std::this_thread::sleep_for(std::chrono::milliseconds(5));
@@ -107,11 +111,6 @@ void server_work(RelocatedWork* w) {
 			last_status_update = now;
 			send_states();
 			// cout << "sending states\n";
-		}
-		
-				
-		if(w->HasWork()) {
-			w->Continue();
 		}
 	}
 }
@@ -244,33 +243,44 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt, RelocatedWork* w) {
 			}
 			*/
 			
-			/*
+			std::cout << "logging with email: " << packet->user_email << "\n";
+			
 			w->MakeWork(
-				[](mysqlpp::Row row) { std::cout << "got: " << row["username"] << std::endl; },
-				[](mysqlpp::Connection con) -> mysqlpp::Row {
-					mysqlpp::Query query(con.query("SELECT * FROM accounts"));
-					mysqlpp::StoreQueryResult res = query.store();
-					
-					for (size_t j = 0; j < res.num_rows(); ++j) {
-						cout << res[j]["username"] << endl;
+				[=](int login_account_id) {
+					if(login_account_id > 0) {
+						std::cout << "logged in, getting user\n";
+						w->MakeWork(
+							[=](mysqlpp::Row loggedUser) {
+								unsigned int user_id = loggedUser["id"];
+								std::string user_name(loggedUser["username"]);
+								std::cout << "sending authorize...\n";
+								send_authorize(peer, user_id, user_name);
+							},
+							getExistingUser,
+							login_account_id
+						);
+					} else {
+						std::cout << "not authorized\n";
+						send_authorize(peer);
 					}
-					mysqlpp::Connection::thread_end();
-									
-					
-					return res[0];
-				}
+				},
+				loginAccount,
+				std::string(packet->user_email),
+				std::string(packet->user_password),
+				std::string(ipAddress),
+				players[peer]->challenge
 			);
-			*/
 			
 			
-			w->MakeWork(
-				[](int b) { std::cout << "get: " << std::endl; },
-				[](int a) {
-					std::cout << "set: " << std::endl;
+			
+			// w->MakeWork(
+				// [](int b) { std::cout << "get: " << std::endl; },
+				// [](int a) {
+					// std::cout << "set: " << std::endl;
 					
-					return a;
-				}
-			);
+					// return a;
+				// }
+			// );
 			
 			break;
 		}

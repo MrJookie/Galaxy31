@@ -53,10 +53,10 @@ int createAccount(std::string email, std::string userName, std::string password,
 }
 
 //update ip_addr INET_ATON(ip_of_user);
-int loginAccount(std::string email, std::string password, std::string ipAddress, int challenge) {
+int loginAccount(mysqlpp::Connection &con, std::string email, std::string password, std::string ipAddress, int challenge) {
 	mysqlpp::Query query = con.query();
     query << "SELECT id, active, password FROM accounts WHERE email = '" << mysqlpp::escape << email << "' LIMIT 1";
-    
+    std::cout << "login => " << email << " : " << password << " : " << ipAddress << "\n";
     mysqlpp::StoreQueryResult res = query.store();
     if(res.num_rows() > 0) {
 		CryptoPP::SHA1 sha1;
@@ -70,6 +70,7 @@ int loginAccount(std::string email, std::string password, std::string ipAddress,
 			query.execute();
 			
 			if((int)res[0]["active"] > 0) {
+				std::cout << "returning user\n";
 				return res[0]["id"];
 			} else {
 				return 0;
@@ -80,7 +81,7 @@ int loginAccount(std::string email, std::string password, std::string ipAddress,
 	return -1;
 }
 
-mysqlpp::Row getExistingUser(unsigned int account_id) {
+mysqlpp::Row getExistingUser(mysqlpp::Connection &con, unsigned int account_id) {
 	mysqlpp::Query query = con.query();
     query << "SELECT * FROM accounts WHERE id = " << mysqlpp::escape << account_id << " LIMIT 1";
     
