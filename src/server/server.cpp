@@ -26,7 +26,7 @@ int nthread = 0;
 
 
 // local forwards
-static void parse_packet(ENetPeer* peer, ENetPacket* pkt, RelocatedWork* w, SimpleConnectionPool* poolptr);
+static void parse_packet(ENetPeer* peer, ENetPacket* pkt, RelocatedWork* w);
 static void handle_new_client(ENetPeer* peer);
 static void remove_client(ENetPeer* peer);
 static void send_states();
@@ -74,7 +74,7 @@ void server_wait_for_packet() {
 
 
 std::chrono::high_resolution_clock::time_point last_status_update = std::chrono::high_resolution_clock::now();
-void server_work(RelocatedWork* w, SimpleConnectionPool* poolptr) {
+void server_work(RelocatedWork* w) {
 	{
 		std::unique_lock<std::mutex> l(term);
 		cout << "started thread " << (nthread++) << endl;
@@ -97,7 +97,7 @@ void server_work(RelocatedWork* w, SimpleConnectionPool* poolptr) {
 		
 		if(packet.second && (packet.second->state & ENET_PEER_STATE_CONNECTED > 0)) {
 		//if(packet.first) {
-			parse_packet(packet.second, packet.first, w, poolptr);
+			parse_packet(packet.second, packet.first, w);
 			enet_packet_destroy(packet.first);
 		}
 		
@@ -112,7 +112,7 @@ void server_work(RelocatedWork* w, SimpleConnectionPool* poolptr) {
 }
 
 
-void server_start(short port, RelocatedWork* w, SimpleConnectionPool* poolptr) {
+void server_start(short port, RelocatedWork* w) {
     ENetAddress address;
     ENetHost * server;
     address.host = ENET_HOST_ANY;
@@ -129,7 +129,7 @@ void server_start(short port, RelocatedWork* w, SimpleConnectionPool* poolptr) {
     unsigned int num_threads = num_cores ;
     thread *t = new thread[num_threads];
     for(int i = 0; i < num_threads; i++) {
-		t[i] = thread(server_work, w, poolptr);
+		t[i] = thread(server_work, w);
 	}
 	for(int i=0; i < num_threads; i++) {
 		t[i].detach();
@@ -201,7 +201,7 @@ void send_authorize(ENetPeer* peer, unsigned int id = 0, std::string user_name =
 	enet_host_flush(host);
 }
 
-void parse_packet(ENetPeer* peer, ENetPacket* pkt, RelocatedWork* w, SimpleConnectionPool* poolptr) {
+void parse_packet(ENetPeer* peer, ENetPacket* pkt, RelocatedWork* w) {
 	if(pkt == nullptr) { cout << "null pkt!!" << endl; return; }
 	if(players.find(peer) == players.end()) return;
 	// cout << "rcv packet: " << pkt->data << endl;
@@ -239,50 +239,21 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt, RelocatedWork* w, SimpleConne
 			}
 			*/
 			
-				mysqlpp::Connection::thread_start();
-				
-				mysqlpp::ScopedConnection cp(*poolptr, true);
-				if (!cp) {
-					//throw std::string("Failed to get a connection from the pool!"); //comment out?
-				}
-				
-				mysqlpp::Query query(cp->query("SELECT * FROM accounts"));
-				mysqlpp::StoreQueryResult res = query.store();
-				
-				for (size_t j = 0; j < res.num_rows(); ++j) {
-					cout << res[j]["username"] << endl;
-				}
-	
-				std::cout << "Conns in use: " << poolptr->GetConnsInUse() << std::endl;
-				
-				mysqlpp::Connection::thread_end();
-			
-			/*
 			w->MakeWork(
-			[](mysqlpp::Row row) { std::cout << "got: " << row["username"] << std::endl; },
-			[](int a, int b, SimpleConnectionPool* poolptr) -> mysqlpp::Row { 
-				mysqlpp::Connection::thread_start();
-				
-				mysqlpp::ScopedConnection cp(*poolptr, true);
-				if (!cp) {
-					//throw std::string("Failed to get a connection from the pool!"); //comment out?
+				[](mysqlpp::Row row) { std::cout << "got: " << row["username"] << std::endl; },
+				[](mysqlpp::Connection con) -> mysqlpp::Row {
+					mysqlpp::Query query(con.query("SELECT * FROM accounts"));
+					mysqlpp::StoreQueryResult res = query.store();
+					
+					for (size_t j = 0; j < res.num_rows(); ++j) {
+						cout << res[j]["username"] << endl;
+					}
+					mysqlpp::Connection::thread_end();
+									
+					
+					return res[0];
 				}
-				
-				mysqlpp::Query query(cp->query("SELECT * FROM accounts"));
-				mysqlpp::StoreQueryResult res = query.store();
-				
-				for (size_t j = 0; j < res.num_rows(); ++j) {
-					cout << res[j]["username"] << endl;
-				}
-	
-				std::cout << "Conns in use: " << poolptr->GetConnsInUse() << std::endl;
-				
-				mysqlpp::Connection::thread_end();
-				
-				return res[0];
-			},
-			10,15, poolptr);
-			*/
+			);
 			
 			break;
 		}

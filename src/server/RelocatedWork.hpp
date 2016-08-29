@@ -5,7 +5,22 @@
 #include <mutex>
 class RelocatedWork {
 	private:
-		std::queue<std::function<void()>> m_work;
+		template<typename T>
+		struct ref_k_tmpl {
+			template<typename B, typename = typename std::enable_if<!std::is_same<ref_k_tmpl<T>, B>()>::type>
+			ref_k_tmpl(B& a) : t(reinterpret_cast<T&>(a)) {}
+			template<typename B>
+			ref_k_tmpl(B* a) : t(reinterpret_cast<T&>(*a)) {}
+			T& t;
+			template<typename B>
+			operator B& () { return reinterpret_cast<B&>(t); }
+			template<typename B>
+			operator B* () { return reinterpret_cast<B*>(&t); }
+		};
+
+		typedef ref_k_tmpl<int> ref_k;
+	
+		std::queue<std::function<void(ref_k)>> m_work;
 		std::queue<std::function<void()>> m_continue;
 		std::mutex m_mutex;
 	public:
@@ -18,6 +33,7 @@ class RelocatedWork {
 		void Continue() {
 			while(!m_continue.empty()) {
 				std::function<void()> continue_func;
+				
 				{
 					std::unique_lock<std::mutex> l(m_mutex);
 					if(m_continue.empty()) return;
@@ -28,9 +44,10 @@ class RelocatedWork {
 				continue_func();
 			}
 		}
-		void Work() {
+		
+		void Work(ref_k state) {
 			while(!m_work.empty()) {
-				std::function<void()> work_func;
+				std::function<void(ref_k)> work_func;
 				
 				{
 					std::unique_lock<std::mutex> l(m_mutex);
@@ -39,55 +56,23 @@ class RelocatedWork {
 					m_work.pop();
 				}
 				
-				work_func();
+				work_func(state);
 			}
 		}
 		
-		template<typename T>
-		struct memfun_type
-		{
-			using type = void;
-		};
-
-		template<typename Ret, typename Class, typename... Args>
-		struct memfun_type<Ret(Class::*)(Args...) const>
-		{
-			using type = std::function<Ret(Args...)>;
-			using ret = Ret;
-		};
-		
-		template <typename W, typename... Args>
-		void MakeWork( std::function<void(typename memfun_type<decltype(&W::operator())>::ret)> continuation_function, 
+		template <typename F, typename W, typename... Args>
+		void MakeWork( F continuation_function, 
 					   W work_function,
 					   Args... args ) 
 		{
-			m_work.push([=](){
-		
-				typename memfun_type<decltype(&W::operator())>::ret result = work_function(args...);
-				
+			m_work.push([=](ref_k state){
+				auto result = work_function(state, args...);
 				std::unique_lock<std::mutex> l(m_mutex);
 				m_continue.push([=]() {
 					continuation_function( result );
 				});
 			});
 		}
-		
-		template <typename Ret, typename... Args>
-		void MakeWork( void(*continuation_function)(Ret), 
-					   Ret (*work_function)(Args...),
-					   Args... args ) 
-		{
-			m_work.push([=](){
-				Ret result = work_function(args...);
-				
-				std::unique_lock<std::mutex> l(m_mutex);
-				m_continue.push([=]() {
-					continuation_function( result );
-				});
-			});
-		}
-		
-	
 };
 
 
