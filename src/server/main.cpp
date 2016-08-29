@@ -126,10 +126,6 @@ int main(int argc, char* argv[]) {
 	
 	while(1) {
 		server_wait_for_packet();
-		
-		while(w.HasWork()) {
-			w.Continue();
-		}
 	}
 	
 	return 0;

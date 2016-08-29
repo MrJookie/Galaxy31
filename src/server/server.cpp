@@ -108,6 +108,11 @@ void server_work(RelocatedWork* w) {
 			send_states();
 			// cout << "sending states\n";
 		}
+		
+				
+		if(w->HasWork()) {
+			w->Continue();
+		}
 	}
 }
 
@@ -239,6 +244,7 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt, RelocatedWork* w) {
 			}
 			*/
 			
+			/*
 			w->MakeWork(
 				[](mysqlpp::Row row) { std::cout << "got: " << row["username"] << std::endl; },
 				[](mysqlpp::Connection con) -> mysqlpp::Row {
@@ -252,6 +258,17 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt, RelocatedWork* w) {
 									
 					
 					return res[0];
+				}
+			);
+			*/
+			
+			
+			w->MakeWork(
+				[](int b) { std::cout << "get: " << std::endl; },
+				[](int a) {
+					std::cout << "set: " << std::endl;
+					
+					return a;
 				}
 			);
 			
