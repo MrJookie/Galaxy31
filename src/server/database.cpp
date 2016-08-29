@@ -7,9 +7,6 @@
 
 mysqlpp::Connection con;
 
-using std::cout;
-using std::endl;
-
 void mysql_connect(const char *db, const char *server, const char *user, const char *password, unsigned int port) {
 	//con.set_option(new mysqlpp::ReconnectOption(true));
 	//con.set_option(new mysqlpp::ConnectTimeoutOption(5));

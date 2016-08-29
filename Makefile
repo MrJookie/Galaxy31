@@ -101,6 +101,7 @@ server_cpp := \
 		src/server/server.cpp \
 		src/server/main.cpp \
 		src/server/database.cpp \
+#		src/server/DbPool.cpp \
 		src/Object.cpp \
 		
 server_exe := Galaxy31_server

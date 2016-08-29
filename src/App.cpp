@@ -172,11 +172,13 @@ void App::init() {
 		GameState::activePage = "login";
 	});
 	
+	/*
 	Terminal &tm_game_chat = *((Terminal*)GameState::gui.GetControlById("game_terminal"));
 	tm_game_chat.SubscribeEvent(Terminal::event::command, [](Control* c) {
 		Terminal* t = (Terminal*)c;
 		std::cout << "command: " << t->GetText() << std::endl;
 	});
+	*/
 		
 	Ship::Chassis chassis("main_ship", "ship_01_skin.png", "ship_01_skin.png");
     Ship ship(glm::vec2(0, 0), 0.0, chassis);

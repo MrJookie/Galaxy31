@@ -10,7 +10,7 @@ Target Server Type    : MYSQL
 Target Server Version : 50505
 File Encoding         : 65001
 
-Date: 2016-07-26 03:08:34
+Date: 2016-08-29 11:49:14
 */
 
 SET FOREIGN_KEY_CHECKS=0;
@@ -39,7 +39,7 @@ CREATE TABLE `abilities` (
 DROP TABLE IF EXISTS `accounts`;
 CREATE TABLE `accounts` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
-  `email` varchar(255) NOT NULL,
+  `email` varchar(40) NOT NULL,
   `username` varchar(10) NOT NULL,
   `password` char(40) NOT NULL,
   `active` int(1) NOT NULL,
@@ -51,11 +51,13 @@ CREATE TABLE `accounts` (
   `resource_cobalt` int(11) NOT NULL,
   `resource_uranium` int(11) NOT NULL,
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8;
 
 -- ----------------------------
 -- Records of accounts
 -- ----------------------------
+INSERT INTO `accounts` VALUES ('1', 'your@email.com', 'Zippo', '46339c0f1d529fcc6a3f7e854b99482fe91ba0db', '1', 0x31353034373931373637, '2016-07-26 03:10:38', '2016-08-25 20:23:27', '0', '0', '0', '0');
+INSERT INTO `accounts` VALUES ('2', 'your@email.com1', 'Nikola', '46339c0f1d529fcc6a3f7e854b99482fe91ba0db', '1', 0x31353034373931373637, '2016-08-20 17:19:18', '2016-08-20 18:05:10', '0', '0', '0', '0');
 
 -- ----------------------------
 -- Table structure for `chassis`

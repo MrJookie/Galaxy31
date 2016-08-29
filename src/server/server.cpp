@@ -15,8 +15,7 @@
 #include "server.hpp"
 #include "network.hpp"
 #include "../Object.hpp"
-#include "database.hpp"
-
+//#include "database.hpp"
 
 using std::cout;
 using std::endl;
@@ -27,7 +26,7 @@ int nthread = 0;
 
 
 // local forwards
-static void parse_packet(ENetPeer* peer, ENetPacket* pkt);
+static void parse_packet(ENetPeer* peer, ENetPacket* pkt, RelocatedWork* w, SimpleConnectionPool* poolptr);
 static void handle_new_client(ENetPeer* peer);
 static void remove_client(ENetPeer* peer);
 static void send_states();
@@ -68,13 +67,14 @@ void server_wait_for_packet() {
 			cout << "event: " << event.type << endl;
         }
     }
+    
     std::this_thread::sleep_for(std::chrono::milliseconds(5));
 }
 
 
 
 std::chrono::high_resolution_clock::time_point last_status_update = std::chrono::high_resolution_clock::now();
-void server_work() {
+void server_work(RelocatedWork* w, SimpleConnectionPool* poolptr) {
 	{
 		std::unique_lock<std::mutex> l(term);
 		cout << "started thread " << (nthread++) << endl;
@@ -97,7 +97,7 @@ void server_work() {
 		
 		if(packet.second && (packet.second->state & ENET_PEER_STATE_CONNECTED > 0)) {
 		//if(packet.first) {
-			parse_packet(packet.second, packet.first);
+			parse_packet(packet.second, packet.first, w, poolptr);
 			enet_packet_destroy(packet.first);
 		}
 		
@@ -112,7 +112,7 @@ void server_work() {
 }
 
 
-void server_start(short port) {
+void server_start(short port, RelocatedWork* w, SimpleConnectionPool* poolptr) {
     ENetAddress address;
     ENetHost * server;
     address.host = ENET_HOST_ANY;
@@ -129,7 +129,7 @@ void server_start(short port) {
     unsigned int num_threads = num_cores ;
     thread *t = new thread[num_threads];
     for(int i = 0; i < num_threads; i++) {
-		t[i] = thread(server_work);
+		t[i] = thread(server_work, w, poolptr);
 	}
 	for(int i=0; i < num_threads; i++) {
 		t[i].detach();
@@ -201,7 +201,7 @@ void send_authorize(ENetPeer* peer, unsigned int id = 0, std::string user_name =
 	enet_host_flush(host);
 }
 
-void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
+void parse_packet(ENetPeer* peer, ENetPacket* pkt, RelocatedWork* w, SimpleConnectionPool* poolptr) {
 	if(pkt == nullptr) { cout << "null pkt!!" << endl; return; }
 	if(players.find(peer) == players.end()) return;
 	// cout << "rcv packet: " << pkt->data << endl;
@@ -225,6 +225,7 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
             std::string ipAddress(ipAddr);
 			
 			//std::unique_lock<std::mutex> l(host_mutex);
+			/*
 			int login_account_id = loginAccount(packet->user_email, packet->user_password, ipAddress, players[peer]->challenge);
 			if(login_account_id > 0) {
 				mysqlpp::Row loggedUser = getExistingUser(login_account_id);
@@ -236,6 +237,53 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 			} else {
 				send_authorize(peer); //err
 			}
+			*/
+			
+				mysqlpp::Connection::thread_start();
+				
+				mysqlpp::ScopedConnection cp(*poolptr, true);
+				if (!cp) {
+					//throw std::string("Failed to get a connection from the pool!"); //comment out?
+				}
+				
+				mysqlpp::Query query(cp->query("SELECT * FROM accounts"));
+				mysqlpp::StoreQueryResult res = query.store();
+				
+				for (size_t j = 0; j < res.num_rows(); ++j) {
+					cout << res[j]["username"] << endl;
+				}
+	
+				std::cout << "Conns in use: " << poolptr->GetConnsInUse() << std::endl;
+				
+				mysqlpp::Connection::thread_end();
+			
+			/*
+			w->MakeWork(
+			[](mysqlpp::Row row) { std::cout << "got: " << row["username"] << std::endl; },
+			[](int a, int b, SimpleConnectionPool* poolptr) -> mysqlpp::Row { 
+				mysqlpp::Connection::thread_start();
+				
+				mysqlpp::ScopedConnection cp(*poolptr, true);
+				if (!cp) {
+					//throw std::string("Failed to get a connection from the pool!"); //comment out?
+				}
+				
+				mysqlpp::Query query(cp->query("SELECT * FROM accounts"));
+				mysqlpp::StoreQueryResult res = query.store();
+				
+				for (size_t j = 0; j < res.num_rows(); ++j) {
+					cout << res[j]["username"] << endl;
+				}
+	
+				std::cout << "Conns in use: " << poolptr->GetConnsInUse() << std::endl;
+				
+				mysqlpp::Connection::thread_end();
+				
+				return res[0];
+			},
+			10,15, poolptr);
+			*/
+			
 			break;
 		}
 		default:
