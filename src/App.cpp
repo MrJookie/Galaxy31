@@ -210,49 +210,51 @@ void App::init() {
             if(e.type == SDL_QUIT) {
                 running = false;
             } else if(e.type == SDL_KEYDOWN) {
-                switch(e.key.keysym.sym) {
-                case SDLK_f: {
-                    if(toggleFullscreen) {
-                        SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+				if(!GameState::gui.GetActiveControl()) {
+					switch(e.key.keysym.sym) {
+					case SDLK_f: {
+						if(toggleFullscreen) {
+							SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
 
-                        int w, h;
-                        SDL_GetWindowSize(window, &w, &h);
-                        this->setWindowSize(glm::vec2(w, h));
+							int w, h;
+							SDL_GetWindowSize(window, &w, &h);
+							this->setWindowSize(glm::vec2(w, h));
 
-                        toggleFullscreen = false;
-                    } else {
-                        SDL_SetWindowFullscreen(window, 0);
-                        //SDL_SetWindowDisplayMode(window, 0);
+							toggleFullscreen = false;
+						} else {
+							SDL_SetWindowFullscreen(window, 0);
+							//SDL_SetWindowDisplayMode(window, 0);
 
-                        /*
-                        int w, h;
-                        SDL_GetWindowSize(window, &w, &h); //?
-                        */
+							/*
+							int w, h;
+							SDL_GetWindowSize(window, &w, &h); //?
+							*/
 
-                        this->setWindowSize(m_initialWindowSize);
+							this->setWindowSize(m_initialWindowSize);
 
-                        toggleFullscreen = true;
-                    }
-                    
-                    skipMouseResolution = 4;
-                }
-                break;
+							toggleFullscreen = true;
+						}
+						
+						skipMouseResolution = 4;
+					}
+					break;
 
-                case SDLK_ESCAPE:
-                    running = false;
-                    break;
+					case SDLK_ESCAPE:
+						running = false;
+						break;
 
-                case SDLK_e: {
-                    if(toggleWireframe) {
-                        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-                        toggleWireframe = false;
-                    } else {
-                        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-                        toggleWireframe = true;
-                    }
-                }
-                break;
-                }
+					case SDLK_e: {
+						if(toggleWireframe) {
+							glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+							toggleWireframe = false;
+						} else {
+							glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+							toggleWireframe = true;
+						}
+					}
+					break;
+					}
+				}
             } else if(e.type == SDL_MOUSEBUTTONDOWN && GameState::gui.GetSelectedControl() == nullptr) {
 				if(e.button.button == SDL_BUTTON_LEFT) {
 					Ship* ship = new Ship(this->getWorldMousePosition(), 0.0, chassis);

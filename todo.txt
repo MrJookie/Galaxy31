@@ -49,7 +49,7 @@ TODO:
 			- ship controls
 			- handling lot of players
 			- multiple servers?
-			- server mysql connection
+			+ server mysql connection
 		client network
 			+ join
 			- chat

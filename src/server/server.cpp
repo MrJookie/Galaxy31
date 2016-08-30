@@ -246,29 +246,30 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt, RelocatedWork* w) {
 			std::cout << "logging with email: " << packet->user_email << "\n";
 			
 			w->MakeWork(
+				loginAccount,
+				{packet->user_email,
+				packet->user_password,
+				ipAddress,
+				players[peer]->challenge},
+				
 				[=](int login_account_id) {
 					if(login_account_id > 0) {
 						std::cout << "logged in, getting user\n";
 						w->MakeWork(
+							getExistingUser,
+							{login_account_id},
 							[=](mysqlpp::Row loggedUser) {
 								unsigned int user_id = loggedUser["id"];
 								std::string user_name(loggedUser["username"]);
 								std::cout << "sending authorize...\n";
 								send_authorize(peer, user_id, user_name);
-							},
-							getExistingUser,
-							login_account_id
+							}
 						);
 					} else {
 						std::cout << "not authorized\n";
 						send_authorize(peer);
 					}
-				},
-				loginAccount,
-				std::string(packet->user_email),
-				std::string(packet->user_password),
-				std::string(ipAddress),
-				players[peer]->challenge
+				}
 			);
 			
 			

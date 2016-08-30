@@ -13,7 +13,8 @@ RelocatedWork w;
 
 void mysql_thread() {
 	mysqlpp::Connection con;
-	if(!con.connect("test", "89.177.76.215", "root", "Galaxy31")) {
+	// if(!con.connect("test", "89.177.76.215", "root", "Galaxy31")) {
+	if(!con.connect("galaxy31", "127.0.0.1", "Galaxy31", "Galaxy31")) {
 		cout << con.error() << std::endl;
 		exit(EXIT_FAILURE);
 	}
@@ -77,22 +78,22 @@ int main(int argc, char* argv[]) {
 	std::thread mysql_thrd(mysql_thread);
 	mysql_thrd.detach();
 
-	for(int i = 0; i < 10; i++) {
-		w.MakeWork(
-			[](mysqlpp::Row row) { std::cout << "got: " << row["username"] << std::endl; },
-			[](mysqlpp::Connection con) -> mysqlpp::Row {
-				mysqlpp::Query query(con.query("SELECT * FROM accounts"));
-				mysqlpp::StoreQueryResult res = query.store();
+	// for(int i = 0; i < 10; i++) {
+		// w.MakeWork(
+			// [](mysqlpp::Row row) { std::cout << "got: " << row["username"] << std::endl; },
+			// [](mysqlpp::Connection con) -> mysqlpp::Row {
+				// mysqlpp::Query query(con.query("SELECT * FROM accounts"));
+				// mysqlpp::StoreQueryResult res = query.store();
 				
-				for (size_t j = 0; j < res.num_rows(); ++j) {
-					cout << res[j]["username"] << endl;
-				}
+				// for (size_t j = 0; j < res.num_rows(); ++j) {
+					// cout << res[j]["username"] << endl;
+				// }
 								
 				
-				return res[0];
-			}
-		);
-	}
+				// return res[0];
+			// }
+		// );
+	// }
 	
 	/*
 	for(int i = 0; i < 10; i++) {
