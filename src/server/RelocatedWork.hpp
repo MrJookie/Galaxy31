@@ -20,7 +20,6 @@ class RelocatedWork {
 
 		typedef ref_k_tmpl<int> ref_k;
 		
-		// ---------- shitload of crap
 		template<bool done, int n, typename... Args>
 		struct tuple_skip_n_args;
 		
@@ -39,8 +38,10 @@ class RelocatedWork {
 
 		template< typename r, typename ... a, std::size_t n >
 		struct function_argument_type< r (*)( a ... ), n >
-			{ using type = typename std::tuple_element< n, std::tuple< a ... > >::type; 
+			{ 
+			  // using type = typename std::tuple_element< n, std::tuple< a ... > >::type; 
 			  using tuple = typename tuple_skip_n_args<n == 0, n, a...>::type;
+			  using result = r;
 			};
 
 		template< typename r, typename c, typename ... a, std::size_t n >
@@ -57,34 +58,40 @@ class RelocatedWork {
 			: function_argument_type< decltype( & ftor::operator () ), n > {};
 		// --------------
 		
-		// -----------
-		template <typename F, typename Tuple, bool Done, int Total, int... N>
-		struct call_impl {
-			static auto call(F f, Tuple && t) {
-				return call_impl<F, Tuple, Total == 1 + sizeof...(N), Total, N..., sizeof...(N)>::call(f, std::forward<Tuple>(t));
+		template<typename T>
+		struct ThenObj{
+			std::function<void()> func;
+			T result;
+			
+			template<typename F>
+			void then(F continue_function) {
+				func = [=](){ 
+					continue_function( result );
+				};
 			}
 		};
-
-		template <typename F, typename Tuple, int Total, int... N>
-		struct call_impl<F, Tuple, true, Total, N...> {
-			static auto call(F f, Tuple && t) {
-				return f(std::get<N>(std::forward<Tuple>(t))...);
-			}
-		};
-
-		// user invokes this
-		template <typename F, typename Tuple>
-		auto call(F f, Tuple && t) {
-			typedef typename std::decay<Tuple>::type ttype;
-			return call_impl<F, Tuple, 0 == std::tuple_size<ttype>::value, std::tuple_size<ttype>::value>::call(f, std::forward<Tuple>(t));
-		}
-		// -----------
 	
 		std::queue<std::function<void(ref_k)>> m_work;
-		std::queue<std::function<void()>> m_continue;
+		std::queue<std::function<void()>*> m_continue;
 		std::mutex m_mutex;
+		
+	private:
+		template <typename W, typename Tuple, std::size_t... N>
+		auto& makeWork( W work_function, Tuple tuple, std::index_sequence<N...> ) {
+			auto* ret = new ThenObj<typename function_argument_type<W,1>::result>();
+			std::unique_lock<std::mutex> l(m_mutex);
+			m_work.push([=](ref_k state){
+				ret->result = work_function(state, std::get<N>(tuple)...);
+				std::unique_lock<std::mutex> l(m_mutex);
+				m_continue.push((std::function<void()>*)ret);
+			});
+			return *ret;
+		}
+		
 	public:
 	
+		
+			
 		bool HasWork() { 
 			std::unique_lock<std::mutex> l(m_mutex);
 			return !m_work.empty();
@@ -97,7 +104,7 @@ class RelocatedWork {
 		
 		void Continue() {
 			while(!m_continue.empty()) {
-				std::function<void()> continue_func;
+				std::function<void()>* continue_func;
 				
 				{
 					std::unique_lock<std::mutex> l(m_mutex);
@@ -106,7 +113,9 @@ class RelocatedWork {
 					m_continue.pop();
 				}
 				
-				continue_func();
+				if(*continue_func)
+					(*continue_func)();
+				delete continue_func;
 			}
 		}
 		
@@ -125,21 +134,12 @@ class RelocatedWork {
 			}
 		}
 		
-		template <typename F, typename W>
-		void MakeWork( W work_function,
-					   typename function_argument_type<W,1>::tuple tuple,
-					   F continuation_function
-					   ) 
-		{
-			std::unique_lock<std::mutex> l(m_mutex);
-			m_work.push([=](ref_k state){
-				auto result = call(work_function, std::tuple_cat(std::make_tuple(state), tuple)); //work_function(state, args...);
-				std::unique_lock<std::mutex> l(m_mutex);
-				m_continue.push([=]() {
-					continuation_function( result );
-				});
-			});
+		template <typename W, typename... Args>
+		inline auto& MakeWork( W work_function, Args...  args ) {
+			return makeWork<W, typename function_argument_type<W,1>::tuple> (std::forward<W>(work_function), {args...}, std::make_index_sequence<sizeof...(Args)>());
 		}
+		
+		
 		
 };
 

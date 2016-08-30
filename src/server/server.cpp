@@ -247,17 +247,18 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt, RelocatedWork* w) {
 			
 			w->MakeWork(
 				loginAccount,
-				{packet->user_email,
+				packet->user_email,
 				packet->user_password,
 				ipAddress,
-				players[peer]->challenge},
-				
+				players[peer]->challenge
+			)
+			.then(
 				[=](int login_account_id) {
+					std::cout << login_account_id << std::endl;
 					if(login_account_id > 0) {
 						std::cout << "logged in, getting user\n";
-						w->MakeWork(
-							getExistingUser,
-							{login_account_id},
+						w->MakeWork(getExistingUser,login_account_id )
+						.then(
 							[=](mysqlpp::Row loggedUser) {
 								unsigned int user_id = loggedUser["id"];
 								std::string user_name(loggedUser["username"]);
