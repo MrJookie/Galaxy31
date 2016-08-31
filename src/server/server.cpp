@@ -26,7 +26,7 @@ int nthread = 0;
 
 
 // local forwards
-static void parse_packet(ENetPeer* peer, ENetPacket* pkt, RelocatedWork* w);
+static void parse_packet(ENetPeer* peer, ENetPacket* pkt);
 static void handle_new_client(ENetPeer* peer);
 static void remove_client(ENetPeer* peer);
 static void send_states();
@@ -71,17 +71,17 @@ void server_wait_for_packet() {
     std::this_thread::sleep_for(std::chrono::milliseconds(5));
 }
 
-
+RelocatedWork w;
 
 std::chrono::high_resolution_clock::time_point last_status_update = std::chrono::high_resolution_clock::now();
-void server_work(RelocatedWork* w) {
+void server_work() {
 	{
 		std::unique_lock<std::mutex> l(term);
 		cout << "started thread " << (nthread++) << endl;
 	}
 	while(1) {
-		if(w->HasResult()) {
-			w->Continue();
+		if(w.HasResult()) {
+			w.Continue();
 		}
 		
 		std::pair<ENetPacket*, ENetPeer*> packet(0,0);
@@ -101,7 +101,7 @@ void server_work(RelocatedWork* w) {
 		
 		if(packet.second && (packet.second->state & ENET_PEER_STATE_CONNECTED > 0)) {
 		//if(packet.first) {
-			parse_packet(packet.second, packet.first, w);
+			parse_packet(packet.second, packet.first);
 			enet_packet_destroy(packet.first);
 		}
 		
@@ -115,8 +115,21 @@ void server_work(RelocatedWork* w) {
 	}
 }
 
+void mysql_thread(const char *mdb, const char *mserver, const char *muser, const char *mpassword, ushort mport) {
+	mysqlpp::Connection con = mysql_connect(mdb, mserver, muser, mpassword, mport);
+	
+	while(1) {
+		while(!con.ping()) {
+			cout << "(MySQL has gone away?): reconnecting to mysql" << std::endl;
+			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+		}
+      
+		w.Work(con);
+		std::this_thread::sleep_for(std::chrono::milliseconds(5));
+	}
+}
 
-void server_start(short port, RelocatedWork* w) {
+void server_start(ushort port, const char *mdb, const char *mserver, const char *muser, const char *mpassword, ushort mport) {
     ENetAddress address;
     ENetHost * server;
     address.host = ENET_HOST_ANY;
@@ -133,12 +146,15 @@ void server_start(short port, RelocatedWork* w) {
     unsigned int num_threads = num_cores ;
     thread *t = new thread[num_threads];
     for(int i = 0; i < num_threads; i++) {
-		t[i] = thread(server_work, w);
+		t[i] = thread(server_work);
 	}
 	for(int i=0; i < num_threads; i++) {
 		t[i].detach();
 	}
     // delete[] t;
+    
+    std::thread mysql_thrd(mysql_thread, mdb, mserver, muser, mpassword, mport);
+	mysql_thrd.detach();
 }
 
 void handle_new_client(ENetPeer* peer) {
@@ -205,7 +221,7 @@ void send_authorize(ENetPeer* peer, unsigned int id = 0, std::string user_name =
 	enet_host_flush(host);
 }
 
-void parse_packet(ENetPeer* peer, ENetPacket* pkt, RelocatedWork* w) {
+void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 	if(pkt == nullptr) { cout << "null pkt!!" << endl; return; }
 	if(players.find(peer) == players.end()) return;
 	// cout << "rcv packet: " << pkt->data << endl;
@@ -228,24 +244,7 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt, RelocatedWork* w) {
             enet_address_get_host_ip(&peer->address, ipAddr, sizeof(ipAddr));
             std::string ipAddress(ipAddr);
 			
-			//std::unique_lock<std::mutex> l(host_mutex);
-			/*
-			int login_account_id = loginAccount(packet->user_email, packet->user_password, ipAddress, players[peer]->challenge);
-			if(login_account_id > 0) {
-				mysqlpp::Row loggedUser = getExistingUser(login_account_id);
-				
-				unsigned int user_id = loggedUser["id"];
-				std::string user_name(loggedUser["username"]);
-				
-				send_authorize(peer, user_id, user_name); //ok
-			} else {
-				send_authorize(peer); //err
-			}
-			*/
-			
-			std::cout << "logging with email: " << packet->user_email << "\n";
-			
-			w->MakeWork(
+			w.MakeWork(
 				loginAccount,
 				packet->user_email,
 				packet->user_password,
@@ -254,36 +253,22 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt, RelocatedWork* w) {
 			)
 			.then(
 				[=](int login_account_id) {
-					std::cout << login_account_id << std::endl;
 					if(login_account_id > 0) {
-						std::cout << "logged in, getting user\n";
-						w->MakeWork(getExistingUser,login_account_id )
+						w.MakeWork(getExistingUser, login_account_id)
 						.then(
 							[=](mysqlpp::Row loggedUser) {
 								unsigned int user_id = loggedUser["id"];
 								std::string user_name(loggedUser["username"]);
-								std::cout << "sending authorize...\n";
+
 								send_authorize(peer, user_id, user_name);
 							}
 						);
 					} else {
-						std::cout << "not authorized\n";
 						send_authorize(peer);
 					}
 				}
 			);
-			
-			
-			
-			// w->MakeWork(
-				// [](int b) { std::cout << "get: " << std::endl; },
-				// [](int a) {
-					// std::cout << "set: " << std::endl;
-					
-					// return a;
-				// }
-			// );
-			
+
 			break;
 		}
 		default:

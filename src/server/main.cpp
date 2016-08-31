@@ -1,6 +1,5 @@
 #include <iostream>
 #include "server.hpp"
-#include "database.hpp"
 
 #include <mysql++.h>
 
@@ -9,30 +8,12 @@
 
 using namespace std;
 
-RelocatedWork w;
-
-void mysql_thread() {
-	mysqlpp::Connection con;
-	// if(!con.connect("test", "89.177.76.215", "root", "Galaxy31")) {
-	if(!con.connect("galaxy31", "127.0.0.1", "Galaxy31", "Galaxy31")) {
-		cout << con.error() << std::endl;
-		exit(EXIT_FAILURE);
-	}
-	
-	while(1) {
-		w.Work(con);
-		std::this_thread::sleep_for(std::chrono::milliseconds(5));
-	}
-}
-
 int main(int argc, char* argv[]) {
 	if (enet_initialize () != 0) {
 		std::cout << "An error occurred while initializing ENet." << std::endl;
 		return -1;
 	}
 	atexit (enet_deinitialize);
-	
-	//mysql_connect("test", "89.177.76.215", "root", "Galaxy31");
 	
 	/*
 	//mysql_connect("test", "89.177.76.215", "root", "Galaxy31");
@@ -72,58 +53,9 @@ int main(int argc, char* argv[]) {
 	
 	std::cout << "-----------------" << std::endl;
 	/////////////////
-		
-	server_start(1234, &w);
 
-	std::thread mysql_thrd(mysql_thread);
-	mysql_thrd.detach();
-
-	// for(int i = 0; i < 10; i++) {
-		// w.MakeWork(
-			// [](mysqlpp::Row row) { std::cout << "got: " << row["username"] << std::endl; },
-			// [](mysqlpp::Connection con) -> mysqlpp::Row {
-				// mysqlpp::Query query(con.query("SELECT * FROM accounts"));
-				// mysqlpp::StoreQueryResult res = query.store();
-				
-				// for (size_t j = 0; j < res.num_rows(); ++j) {
-					// cout << res[j]["username"] << endl;
-				// }
-								
-				
-				// return res[0];
-			// }
-		// );
-	// }
-	
-	/*
-	for(int i = 0; i < 10; i++) {
-		w.MakeWork(
-			[](mysqlpp::Row row) { std::cout << "got: " << row["username"] << std::endl; },
-			[](SimpleConnectionPool* poolptr) -> mysqlpp::Row { 
-				mysqlpp::Connection::thread_start();
-				
-				mysqlpp::ScopedConnection cp(*poolptr, true);
-				if (!cp) {
-					cerr << "Failed to get a connection from the pool!" << endl;
-					throw std::string("Failed to get a connection from the pool!"); //comment out?
-				}
-				
-				mysqlpp::Query query(cp->query("SELECT * FROM accounts"));
-				mysqlpp::StoreQueryResult res = query.store();
-				
-				for (size_t j = 0; j < res.num_rows(); ++j) {
-					cout << res[j]["username"] << endl;
-				}
-	
-				std::cout << "Conns in use: " << poolptr->GetConnsInUse() << std::endl;
-								
-				mysqlpp::Connection::thread_end();
-				
-				return res[0];
-			},
-		poolptr);
-	}
-	*/
+	// server_start(1234, "galaxy31", "127.0.0.1", "Galaxy31", "Galaxy31", 3306);
+	server_start(1234, "test", "89.177.76.215", "root", "Galaxy31", 3306);
 	
 	while(1) {
 		server_wait_for_packet();

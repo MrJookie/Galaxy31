@@ -5,29 +5,32 @@
 #include <cryptopp/filters.h>
 #include <cryptopp/hex.h>
 
-mysqlpp::Connection con;
-
-void mysql_connect(const char *db, const char *server, const char *user, const char *password, unsigned int port) {
+mysqlpp::Connection mysql_connect(const char *mdb, const char *mserver, const char *muser, const char *mpassword, ushort mport) {
 	//con.set_option(new mysqlpp::ReconnectOption(true));
 	//con.set_option(new mysqlpp::ConnectTimeoutOption(5));
 	
 	//con.set_option(new mysqlpp::MultiStatementsOption(true));
-	if(con.connect(db, server, user, password, port)) {
-        cout << "Connected to MySQL server: " << server << ":" << port << endl;
+	mysqlpp::Connection con;
+	if(con.connect(mdb, mserver, muser, mpassword, mport)) {
+        cout << "Connected to MySQL server: " << mserver << ":" << mport << endl;
     } else {
 		cout << con.error() << std::endl;
 		exit(EXIT_FAILURE);
 	}
 	
+	/*
 	if(!con.thread_aware()) {
         cout << "Mysql++ not compiled with threading support" << endl;
     } else {
         cout << "Mysql++ compiled with threading support" << endl;
     }
+    */
+    
+    return con;
 }
 
 //add ip_addr INET_ATON(ip_of_user);
-int createAccount(std::string email, std::string userName, std::string password, std::string ipAddr) {
+int createAccount(mysqlpp::Connection &con, std::string email, std::string userName, std::string password, std::string ipAddr) {
 	mysqlpp::Query query = con.query();
     query << "SELECT id FROM accounts WHERE email = '" << mysqlpp::escape << email << "' AND username = '" << mysqlpp::escape << userName << "' LIMIT 1";
     
@@ -56,7 +59,7 @@ int createAccount(std::string email, std::string userName, std::string password,
 int loginAccount(mysqlpp::Connection &con, std::string email, std::string password, std::string ipAddress, int challenge) {
 	mysqlpp::Query query = con.query();
     query << "SELECT id, active, password FROM accounts WHERE email = '" << mysqlpp::escape << email << "' LIMIT 1";
-    std::cout << "login => " << email << " : " << password << " : " << ipAddress << "\n";
+
     mysqlpp::StoreQueryResult res = query.store();
     if(res.num_rows() > 0) {
 		CryptoPP::SHA1 sha1;
@@ -70,7 +73,6 @@ int loginAccount(mysqlpp::Connection &con, std::string email, std::string passwo
 			query.execute();
 			
 			if((int)res[0]["active"] > 0) {
-				std::cout << "returning user\n";
 				return res[0]["id"];
 			} else {
 				return 0;
@@ -93,7 +95,7 @@ mysqlpp::Row getExistingUser(mysqlpp::Connection &con, unsigned int account_id) 
 	return mysqlpp::Row();
 }
 
-std::vector<mysqlpp::Row> getAllAccountsVec() {
+std::vector<mysqlpp::Row> getAllAccountsVec(mysqlpp::Connection &con) {
 	std::vector<mysqlpp::Row> result;
 	
 	mysqlpp::Query query = con.query("SELECT * FROM accounts");

@@ -15,7 +15,8 @@ enum PacketType {
 	update_objects,
 	new_ship,
 	authenticate,
-	authorize
+	authorize,
+	chat_message
 };
 
 namespace Packet {
@@ -50,6 +51,18 @@ namespace Packet {
 		unsigned int user_id;
 		char user_name[11];
 	};
+	
+	/*
+	 * //always fill from_user_id
+	 * //if /w "Nick" message is set, then send message to Nick user (lookup by user_id on server), response to user, if user doesnt exist
+	 * //else only message is filled, so user is empty, broadcast it to all peers, except this peer (author), overlapping?
+	struct chat_message : public Packet {
+		chat_message() : Packet(PacketType::chat_message) {}
+		unsigned int from_user_id;
+		char to_user_name[11];
+		char message[256];
+	};
+	*/
 }
 
 

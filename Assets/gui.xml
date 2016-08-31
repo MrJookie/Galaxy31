@@ -2,9 +2,8 @@
 	<theme>
 		<button font="Assets/Fonts/DroidSansMono.ttf,13" backgroundcolor="#331228D1" bordercolor="#FF1228D1" hoverbordercolor="#FF12AAAA" downcolor="#FF12AAAA" upcolor="#FFFFFFFF" />
 		<textbox font="Assets/Fonts/DroidSansMono.ttf,13" backgroundcolor="#00000000" bordercolor="#FF1228D1" hoverbordercolor="#FF12AAAA" multiline="false" terminal_mode="false" />
-		<terminal font="Assets/Fonts/DroidSansMono.ttf,13" />
-		<terminal hoverbordercolor="#FF12AAAA" >
-			<textbox backgroundcolor="#505000" font="Assets/Fonts/DroidSansMono.ttf,13" backgroundcolor="#33000000" bordercolor="#1228D1" />
+		<terminal>
+			<textbox backgroundcolor="#505000" font="Assets/Fonts/DroidSansMono.ttf,13" backgroundcolor="#33777777" bordercolor="#FF1228D1" hoverbordercolor="#FF1228D1" />
 		</terminal>
 	</theme>
 	<anchor pos="L+50%-100,T+50%-109">
