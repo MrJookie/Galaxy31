@@ -16,6 +16,7 @@ enum PacketType {
 	new_ship,
 	authenticate,
 	authorize,
+	signup,
 	chat_message
 };
 
@@ -29,6 +30,7 @@ namespace Packet {
 		new_client() : Packet(PacketType::new_client) {}
 		int new_id;
 		int challenge;
+		unsigned char public_key[310];
 	};
 
 	struct update_objects : public Packet {
@@ -49,7 +51,15 @@ namespace Packet {
 	struct authorize : public Packet {
 		authorize() : Packet(PacketType::authorize) {}
 		unsigned int user_id;
+		int status_code; //0 = signup ok, 1 = signup email exists, 2 = signup user exists, 3 = signin ok, 4 = signin error, 5 = signin banned
 		char user_name[11];
+	};
+	
+	struct signup : public Packet {
+		signup() : Packet(PacketType::signup) {}
+		char user_email[41];
+		char user_name[11];
+		char user_password[41];
 	};
 	
 	/*

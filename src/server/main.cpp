@@ -3,9 +3,6 @@
 
 #include <mysql++.h>
 
-#include <chrono>
-#include <thread>
-
 using namespace std;
 
 int main(int argc, char* argv[]) {
@@ -53,6 +50,8 @@ int main(int argc, char* argv[]) {
 	
 	std::cout << "-----------------" << std::endl;
 	/////////////////
+	
+	///////////////////////////////////////////////////////////////////////////////////// TO DO: account registration
 
 	// server_start(1234, "galaxy31", "127.0.0.1", "Galaxy31", "Galaxy31", 3306);
 	server_start(1234, "test", "89.177.76.215", "root", "Galaxy31", 3306);

@@ -10,7 +10,7 @@
 		<widget rect="0,0,200,218" id="login">
 			<anchor pos="rL,T">
 				<textbox id="login_status" rect="0,-10,200,28" value="Error logging in!" backgroundcolor="#33FF0000" bordercolor="#FFFF0000" hoverbordercolor="#FFFF0000" visible="false" readonly="true" /><br />
-				<textbox id="login_email" rect="0,10,200,28" value="your@email.com" placeholder="your@email.com" /><br />
+				<textbox id="login_email" rect="0,10,200,28" value="your@email.com" placeholder="your@email.com" max_length="40" /><br />
 				<textbox id="login_password" rect="0,10,200,28" value="kokos" placeholder="kokos" /><br />
 				
 				<button  id="login_submit" rect="0,10,200,28" value="login" visible="true" /><br />
@@ -23,9 +23,9 @@
 	<anchor pos="L+50%-100,T+50%-128">
 		<widget rect="0,0,200,256" id="register">
 			<anchor pos="rL,T">
-				<textbox id="register_status" rect="0,-10,200,28" value="Error logging in!" backgroundcolor="#33FF0000" bordercolor="#FFFF0000" hoverbordercolor="#FFFF0000" visible="false" readonly="true" /><br />
-				<textbox id="register_email" rect="0,10,200,28" value="" placeholder="your@email.com" /><br />
-				<textbox id="register_username" rect="0,10,200,28" value="" placeholder="username" /><br />
+				<textbox id="register_status" rect="0,-10,200,28" value="Error registering!" backgroundcolor="#33FF0000" bordercolor="#FFFF0000" hoverbordercolor="#FFFF0000" visible="false" readonly="true" /><br />
+				<textbox id="register_email" rect="0,10,200,28" value="" placeholder="your@email.com" max_length="40" /><br />
+				<textbox id="register_username" rect="0,10,200,28" value="" placeholder="username" max_length="10" /><br />
 				<textbox id="register_password" rect="0,10,200,28" value="" placeholder="password" /><br />
 				<textbox id="register_password_verify" rect="0,10,200,28" value="" placeholder="password again" /><br />
 				

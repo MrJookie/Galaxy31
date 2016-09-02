@@ -12,6 +12,9 @@
 #include <cryptopp/sha.h>
 #include <cryptopp/filters.h>
 #include <cryptopp/hex.h>
+#include <cryptopp/rsa.h>
+#include <cryptopp/osrng.h>
+#include <cryptopp/integer.h>
 
 using namespace ng;
 
@@ -125,6 +128,70 @@ namespace Network {
 	}
 	
 	void SendAuthentication(std::string user_email, std::string user_password) {
+		////////////////////////////////////////////////
+		// Generate keys
+		/*
+		const unsigned int BLOCKSIZE = 2;
+		CryptoPP::SecByteBlock scratch( BLOCKSIZE );
+
+		CryptoPP::RandomPool rng;
+		rng.GenerateBlock( scratch, scratch.size() );
+		*/
+		
+		CryptoPP::AutoSeededRandomPool rng;
+
+		CryptoPP::InvertibleRSAFunction params;
+		params.GenerateRandomWithKeySize(rng, 1024); //309 chars
+		
+		///////////////////////////////////////
+		// Generated Parameters
+		const CryptoPP::Integer& n = params.GetModulus();
+		const CryptoPP::Integer& p2 = params.GetPrime1();
+		const CryptoPP::Integer& q = params.GetPrime2();
+		const CryptoPP::Integer& d2 = params.GetPrivateExponent();
+		const CryptoPP::Integer& e2 = params.GetPublicExponent();
+		
+		///////////////////////////////////////
+		// Dump
+		cout << "RSA Parameters:" << endl;
+		cout << " n: " << n << endl;
+		cout << " p: " << p2 << endl;
+		cout << " q: " << q << endl;
+		cout << " d: " << d2 << endl;
+		cout << " e: " << e2 << endl;
+		cout << endl;
+
+		CryptoPP::RSA::PrivateKey privateKey(params);
+		CryptoPP::RSA::PublicKey publicKey(params);
+
+		std::string plain = "RSA Encryption", cipher, recovered;
+		
+		cout << "plain: " << plain << endl;
+
+		////////////////////////////////////////////////
+		// Encryption
+		CryptoPP::RSAES_OAEP_SHA_Encryptor e(publicKey);
+
+		CryptoPP::StringSource ss1(plain, true,
+			new CryptoPP::PK_EncryptorFilter(rng, e,
+				new CryptoPP::StringSink(cipher)
+		   ) // PK_EncryptorFilter
+		); // StringSource
+		
+
+		////////////////////////////////////////////////
+		// Decryption
+		CryptoPP::RSAES_OAEP_SHA_Decryptor d(privateKey);
+
+		CryptoPP::StringSource ss2(cipher, true,
+			new CryptoPP::PK_DecryptorFilter(rng, d,
+				new CryptoPP::StringSink(recovered)
+		   ) // PK_DecryptorFilter
+		); // StringSource
+
+		cout << "recovered: " << recovered << endl;
+		
+		
 		CryptoPP::SHA1 sha1;
 		std::string source = user_password;
 		std::string hash = "";
@@ -135,14 +202,34 @@ namespace Network {
 		CryptoPP::StringSource(hashChallenge, true, new CryptoPP::HashFilter(sha1, new CryptoPP::HexEncoder(new CryptoPP::StringSink(finalHash), false)));
 		user_password = finalHash;
 		
-		int len = sizeof(Packet::authenticate);
-		
-		ENetPacket* pkt = enet_packet_create(nullptr, len, ENET_PACKET_FLAG_RELIABLE);
+		ENetPacket* pkt = enet_packet_create(nullptr, sizeof(Packet::authenticate), ENET_PACKET_FLAG_RELIABLE);
 		Packet::authenticate *p = new (pkt->data) Packet::authenticate();
 		
 		// && user_password.length() < sizeof(p->user_password)) // not needed, since sha1 is 40 chars always, thus will fit 40+1 null terminator
 		if(user_email.length() < sizeof(p->user_email)) {
 			strcpy(p->user_email, user_email.c_str());
+			strcpy(p->user_password, user_password.c_str());
+						
+			enet_peer_send(host, Channel::control, pkt);
+			flush();
+		} else {
+			enet_packet_destroy(pkt);
+		}
+	}
+	
+	void SendRegistration(std::string user_email, std::string user_name, std::string user_password) {
+		CryptoPP::SHA1 sha1;
+		std::string source = user_password;
+		std::string hash = "";
+		CryptoPP::StringSource(source, true, new CryptoPP::HashFilter(sha1, new CryptoPP::HexEncoder(new CryptoPP::StringSink(hash), false)));
+		user_password = hash;
+		
+		ENetPacket* pkt = enet_packet_create(nullptr, sizeof(Packet::signup), ENET_PACKET_FLAG_RELIABLE);
+		Packet::signup *p = new (pkt->data) Packet::signup();
+		
+		if(user_email.length() < sizeof(p->user_email)) {
+			strcpy(p->user_email, user_email.c_str());
+			strcpy(p->user_name, user_name.c_str());
 			strcpy(p->user_password, user_password.c_str());
 						
 			enet_peer_send(host, Channel::control, pkt);
@@ -202,13 +289,28 @@ namespace Network {
 				
 				GameState::user_id = p->user_id;
 				GameState::user_name = p->user_name;
-
-				if(p->user_id > 0) {
+				
+				if(p->status_code == 0) {
 					TextBox* tb_game_account = (TextBox*)GameState::gui.GetControlById("game_account"); //move this?
 					tb_game_account->SetText("Logged in as: " + std::to_string(GameState::user_id) + " | " + GameState::user_name);
 					
 					GameState::activePage = "game";
-				} else {
+				} else if(p->status_code == 1) {
+					TextBox* tb_register_status = (TextBox*)GameState::gui.GetControlById("register_status"); //move this?
+					tb_register_status->SetText("Error email exists!");
+					
+					GameState::activePage = "register";
+				} else if(p->status_code == 2) {
+					TextBox* tb_register_status = (TextBox*)GameState::gui.GetControlById("register_status"); //move this?
+					tb_register_status->SetText("Username taken!");
+					
+					GameState::activePage = "register";
+				} else if(p->status_code == 3) {
+					TextBox* tb_game_account = (TextBox*)GameState::gui.GetControlById("game_account"); //move this?
+					tb_game_account->SetText("Logged in as: " + std::to_string(GameState::user_id) + " | " + GameState::user_name);
+					
+					GameState::activePage = "game";
+				} else if(p->status_code == 4) {
 					TextBox* tb_login_status = (TextBox*)GameState::gui.GetControlById("login_status"); //move this?
 					tb_login_status->SetText("Error logging in!");
 					

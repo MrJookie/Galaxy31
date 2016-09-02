@@ -6,11 +6,12 @@
 #include <cryptopp/hex.h>
 
 mysqlpp::Connection mysql_connect(const char *mdb, const char *mserver, const char *muser, const char *mpassword, ushort mport) {
-	//con.set_option(new mysqlpp::ReconnectOption(true));
+	mysqlpp::Connection con;
+	con.set_option(new mysqlpp::ReconnectOption(true));
 	//con.set_option(new mysqlpp::ConnectTimeoutOption(5));
 	
 	//con.set_option(new mysqlpp::MultiStatementsOption(true));
-	mysqlpp::Connection con;
+	
 	if(con.connect(mdb, mserver, muser, mpassword, mport)) {
         cout << "Connected to MySQL server: " << mserver << ":" << mport << endl;
     } else {
@@ -32,7 +33,7 @@ mysqlpp::Connection mysql_connect(const char *mdb, const char *mserver, const ch
 //add ip_addr INET_ATON(ip_of_user);
 int createAccount(mysqlpp::Connection &con, std::string email, std::string userName, std::string password, std::string ipAddr) {
 	mysqlpp::Query query = con.query();
-    query << "SELECT id FROM accounts WHERE email = '" << mysqlpp::escape << email << "' AND username = '" << mysqlpp::escape << userName << "' LIMIT 1";
+    query << "SELECT id FROM accounts WHERE email = '" << mysqlpp::escape << email << "' OR username = '" << mysqlpp::escape << userName << "' LIMIT 1";
     
     mysqlpp::StoreQueryResult res = query.store();
     if(res.num_rows() > 0) {
@@ -42,7 +43,7 @@ int createAccount(mysqlpp::Connection &con, std::string email, std::string userN
 			  << "'', "
 			  << "'" << mysqlpp::escape << email << "', "
 			  << "'" << mysqlpp::escape << userName << "', "
-			  << "SHA1('" << mysqlpp::escape << password << "'), "
+			  << "'" << mysqlpp::escape << password << "', "
 			  << "1, "
 			  << "INET_ATON('" << mysqlpp::escape << ipAddr << "'), "
 			  << "NOW() "

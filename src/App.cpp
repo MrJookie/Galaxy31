@@ -143,12 +143,28 @@ void App::init() {
 	
 	Button &bt_pass_restore_submit = *((Button*)GameState::gui.GetControlById("pass_restore_submit"));
 	bt_pass_restore_submit.SubscribeEvent(Button::event::click, [&](Control* c) {
-		//Button* bt = (Button*)c;
-		
 		TextBox* tb_pass_restore_email = (TextBox*)GameState::gui.GetControlById("pass_restore_email");
 		
 		if(this->TODOserver_doPassRestore(tb_pass_restore_email->GetText())) {
 			GameState::gui.GetControlById("pass_restore_ok")->SetVisible(true);
+		}
+	});
+	
+	Button &bt_register_submit = *((Button*)GameState::gui.GetControlById("register_submit"));
+	bt_register_submit.SubscribeEvent(Button::event::click, [&](Control* c) {
+		TextBox* tb_register_status = (TextBox*)GameState::gui.GetControlById("register_status");
+		TextBox* tb_register_email = (TextBox*)GameState::gui.GetControlById("register_email");
+		TextBox* tb_register_username = (TextBox*)GameState::gui.GetControlById("register_username");
+		TextBox* tb_register_password = (TextBox*)GameState::gui.GetControlById("register_password");
+		TextBox* tb_register_password_verify = (TextBox*)GameState::gui.GetControlById("register_password_verify");
+
+		tb_register_status->SetText("Creating account...");
+		tb_register_status->SetVisible(true);
+		
+		if(tb_register_password->GetText() == tb_register_password_verify->GetText()) {
+			Network::SendRegistration(tb_register_email->GetText(), tb_register_username->GetText(), tb_register_password->GetText());
+		} else {
+			tb_register_status->SetText("Error! Passwords differ...");
 		}
 	});
 
@@ -324,6 +340,12 @@ void App::init() {
 			GameState::gui.GetControlById("pass_restore")->SetVisible(true);
 			//GameState::gui.GetControlById("lobby")->SetVisible(false);
 			GameState::gui.GetControlById("game")->SetVisible(false);
+		} else if(GameState::activePage == "game") {
+			GameState::gui.GetControlById("login")->SetVisible(false);
+			GameState::gui.GetControlById("register")->SetVisible(false);
+			GameState::gui.GetControlById("pass_restore")->SetVisible(false);
+			//GameState::gui.GetControlById("lobby")->SetVisible(false);
+			GameState::gui.GetControlById("game")->SetVisible(true);
 		}
 
 		// background
@@ -372,9 +394,6 @@ void App::init() {
         //
         
         if(GameState::activePage == "game") {
-			GameState::gui.GetControlById("game")->SetVisible(true);
-			GameState::gui.GetControlById("login")->SetVisible(false);
-			
 			cv_minimap->Clear(0);
 			
 			// draw my ship on radar

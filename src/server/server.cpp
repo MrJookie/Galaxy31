@@ -17,6 +17,14 @@
 #include "../Object.hpp"
 //#include "database.hpp"
 
+//crypto
+#include <cryptopp/sha.h>
+#include <cryptopp/filters.h>
+#include <cryptopp/hex.h>
+#include <cryptopp/rsa.h>
+#include <cryptopp/osrng.h>
+#include <cryptopp/integer.h>
+
 using std::cout;
 using std::endl;
 using std::thread;
@@ -38,6 +46,9 @@ struct Player {
 	int challenge;
 	std::vector<Object> obj;
 };
+
+unsigned char public_key[310];
+unsigned char private_key[310];
 
 // local data (statics)
 static ENetHost* host;
@@ -160,7 +171,7 @@ void server_start(ushort port, const char *mdb, const char *mserver, const char 
 void handle_new_client(ENetPeer* peer) {
 	srand (time(NULL));
 	int challenge = rand() % 9999999 + 1000000;
-	
+		
 	last_id++;
 	Packet::new_client cl;
 	cl.new_id = last_id;
@@ -174,6 +185,62 @@ void handle_new_client(ENetPeer* peer) {
 	players[peer] = player;
 	
 	cout << "challenge: " << challenge << endl;
+	
+	
+	
+	//Generate keys
+	CryptoPP::AutoSeededRandomPool rng;
+
+	CryptoPP::InvertibleRSAFunction params;
+	params.GenerateRandomWithKeySize(rng, 1024);
+
+	//Create
+	CryptoPP::RSA::PublicKey publicKey(params);
+	CryptoPP::RSA::PrivateKey privateKey(params);
+	
+	//Save
+	CryptoPP::ByteQueue queue;
+	publicKey.Save(queue);
+
+	unsigned char publicKeyBuffer[310];
+	size_t size = queue.Get((byte*)&publicKeyBuffer, sizeof(publicKeyBuffer));
+	
+	//Load
+	CryptoPP::RSA::PublicKey loadkey;
+	CryptoPP::ByteQueue queue2;
+	queue2.Put2((byte *)&publicKeyBuffer, 1, 0, true);
+
+	loadkey.Load(queue2);
+
+	
+// Message
+std::string plain="RSA Encryption", cipher, recovered;
+
+////////////////////////////////////////////////
+// Encryption
+CryptoPP::RSAES_OAEP_SHA_Encryptor e(loadkey);
+
+CryptoPP::StringSource ss1(plain, true,
+    new CryptoPP::PK_EncryptorFilter(rng, e,
+        new CryptoPP::StringSink(cipher)
+   ) // PK_EncryptorFilter
+); // StringSource
+
+	
+	
+////////////////////////////////////////////////
+// Decryption
+CryptoPP::RSAES_OAEP_SHA_Decryptor d(privateKey);
+
+CryptoPP::StringSource ss2(cipher, true,
+    new CryptoPP::PK_DecryptorFilter(rng, d,
+        new CryptoPP::StringSink(recovered)
+   ) // PK_DecryptorFilter
+); // StringSource
+
+cout << "plain: " << plain << endl;
+cout << "recovered: " << recovered << endl;
+
 }
 
 void remove_client(ENetPeer* peer) {
@@ -209,12 +276,13 @@ void send_states() {
 	enet_host_flush(host);
 }
 
-void send_authorize(ENetPeer* peer, unsigned int id = 0, std::string user_name = "") {
+void send_authorize(ENetPeer* peer, int status_code = -1, unsigned int id = 0, std::string user_name = "") {
 	int len = sizeof(Packet::authorize);
 		
 	ENetPacket* pkt = enet_packet_create(nullptr, len, ENET_PACKET_FLAG_RELIABLE);
 	Packet::authorize *p = new (pkt->data) Packet::authorize();
 	p->user_id = id;
+	p->status_code = status_code;
 	strcpy(p->user_name, user_name.c_str());
 	
 	enet_peer_send(peer, Channel::control, pkt);
@@ -224,6 +292,11 @@ void send_authorize(ENetPeer* peer, unsigned int id = 0, std::string user_name =
 void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 	if(pkt == nullptr) { cout << "null pkt!!" << endl; return; }
 	if(players.find(peer) == players.end()) return;
+	
+	char ipAddr[256];
+	enet_address_get_host_ip(&peer->address, ipAddr, sizeof(ipAddr));
+	std::string ipAddress(ipAddr);
+            
 	// cout << "rcv packet: " << pkt->data << endl;
 	Packet::Packet *ppkt = (Packet::Packet*)pkt->data;
 	switch(ppkt->type) {
@@ -239,10 +312,6 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 		}
 		case PacketType::authenticate: {
 			Packet::authenticate* packet = (Packet::authenticate*)pkt->data;
-			
-            char ipAddr[256];
-            enet_address_get_host_ip(&peer->address, ipAddr, sizeof(ipAddr));
-            std::string ipAddress(ipAddr);
 			
 			w.MakeWork(
 				loginAccount,
@@ -260,11 +329,42 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 								unsigned int user_id = loggedUser["id"];
 								std::string user_name(loggedUser["username"]);
 
-								send_authorize(peer, user_id, user_name);
+								send_authorize(peer, 3, user_id, user_name);
+							}
+						);
+					//send account banned status if login_account_id = 0?
+					} else {
+						send_authorize(peer, 4);
+					}
+				}
+			);
+
+			break;
+		}
+		case PacketType::signup: {
+			Packet::signup* packet = (Packet::signup*)pkt->data;
+
+			w.MakeWork(
+				createAccount,
+				packet->user_email,
+				packet->user_name,
+				packet->user_password,
+				ipAddress
+			)
+			.then(
+				[=](int login_account_id) {
+					if(login_account_id > 0) {
+						w.MakeWork(getExistingUser, login_account_id)
+						.then(
+							[=](mysqlpp::Row loggedUser) {
+								unsigned int user_id = loggedUser["id"];
+								std::string user_name(loggedUser["username"]);
+
+								send_authorize(peer, 0, user_id, user_name);
 							}
 						);
 					} else {
-						send_authorize(peer);
+						send_authorize(peer, 1);
 					}
 				}
 			);
