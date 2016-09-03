@@ -17,6 +17,7 @@ enum PacketType {
 	authenticate,
 	authorize,
 	signup,
+	test_packet,
 	chat_message
 };
 
@@ -30,7 +31,7 @@ namespace Packet {
 		new_client() : Packet(PacketType::new_client) {}
 		int new_id;
 		int challenge;
-		unsigned char public_key[310];
+		char public_key[600];
 	};
 
 	struct update_objects : public Packet {
@@ -60,6 +61,11 @@ namespace Packet {
 		char user_email[41];
 		char user_name[11];
 		char user_password[41];
+	};
+	
+	struct test_packet : public Packet {
+		test_packet() : Packet(PacketType::test_packet) {}
+		char data[400];
 	};
 	
 	/*

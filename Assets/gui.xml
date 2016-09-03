@@ -11,7 +11,7 @@
 			<anchor pos="rL,T">
 				<textbox id="login_status" rect="0,-10,200,28" value="Error logging in!" backgroundcolor="#33FF0000" bordercolor="#FFFF0000" hoverbordercolor="#FFFF0000" visible="false" readonly="true" /><br />
 				<textbox id="login_email" rect="0,10,200,28" value="your@email.com" placeholder="your@email.com" max_length="40" /><br />
-				<textbox id="login_password" rect="0,10,200,28" value="kokos" placeholder="kokos" /><br />
+				<textbox id="login_password" rect="0,10,200,28" value="kokos" placeholder="kokos" password="true" /><br />
 				
 				<button  id="login_submit" rect="0,10,200,28" value="login" visible="true" /><br />
 				<button id="login_pass_restore" rect="0,10,200,28" value="Forgot password?" backgroundcolor="#00000000" bordercolor="#00000000" visible="true" /><br />
@@ -26,8 +26,8 @@
 				<textbox id="register_status" rect="0,-10,200,28" value="Error registering!" backgroundcolor="#33FF0000" bordercolor="#FFFF0000" hoverbordercolor="#FFFF0000" visible="false" readonly="true" /><br />
 				<textbox id="register_email" rect="0,10,200,28" value="" placeholder="your@email.com" max_length="40" /><br />
 				<textbox id="register_username" rect="0,10,200,28" value="" placeholder="username" max_length="10" /><br />
-				<textbox id="register_password" rect="0,10,200,28" value="" placeholder="password" /><br />
-				<textbox id="register_password_verify" rect="0,10,200,28" value="" placeholder="password again" /><br />
+				<textbox id="register_password" rect="0,10,200,28" value="" placeholder="password" password="true" /><br />
+				<textbox id="register_password_verify" rect="0,10,200,28" value="" placeholder="password again" password="true"/><br />
 				
 				<button id="register_submit" rect="0,10,200,28" value="register" visible="true" /><br />
 				<button id="register_login" rect="0,10,200,28" value="Back to main screen" backgroundcolor="#00000000" bordercolor="#00000000" visible="true" /><br />

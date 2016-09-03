@@ -24,6 +24,7 @@
 #include <cryptopp/rsa.h>
 #include <cryptopp/osrng.h>
 #include <cryptopp/integer.h>
+#include <cryptopp/files.h>
 
 using std::cout;
 using std::endl;
@@ -47,8 +48,10 @@ struct Player {
 	std::vector<Object> obj;
 };
 
-unsigned char public_key[310];
-unsigned char private_key[310];
+CryptoPP::RSA::PublicKey _publicKey;
+CryptoPP::RSA::PrivateKey _privateKey;
+std::string _publicKeyStr;
+std::string _privateKeyStr;
 
 // local data (statics)
 static ENetHost* host;
@@ -126,13 +129,18 @@ void server_work() {
 	}
 }
 
+std::chrono::high_resolution_clock::time_point last_time_mysql_pinged = std::chrono::high_resolution_clock::now();
 void mysql_thread(const char *mdb, const char *mserver, const char *muser, const char *mpassword, ushort mport) {
 	mysqlpp::Connection con = mysql_connect(mdb, mserver, muser, mpassword, mport);
 	
 	while(1) {
-		while(!con.ping()) {
-			cout << "(MySQL has gone away?): reconnecting to mysql" << std::endl;
-			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+		std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
+		if(now - last_time_mysql_pinged > std::chrono::milliseconds(1000)) {
+			if(!con.ping()) {
+				cout << "(MySQL has gone away?): reconnecting to mysql" << std::endl;
+			}
+			
+			last_time_mysql_pinged = now;
 		}
       
 		w.Work(con);
@@ -140,7 +148,151 @@ void mysql_thread(const char *mdb, const char *mserver, const char *muser, const
 	}
 }
 
+void RSATest() {
+	/*
+	////////////////////////////////////////////////
+	// Generate keys
+	CryptoPP::AutoSeededRandomPool rng;
+
+	CryptoPP::InvertibleRSAFunction params;
+	params.GenerateRandomWithKeySize(rng, 1024);
+	
+	///////////////////////////////////////
+	// Generated Parameters
+	const CryptoPP::Integer& n = params.GetModulus();
+	const CryptoPP::Integer& p2 = params.GetPrime1();
+	const CryptoPP::Integer& q = params.GetPrime2();
+	const CryptoPP::Integer& d2 = params.GetPrivateExponent();
+	const CryptoPP::Integer& e2 = params.GetPublicExponent();
+	
+	///////////////////////////////////////
+	// Dump
+	cout << "RSA Parameters:" << endl;
+	cout << " n: " << n << endl;
+	cout << " p: " << p2 << endl;
+	cout << " q: " << q << endl;
+	cout << " d: " << d2 << endl;
+	cout << " e: " << e2 << endl;
+	cout << endl;
+
+	CryptoPP::RSA::PrivateKey privateKey(params);
+	CryptoPP::RSA::PublicKey publicKey(params);
+
+	std::string plain = "RSA Encryption", cipher, recovered;
+	
+	cout << "plain: " << plain << endl;
+
+	////////////////////////////////////////////////
+	// Encryption
+	CryptoPP::RSAES_OAEP_SHA_Encryptor e(publicKey);
+
+	CryptoPP::StringSource ss1(plain, true,
+		new CryptoPP::PK_EncryptorFilter(rng, e,
+			new CryptoPP::StringSink(cipher)
+	   ) // PK_EncryptorFilter
+	); // StringSource
+	
+
+	////////////////////////////////////////////////
+	// Decryption
+	CryptoPP::RSAES_OAEP_SHA_Decryptor d(privateKey);
+
+	CryptoPP::StringSource ss2(cipher, true,
+		new CryptoPP::PK_DecryptorFilter(rng, d,
+			new CryptoPP::StringSink(recovered)
+	   ) // PK_DecryptorFilter
+	); // StringSource
+
+	cout << "recovered: " << recovered << endl;
+	*/
+}
+
+void generate_keypair() {
+	//Generate keys
+	CryptoPP::AutoSeededRandomPool rng;
+
+	CryptoPP::InvertibleRSAFunction params;
+	params.GenerateRandomWithKeySize(rng, 1024);
+
+	//Create
+	CryptoPP::RSA::PublicKey publicKey(params);
+	_publicKey = publicKey;
+	CryptoPP::RSA::PrivateKey privateKey(params);
+	_privateKey = privateKey;
+
+	_publicKey.Save(CryptoPP::HexEncoder(new CryptoPP::StringSink(_publicKeyStr)).Ref());
+	_privateKey.Save(CryptoPP::HexEncoder(new CryptoPP::StringSink(_privateKeyStr)).Ref());
+	
+	
+	/*
+	////////////////////////////////////////////////
+    // Save/Load keys  
+    CryptoPP::HexEncoder encoder1(new CryptoPP::StringSink(_publicKeyStr));
+    CryptoPP::HexEncoder encoder2(new CryptoPP::StringSink(_privateKeyStr));
+
+    _publicKey.Save(encoder1);
+    _privateKey.Save(encoder2);
+
+    // Must have these. Otherwise, the full key (hex encoded)
+    //   is not written until destructors are run
+    encoder1.MessageEnd();
+    encoder2.MessageEnd();
+	*/
+	
+                    
+    std::cout << "publickey: " << _publicKeyStr.length() << " ---- " << _publicKeyStr << std::endl;
+    std::cout << "privatekey: " << _privateKeyStr.length() << " ---- " << _privateKeyStr << std::endl;
+    
+    /*
+    ///////////////////////////////////////
+	// Generated Parameters
+	const CryptoPP::Integer& n = params.GetModulus();
+	const CryptoPP::Integer& p2 = params.GetPrime1();
+	const CryptoPP::Integer& q = params.GetPrime2();
+	const CryptoPP::Integer& d2 = params.GetPrivateExponent();
+	const CryptoPP::Integer& e2 = params.GetPublicExponent();
+	
+	///////////////////////////////////////
+	// Dump
+	cout << "RSA Parameters:" << endl;
+	cout << " n: " << n << endl;
+	cout << " p: " << p2 << endl;
+	cout << " q: " << q << endl;
+	cout << " d: " << d2 << endl;
+	cout << " e: " << e2 << endl;
+	cout << endl;
+	*/
+    
+    /*
+    CryptoPP::AutoSeededRandomPool rng;
+	
+	// Message
+	std::string plain = "RSA Encryption";
+	std::string encrypted, decrypted;
+
+	CryptoPP::RSA::PublicKey loadPublicKey;
+	loadPublicKey.Load(CryptoPP::StringSource(_publicKeyStr, true, new CryptoPP::HexDecoder()).Ref());
+     
+	////////////////////////////////////////////////
+	// Encryption
+	CryptoPP::RSAES_OAEP_SHA_Encryptor e(loadPublicKey);
+	CryptoPP::StringSource ss1(plain, true, new CryptoPP::PK_EncryptorFilter(rng, e, new CryptoPP::StringSink(encrypted)));
+
+		
+		
+	////////////////////////////////////////////////
+	// Decryption
+	CryptoPP::RSAES_OAEP_SHA_Decryptor d(_privateKey);
+	CryptoPP::StringSource ss2(encrypted, true, new CryptoPP::PK_DecryptorFilter(rng, d, new CryptoPP::StringSink(decrypted)));
+
+	cout << "plain: " << plain << endl;
+	cout << "recovered: " << decrypted << endl;
+	*/
+}
+
 void server_start(ushort port, const char *mdb, const char *mserver, const char *muser, const char *mpassword, ushort mport) {
+	generate_keypair();
+	
     ENetAddress address;
     ENetHost * server;
     address.host = ENET_HOST_ANY;
@@ -171,11 +323,14 @@ void server_start(ushort port, const char *mdb, const char *mserver, const char 
 void handle_new_client(ENetPeer* peer) {
 	srand (time(NULL));
 	int challenge = rand() % 9999999 + 1000000;
-		
+	
 	last_id++;
 	Packet::new_client cl;
 	cl.new_id = last_id;
 	cl.challenge = challenge;
+	if(_publicKeyStr.length() < sizeof(cl.public_key)) {
+		memcpy(cl.public_key, _publicKeyStr.c_str(), _publicKeyStr.length() + 1);
+	}
 	ENetPacket* pkt = enet_packet_create( &cl, sizeof(cl), ENET_PACKET_FLAG_RELIABLE );
 	enet_peer_send(peer, Channel::control, pkt);
 	
@@ -185,62 +340,6 @@ void handle_new_client(ENetPeer* peer) {
 	players[peer] = player;
 	
 	cout << "challenge: " << challenge << endl;
-	
-	
-	
-	//Generate keys
-	CryptoPP::AutoSeededRandomPool rng;
-
-	CryptoPP::InvertibleRSAFunction params;
-	params.GenerateRandomWithKeySize(rng, 1024);
-
-	//Create
-	CryptoPP::RSA::PublicKey publicKey(params);
-	CryptoPP::RSA::PrivateKey privateKey(params);
-	
-	//Save
-	CryptoPP::ByteQueue queue;
-	publicKey.Save(queue);
-
-	unsigned char publicKeyBuffer[310];
-	size_t size = queue.Get((byte*)&publicKeyBuffer, sizeof(publicKeyBuffer));
-	
-	//Load
-	CryptoPP::RSA::PublicKey loadkey;
-	CryptoPP::ByteQueue queue2;
-	queue2.Put2((byte *)&publicKeyBuffer, 1, 0, true);
-
-	loadkey.Load(queue2);
-
-	
-// Message
-std::string plain="RSA Encryption", cipher, recovered;
-
-////////////////////////////////////////////////
-// Encryption
-CryptoPP::RSAES_OAEP_SHA_Encryptor e(loadkey);
-
-CryptoPP::StringSource ss1(plain, true,
-    new CryptoPP::PK_EncryptorFilter(rng, e,
-        new CryptoPP::StringSink(cipher)
-   ) // PK_EncryptorFilter
-); // StringSource
-
-	
-	
-////////////////////////////////////////////////
-// Decryption
-CryptoPP::RSAES_OAEP_SHA_Decryptor d(privateKey);
-
-CryptoPP::StringSource ss2(cipher, true,
-    new CryptoPP::PK_DecryptorFilter(rng, d,
-        new CryptoPP::StringSink(recovered)
-   ) // PK_DecryptorFilter
-); // StringSource
-
-cout << "plain: " << plain << endl;
-cout << "recovered: " << recovered << endl;
-
 }
 
 void remove_client(ENetPeer* peer) {
@@ -369,6 +468,30 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 				}
 			);
 
+			break;
+		}
+		case PacketType::test_packet: {
+			Packet::test_packet* packet = (Packet::test_packet*)pkt->data;
+				CryptoPP::AutoSeededRandomPool rng;
+				
+				std::string encrypted(packet->data);
+				std::string decrypted;
+				
+				cout << "size: " << encrypted.length() << " : " << encrypted << endl; 
+					
+				////////////////////////////////////////////////
+				// Decryption
+				
+				if(encrypted.length() == 128) {
+					CryptoPP::RSAES_OAEP_SHA_Decryptor d(_privateKey);
+					CryptoPP::StringSource ss2(encrypted, true, new CryptoPP::PK_DecryptorFilter(rng, d, new CryptoPP::StringSink(decrypted)));
+					
+					//cout << "encrypted: " << encrypted << endl;
+					cout << "recovered: " << decrypted << endl;
+				} else {
+					cout << "encrypted message is not matching modulus size! 128 != encrypted.length(): " << encrypted.length() << endl; 
+				}
+			
 			break;
 		}
 		default:

@@ -15,6 +15,7 @@
 #include <cryptopp/rsa.h>
 #include <cryptopp/osrng.h>
 #include <cryptopp/integer.h>
+#include <cryptopp/secblock.h>
 
 using namespace ng;
 
@@ -128,70 +129,6 @@ namespace Network {
 	}
 	
 	void SendAuthentication(std::string user_email, std::string user_password) {
-		////////////////////////////////////////////////
-		// Generate keys
-		/*
-		const unsigned int BLOCKSIZE = 2;
-		CryptoPP::SecByteBlock scratch( BLOCKSIZE );
-
-		CryptoPP::RandomPool rng;
-		rng.GenerateBlock( scratch, scratch.size() );
-		*/
-		
-		CryptoPP::AutoSeededRandomPool rng;
-
-		CryptoPP::InvertibleRSAFunction params;
-		params.GenerateRandomWithKeySize(rng, 1024); //309 chars
-		
-		///////////////////////////////////////
-		// Generated Parameters
-		const CryptoPP::Integer& n = params.GetModulus();
-		const CryptoPP::Integer& p2 = params.GetPrime1();
-		const CryptoPP::Integer& q = params.GetPrime2();
-		const CryptoPP::Integer& d2 = params.GetPrivateExponent();
-		const CryptoPP::Integer& e2 = params.GetPublicExponent();
-		
-		///////////////////////////////////////
-		// Dump
-		cout << "RSA Parameters:" << endl;
-		cout << " n: " << n << endl;
-		cout << " p: " << p2 << endl;
-		cout << " q: " << q << endl;
-		cout << " d: " << d2 << endl;
-		cout << " e: " << e2 << endl;
-		cout << endl;
-
-		CryptoPP::RSA::PrivateKey privateKey(params);
-		CryptoPP::RSA::PublicKey publicKey(params);
-
-		std::string plain = "RSA Encryption", cipher, recovered;
-		
-		cout << "plain: " << plain << endl;
-
-		////////////////////////////////////////////////
-		// Encryption
-		CryptoPP::RSAES_OAEP_SHA_Encryptor e(publicKey);
-
-		CryptoPP::StringSource ss1(plain, true,
-			new CryptoPP::PK_EncryptorFilter(rng, e,
-				new CryptoPP::StringSink(cipher)
-		   ) // PK_EncryptorFilter
-		); // StringSource
-		
-
-		////////////////////////////////////////////////
-		// Decryption
-		CryptoPP::RSAES_OAEP_SHA_Decryptor d(privateKey);
-
-		CryptoPP::StringSource ss2(cipher, true,
-			new CryptoPP::PK_DecryptorFilter(rng, d,
-				new CryptoPP::StringSink(recovered)
-		   ) // PK_DecryptorFilter
-		); // StringSource
-
-		cout << "recovered: " << recovered << endl;
-		
-		
 		CryptoPP::SHA1 sha1;
 		std::string source = user_password;
 		std::string hash = "";
@@ -253,6 +190,48 @@ namespace Network {
 				cout << "your client id is: " << p->new_id << ", challenge: " << p->challenge << endl;
 				GameState::player->SetId(p->new_id);
 				GameState::account_challenge = p->challenge; //move this?
+				
+				 /*******************
+				 * 
+				 * CLEANUP
+				 * 
+				 *******************/
+				
+				//got public key from server
+				//RSA TESTS - remove
+				std::string publicKeyStr(p->public_key);
+				//std::cout << "publickey: " << publicKeyStr.length() << " ---- " << publicKeyStr << std::endl;
+				std::cout << "received public key: " << publicKeyStr.length() << std::endl;
+				CryptoPP::AutoSeededRandomPool rng;
+				
+				CryptoPP::RSA::PublicKey loadPublicKey;
+				loadPublicKey.Load(CryptoPP::StringSource(publicKeyStr, true, new CryptoPP::HexDecoder()).Ref());
+				bool valid = loadPublicKey.Validate(rng, 3);
+				if(!valid)
+					throw std::string("errrrr");
+				
+				////////////////////////////////////////////////
+				// Encryption
+				std::string plain = "Hello!";
+				std::string encrypted = "";
+				std::string encrypted2 = "";
+				
+				
+				CryptoPP::RSAES_OAEP_SHA_Encryptor e(loadPublicKey);
+				CryptoPP::StringSource ss1(plain, true, new CryptoPP::PK_EncryptorFilter(rng, e, new CryptoPP::StringSink(encrypted)));
+				
+				//std::cout << "encrypted: " << encrypted.length() << " ---- " << encrypted << std::endl;
+				std::cout << "sending encrypted message of size: " << encrypted.length() << std::endl;
+				std::cout << encrypted << std::endl;
+				
+				//send encrypted data to server
+				ENetPacket* pkt2 = enet_packet_create(nullptr, sizeof(Packet::test_packet), ENET_PACKET_FLAG_RELIABLE);
+				Packet::test_packet *p2 = new (pkt2->data) Packet::test_packet();
+	
+				memcpy(p2->data, encrypted.c_str(), encrypted.length() + 1);
+							
+				enet_peer_send(host, Channel::control, pkt2);
+							
 				break;
 			}
 			case PacketType::update_objects: {
