@@ -3,6 +3,11 @@
 
 #include <glm/glm.hpp>
 
+#define KEY_SIZE 1024
+#define PUBLIC_KEY_SIZE 310
+#define MAX_ENCRYPTED_LEN 128
+#define MAX_PLAIN_LEN MAX_ENCRYPTED_LEN-42
+
 enum Channel {
 	control = 0,
 	msg,
@@ -31,7 +36,7 @@ namespace Packet {
 		new_client() : Packet(PacketType::new_client) {}
 		int new_id;
 		int challenge;
-		char public_key[600];
+		std::array<char, PUBLIC_KEY_SIZE+1> public_key;
 	};
 
 	struct update_objects : public Packet {
@@ -45,27 +50,27 @@ namespace Packet {
 	
 	struct authenticate : public Packet {
 		authenticate() : Packet(PacketType::authenticate) {}
-		char user_email[41];
-		char user_password[41];
+		std::array<char, 41> user_email;
+		std::array<char, 41> user_password;
 	};
 	
 	struct authorize : public Packet {
 		authorize() : Packet(PacketType::authorize) {}
 		unsigned int user_id;
 		int status_code; //0 = signup ok, 1 = signup email exists, 2 = signup user exists, 3 = signin ok, 4 = signin error, 5 = signin banned
-		char user_name[11];
+		std::array<char, 11> user_name;
 	};
 	
 	struct signup : public Packet {
 		signup() : Packet(PacketType::signup) {}
-		char user_email[41];
-		char user_name[11];
-		char user_password[41];
+		std::array<char, 41> user_email;
+		std::array<char, 11> user_name;
+		std::array<char, MAX_ENCRYPTED_LEN+1> user_password;
 	};
 	
 	struct test_packet : public Packet {
 		test_packet() : Packet(PacketType::test_packet) {}
-		char data[400];
+		std::array<char, 1000> data;
 	};
 	
 	/*
@@ -75,8 +80,8 @@ namespace Packet {
 	struct chat_message : public Packet {
 		chat_message() : Packet(PacketType::chat_message) {}
 		unsigned int from_user_id;
-		char to_user_name[11];
-		char message[256];
+		std::array<char, 11> to_user_name;
+		std::array<char, 256> message;
 	};
 	*/
 }

@@ -144,8 +144,8 @@ namespace Network {
 		
 		// && user_password.length() < sizeof(p->user_password)) // not needed, since sha1 is 40 chars always, thus will fit 40+1 null terminator
 		if(user_email.length() < sizeof(p->user_email)) {
-			strcpy(p->user_email, user_email.c_str());
-			strcpy(p->user_password, user_password.c_str());
+			strcpy(p->user_email.data(), user_email.c_str());
+			strcpy(p->user_password.data(), user_password.c_str());
 						
 			enet_peer_send(host, Channel::control, pkt);
 			flush();
@@ -161,13 +161,27 @@ namespace Network {
 		CryptoPP::StringSource(source, true, new CryptoPP::HashFilter(sha1, new CryptoPP::HexEncoder(new CryptoPP::StringSink(hash), false)));
 		user_password = hash;
 		
+		////////////////////////////////////////////////
+		// Encryption
+		CryptoPP::AutoSeededRandomPool rng;
+		
+		CryptoPP::RSA::PublicKey loadPublicKey;
+		loadPublicKey.Load(CryptoPP::StringSource(GameState::publicKeyStr, true, new CryptoPP::HexDecoder()).Ref());
+
+		std::string plain(user_password);
+		std::string plain_cut = plain.substr(0, MAX_PLAIN_LEN); 
+		std::string encrypted;
+		
+		CryptoPP::RSAES_OAEP_SHA_Encryptor e(loadPublicKey);
+		CryptoPP::StringSource ss1(plain_cut, true, new CryptoPP::PK_EncryptorFilter(rng, e, new CryptoPP::StringSink(encrypted)));
+
 		ENetPacket* pkt = enet_packet_create(nullptr, sizeof(Packet::signup), ENET_PACKET_FLAG_RELIABLE);
 		Packet::signup *p = new (pkt->data) Packet::signup();
 		
 		if(user_email.length() < sizeof(p->user_email)) {
-			strcpy(p->user_email, user_email.c_str());
-			strcpy(p->user_name, user_name.c_str());
-			strcpy(p->user_password, user_password.c_str());
+			strcpy(p->user_email.data(), user_email.c_str());
+			strcpy(p->user_name.data(), user_name.c_str());
+			memcpy(p->user_password.data(), encrypted.c_str(), encrypted.length() + 1);
 						
 			enet_peer_send(host, Channel::control, pkt);
 			flush();
@@ -190,47 +204,7 @@ namespace Network {
 				cout << "your client id is: " << p->new_id << ", challenge: " << p->challenge << endl;
 				GameState::player->SetId(p->new_id);
 				GameState::account_challenge = p->challenge; //move this?
-				
-				 /*******************
-				 * 
-				 * CLEANUP
-				 * 
-				 *******************/
-				
-				//got public key from server
-				//RSA TESTS - remove
-				std::string publicKeyStr(p->public_key);
-				//std::cout << "publickey: " << publicKeyStr.length() << " ---- " << publicKeyStr << std::endl;
-				std::cout << "received public key: " << publicKeyStr.length() << std::endl;
-				CryptoPP::AutoSeededRandomPool rng;
-				
-				CryptoPP::RSA::PublicKey loadPublicKey;
-				loadPublicKey.Load(CryptoPP::StringSource(publicKeyStr, true, new CryptoPP::HexDecoder()).Ref());
-				bool valid = loadPublicKey.Validate(rng, 3);
-				if(!valid)
-					throw std::string("errrrr");
-				
-				////////////////////////////////////////////////
-				// Encryption
-				std::string plain = "Hello!";
-				std::string encrypted = "";
-				std::string encrypted2 = "";
-				
-				
-				CryptoPP::RSAES_OAEP_SHA_Encryptor e(loadPublicKey);
-				CryptoPP::StringSource ss1(plain, true, new CryptoPP::PK_EncryptorFilter(rng, e, new CryptoPP::StringSink(encrypted)));
-				
-				//std::cout << "encrypted: " << encrypted.length() << " ---- " << encrypted << std::endl;
-				std::cout << "sending encrypted message of size: " << encrypted.length() << std::endl;
-				std::cout << encrypted << std::endl;
-				
-				//send encrypted data to server
-				ENetPacket* pkt2 = enet_packet_create(nullptr, sizeof(Packet::test_packet), ENET_PACKET_FLAG_RELIABLE);
-				Packet::test_packet *p2 = new (pkt2->data) Packet::test_packet();
-	
-				memcpy(p2->data, encrypted.c_str(), encrypted.length() + 1);
-							
-				enet_peer_send(host, Channel::control, pkt2);
+				GameState::publicKeyStr = p->public_key.data(); 
 							
 				break;
 			}
@@ -267,7 +241,7 @@ namespace Network {
 				Packet::authorize *p = (Packet::authorize *)pkt->data;
 				
 				GameState::user_id = p->user_id;
-				GameState::user_name = p->user_name;
+				GameState::user_name = p->user_name.data();
 				
 				if(p->status_code == 0) {
 					TextBox* tb_game_account = (TextBox*)GameState::gui.GetControlById("game_account"); //move this?

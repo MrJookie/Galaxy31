@@ -33,7 +33,6 @@ const int timeout = 1;
 std::mutex term;
 int nthread = 0;
 
-
 // local forwards
 static void parse_packet(ENetPeer* peer, ENetPacket* pkt);
 static void handle_new_client(ENetPeer* peer);
@@ -148,146 +147,22 @@ void mysql_thread(const char *mdb, const char *mserver, const char *muser, const
 	}
 }
 
-void RSATest() {
-	/*
-	////////////////////////////////////////////////
-	// Generate keys
-	CryptoPP::AutoSeededRandomPool rng;
-
-	CryptoPP::InvertibleRSAFunction params;
-	params.GenerateRandomWithKeySize(rng, 1024);
-	
-	///////////////////////////////////////
-	// Generated Parameters
-	const CryptoPP::Integer& n = params.GetModulus();
-	const CryptoPP::Integer& p2 = params.GetPrime1();
-	const CryptoPP::Integer& q = params.GetPrime2();
-	const CryptoPP::Integer& d2 = params.GetPrivateExponent();
-	const CryptoPP::Integer& e2 = params.GetPublicExponent();
-	
-	///////////////////////////////////////
-	// Dump
-	cout << "RSA Parameters:" << endl;
-	cout << " n: " << n << endl;
-	cout << " p: " << p2 << endl;
-	cout << " q: " << q << endl;
-	cout << " d: " << d2 << endl;
-	cout << " e: " << e2 << endl;
-	cout << endl;
-
-	CryptoPP::RSA::PrivateKey privateKey(params);
-	CryptoPP::RSA::PublicKey publicKey(params);
-
-	std::string plain = "RSA Encryption", cipher, recovered;
-	
-	cout << "plain: " << plain << endl;
-
-	////////////////////////////////////////////////
-	// Encryption
-	CryptoPP::RSAES_OAEP_SHA_Encryptor e(publicKey);
-
-	CryptoPP::StringSource ss1(plain, true,
-		new CryptoPP::PK_EncryptorFilter(rng, e,
-			new CryptoPP::StringSink(cipher)
-	   ) // PK_EncryptorFilter
-	); // StringSource
-	
-
-	////////////////////////////////////////////////
-	// Decryption
-	CryptoPP::RSAES_OAEP_SHA_Decryptor d(privateKey);
-
-	CryptoPP::StringSource ss2(cipher, true,
-		new CryptoPP::PK_DecryptorFilter(rng, d,
-			new CryptoPP::StringSink(recovered)
-	   ) // PK_DecryptorFilter
-	); // StringSource
-
-	cout << "recovered: " << recovered << endl;
-	*/
-}
-
 void generate_keypair() {
-	//Generate keys
 	CryptoPP::AutoSeededRandomPool rng;
 
 	CryptoPP::InvertibleRSAFunction params;
-	params.GenerateRandomWithKeySize(rng, 1024);
+	params.GenerateRandomWithKeySize(rng, KEY_SIZE);
 
-	//Create
 	CryptoPP::RSA::PublicKey publicKey(params);
-	_publicKey = publicKey;
 	CryptoPP::RSA::PrivateKey privateKey(params);
+	_publicKey = publicKey;
 	_privateKey = privateKey;
 
 	_publicKey.Save(CryptoPP::HexEncoder(new CryptoPP::StringSink(_publicKeyStr)).Ref());
 	_privateKey.Save(CryptoPP::HexEncoder(new CryptoPP::StringSink(_privateKeyStr)).Ref());
-	
-	
-	/*
-	////////////////////////////////////////////////
-    // Save/Load keys  
-    CryptoPP::HexEncoder encoder1(new CryptoPP::StringSink(_publicKeyStr));
-    CryptoPP::HexEncoder encoder2(new CryptoPP::StringSink(_privateKeyStr));
-
-    _publicKey.Save(encoder1);
-    _privateKey.Save(encoder2);
-
-    // Must have these. Otherwise, the full key (hex encoded)
-    //   is not written until destructors are run
-    encoder1.MessageEnd();
-    encoder2.MessageEnd();
-	*/
-	
                     
-    std::cout << "publickey: " << _publicKeyStr.length() << " ---- " << _publicKeyStr << std::endl;
-    std::cout << "privatekey: " << _privateKeyStr.length() << " ---- " << _privateKeyStr << std::endl;
-    
-    /*
-    ///////////////////////////////////////
-	// Generated Parameters
-	const CryptoPP::Integer& n = params.GetModulus();
-	const CryptoPP::Integer& p2 = params.GetPrime1();
-	const CryptoPP::Integer& q = params.GetPrime2();
-	const CryptoPP::Integer& d2 = params.GetPrivateExponent();
-	const CryptoPP::Integer& e2 = params.GetPublicExponent();
-	
-	///////////////////////////////////////
-	// Dump
-	cout << "RSA Parameters:" << endl;
-	cout << " n: " << n << endl;
-	cout << " p: " << p2 << endl;
-	cout << " q: " << q << endl;
-	cout << " d: " << d2 << endl;
-	cout << " e: " << e2 << endl;
-	cout << endl;
-	*/
-    
-    /*
-    CryptoPP::AutoSeededRandomPool rng;
-	
-	// Message
-	std::string plain = "RSA Encryption";
-	std::string encrypted, decrypted;
-
-	CryptoPP::RSA::PublicKey loadPublicKey;
-	loadPublicKey.Load(CryptoPP::StringSource(_publicKeyStr, true, new CryptoPP::HexDecoder()).Ref());
-     
-	////////////////////////////////////////////////
-	// Encryption
-	CryptoPP::RSAES_OAEP_SHA_Encryptor e(loadPublicKey);
-	CryptoPP::StringSource ss1(plain, true, new CryptoPP::PK_EncryptorFilter(rng, e, new CryptoPP::StringSink(encrypted)));
-
-		
-		
-	////////////////////////////////////////////////
-	// Decryption
-	CryptoPP::RSAES_OAEP_SHA_Decryptor d(_privateKey);
-	CryptoPP::StringSource ss2(encrypted, true, new CryptoPP::PK_DecryptorFilter(rng, d, new CryptoPP::StringSink(decrypted)));
-
-	cout << "plain: " << plain << endl;
-	cout << "recovered: " << decrypted << endl;
-	*/
+    //std::cout << "publickey: " << _publicKeyStr.length() << " ---- " << _publicKeyStr << std::endl;
+    //std::cout << "privatekey: " << _privateKeyStr.length() << " ---- " << _privateKeyStr << std::endl;
 }
 
 void server_start(ushort port, const char *mdb, const char *mserver, const char *muser, const char *mpassword, ushort mport) {
@@ -329,7 +204,7 @@ void handle_new_client(ENetPeer* peer) {
 	cl.new_id = last_id;
 	cl.challenge = challenge;
 	if(_publicKeyStr.length() < sizeof(cl.public_key)) {
-		memcpy(cl.public_key, _publicKeyStr.c_str(), _publicKeyStr.length() + 1);
+		memcpy(cl.public_key.data(), _publicKeyStr.c_str(), _publicKeyStr.length() + 1);
 	}
 	ENetPacket* pkt = enet_packet_create( &cl, sizeof(cl), ENET_PACKET_FLAG_RELIABLE );
 	enet_peer_send(peer, Channel::control, pkt);
@@ -382,7 +257,7 @@ void send_authorize(ENetPeer* peer, int status_code = -1, unsigned int id = 0, s
 	Packet::authorize *p = new (pkt->data) Packet::authorize();
 	p->user_id = id;
 	p->status_code = status_code;
-	strcpy(p->user_name, user_name.c_str());
+	strcpy(p->user_name.data(), user_name.c_str());
 	
 	enet_peer_send(peer, Channel::control, pkt);
 	enet_host_flush(host);
@@ -414,8 +289,8 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 			
 			w.MakeWork(
 				loginAccount,
-				packet->user_email,
-				packet->user_password,
+				packet->user_email.data(),
+				packet->user_password.data(),
 				ipAddress,
 				players[peer]->challenge
 			)
@@ -442,12 +317,26 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 		}
 		case PacketType::signup: {
 			Packet::signup* packet = (Packet::signup*)pkt->data;
+			
+			//////////////////////////////////////////////// 
+			// Decryption
+			CryptoPP::AutoSeededRandomPool rng;
+				
+			std::string encryptedPass(packet->user_password.data(), MAX_ENCRYPTED_LEN);
+			std::string decryptedPass;
+			
+			if(encryptedPass.length() == MAX_ENCRYPTED_LEN) {
+				CryptoPP::RSAES_OAEP_SHA_Decryptor d(_privateKey);
+				CryptoPP::StringSource ss2(encryptedPass, true, new CryptoPP::PK_DecryptorFilter(rng, d, new CryptoPP::StringSink(decryptedPass)));
+			} else {
+				break;
+			}
 
 			w.MakeWork(
 				createAccount,
-				packet->user_email,
-				packet->user_name,
-				packet->user_password,
+				packet->user_email.data(),
+				packet->user_name.data(),
+				decryptedPass,
 				ipAddress
 			)
 			.then(
@@ -472,26 +361,7 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 		}
 		case PacketType::test_packet: {
 			Packet::test_packet* packet = (Packet::test_packet*)pkt->data;
-				CryptoPP::AutoSeededRandomPool rng;
 				
-				std::string encrypted(packet->data);
-				std::string decrypted;
-				
-				cout << "size: " << encrypted.length() << " : " << encrypted << endl; 
-					
-				////////////////////////////////////////////////
-				// Decryption
-				
-				if(encrypted.length() == 128) {
-					CryptoPP::RSAES_OAEP_SHA_Decryptor d(_privateKey);
-					CryptoPP::StringSource ss2(encrypted, true, new CryptoPP::PK_DecryptorFilter(rng, d, new CryptoPP::StringSink(decrypted)));
-					
-					//cout << "encrypted: " << encrypted << endl;
-					cout << "recovered: " << decrypted << endl;
-				} else {
-					cout << "encrypted message is not matching modulus size! 128 != encrypted.length(): " << encrypted.length() << endl; 
-				}
-			
 			break;
 		}
 		default:

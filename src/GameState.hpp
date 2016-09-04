@@ -35,6 +35,7 @@ namespace GameState {
 	extern int account_challenge;
 	extern unsigned int user_id;
 	extern std::string user_name;
+	extern std::string publicKeyStr;
 }
 
 #endif
