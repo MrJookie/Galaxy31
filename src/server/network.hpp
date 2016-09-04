@@ -4,7 +4,7 @@
 #include <glm/glm.hpp>
 
 #define KEY_SIZE 1024
-#define PUBLIC_KEY_SIZE 310
+#define PUBLIC_KEY_SIZE 320
 #define MAX_ENCRYPTED_LEN 128
 #define MAX_PLAIN_LEN MAX_ENCRYPTED_LEN-42
 

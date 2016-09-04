@@ -152,7 +152,7 @@ void generate_keypair() {
 
 	CryptoPP::InvertibleRSAFunction params;
 	params.GenerateRandomWithKeySize(rng, KEY_SIZE);
-
+	
 	CryptoPP::RSA::PublicKey publicKey(params);
 	CryptoPP::RSA::PrivateKey privateKey(params);
 	_publicKey = publicKey;
