@@ -1,36 +1,60 @@
 TODO:
 		- big background (galaxy, moves very little)
 		- first layer background stars (stars must move at different speeds since they are not all at equal distance from us)
-		- asteroids
-		- mining asteroids
-		- asteroid resources (multiple resource types to gather from asteroids)
-		- asteroid destroying, leaving scrap
-		+ camera zoom in/out
-		+ minimap
-		- minimap zooming in/out
-		+ basic weapons
-		- collision with asteroids and other ships
-		- terminal, commands, debug
-		- getting score, upgrade points
-		- adding more ships
-		- upgrading ship
-		- stats (health bar, score points, upgrade points)
-		- customizing ship
-		- advanced weapons (which are crafted or bought later)
-		- bases (big space station, planet, big asteroid, system of space stations or something like that)
-		- customizing placement components around ship (put weapons infront, shield, reflective shield, big but weaker shield, power, lot of other stuff ...)
-		- more complex health (maybe make each component of the ship have its health, volatility, but keep overall health with some formula or averaging)
 		+ slow rotation
-		- strafe movement (in case of additional engines available on sides)
+		+ stabilizers
+		
+	zippo:
+		- shaking effect (for being hit effect)
+		+ minimap
+		+ camera zoom in/out
+		- minimap zooming in/out
+		- collision with asteroids and other ships (just print message to terminal "collision" and which object collided)
+		- customizing ship
+		- stats (health bar, score points, upgrade points)
 		- when base is attacked add some info on minimap
+		- more complex health (maybe make each component of the ship have its health, volatility, but keep overall health with some formula or averaging)
+		- getting score, upgrade points
+		- bases (big space station, planet, big asteroid, system of space stations or something like that)
+		- clans
+		- friend list, invite friend
+		
+		gui:
+			- options menu(setting resolution, quality, whatever)
+			- adding more ships
+			- upgrading ship
+			
+	112212:
+		+ basic weapons
+		- network buffering (for smoothness, lag detection, ping jump, freeze player ...) and other network issues
+		- shooting projectiles
+		- collision physics
+		
+		asteroids:
+			- asteroids
+			- mining asteroids
+			- asteroid resources (multiple resource types to gather from asteroids)
+			- asteroid destroying, leaving scrap
+			
+		- terminal, commands, debug
 		- configuration files (linux: $HOME/.config/galaxy31/, windows: C:\...\Documents\configuration files ...\galaxy31\...)
 		- local data configuration (downloads)
-		+ stabilizers
+		- advanced weapons (which are crafted or bought later)
+		- strafe movement (in case of additional engines available on sides)
+		- patching / updating system
+		- physfs (optional, but makes loading files much faster)
+		
+		gui:
+			- customizing placement components around ship (put weapons infront, shield, reflective shield, big but weaker shield, power, lot of other stuff ...)
+			
+		commands:
+			- show ping
+			- show metering
+			- show fps
 		
 	BUGS:
 		
 	TO FIX:
-		- windows enet not working with wine
 		
 	build
 		+ windows build
@@ -54,3 +78,73 @@ TODO:
 			+ join
 			- chat
 			- sending controls and stats
+
+
+; ------ network plan -------
+network key tradeoffs: latency, smoothness, responsiveness, bandwidth
+	low bandwidth goal => harder to sync, but more window for syncing big combat since todays bandwidth is quite big and leaving more space to huge combat
+	bigger latency window => more smooth, less responsive
+	more responsiveness => less smoothness, more blinking, glitchy
+	
+server not simulating anything unless it has to (when player is reported for hacking, simulation happens):
+	if server needs to simulate one player, it will also have to simulate his entire surrounding
+	if server is not simulating it needs to store each players last packet until next arrives
+
+ping jump problem:
+	? use prediction for brief moment before player gets frozen
+	freeze unstable player and then kick if doesn't stabilize
+
+? best way to sync seed of random numbers (if we use random numbers for anything)
+
+? can we just send player input instead of sending which rockets just player shot
+
+multiple servers:
+	? each server controlling its own territory
+	? each server controlling its own groups of isolated players on same territory
+		server needs to have players split by isolated groups
+		? can isolated groups be easily determined by quadtree
+	
+anti cheat:
+	at moment of player being reported: record his ping latency, ping jump, bandwidth, loss of packets (if detected) ...
+		also record his position, speed, acceleration. Even better record his surroundings as demo saved in database
+	players might send ticket for unbanning, if they were mistakenly banned and with demo, we will have evidence
+
+
+determine absolute maximum distance any radar can detect (we must limit this to some reasonable value, otherwise server might get choked at some point later when many people have ultra radars)
+	
+; ----- mountables plan -----
+event system based radar: add listening event with params which object is being detected and which distance
+when object is detected: think event gets registered
+? how does thinking process work on each client
+thinking process might cause desync (if execution depends on not synced variables)
+weapons should be also programed with LUA or separate .SO, .DLL (because my PC sucks and compiling all that will take time)
+
+~~~~~
+sample how to program weapon using event system:
+	listen for event (radar, radius of 50m):
+		unregister_event(radar)
+		listen for event(think, every 10ms):
+			if target still in range
+				turn cannon to detected target by some rotation speed of cannon
+				if cannon is facing target
+					fire projectile
+					listen for event(collision, projectile, target):
+						deal damage to target
+						display animation of blast
+						create additional particles if needed
+					skip some think cycles (delay before shooting next projectile)
+			else (not in range)
+				unregister_event (think)
+~~~~~
+
+
+; ---- event system uses ----
+event systems:
+	radar
+	timer
+	collision
+small events:
+	target destroyed
+	damage taken
+	reward
+	
