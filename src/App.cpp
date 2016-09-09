@@ -28,6 +28,7 @@ App::~App() {
     Mix_CloseAudio();
     Mix_Quit();
     Network::cleanup();
+    NetworkChat::cleanup();
     SDL_GL_DeleteContext(glContext);
     SDL_DestroyWindow(window);
     SDL_Quit();
@@ -35,7 +36,9 @@ App::~App() {
 
 void App::init() {
     Network::initialize();
+    NetworkChat::initialize();
     Network::connect("89.177.76.215", 1234);
+    
     if(SDL_Init(SDL_INIT_EVERYTHING) != 0) {
         throw std::string("Failed to initialize SDL: ") + SDL_GetError();
     }
@@ -204,8 +207,11 @@ void App::init() {
 				std::cout << "match: " << match << std::endl;
 			}
 			*/
-
-			Network::SendChatMessage(matches[1], matches[2]);
+			if(GameState::user_name != matches[1]) {
+				NetworkChat::SendChatMessage(matches[1], matches[2]);
+			}
+		} else {
+			NetworkChat::SendChatMessage("", t->GetText());
 		}
 	});
 		
@@ -409,6 +415,7 @@ void App::init() {
         //
         
         if(GameState::activePage == "game") {
+			NetworkChat::handle_events(5);
 			cv_minimap->Clear(0);
 			
 			// draw my ship on radar
@@ -551,7 +558,7 @@ void App::init() {
 
         this->showFPS();
 
-        //SDL_Delay(16);
+        SDL_Delay(16);
     }
 }
 

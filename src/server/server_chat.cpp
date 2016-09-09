@@ -177,15 +177,20 @@ void remove_client(ENetPeer* peer) {
 	players.erase( peer );
 }
 
-void SendChatMessage(std::string from_user_name, ENetPeer* peer, std::string message) {
+void SendChatMessage(std::string from_user_name, ENetPeer* peer, std::string message, int message_type) {
 	ENetPacket* pkt = enet_packet_create(nullptr, sizeof(Packet::chat_message), ENET_PACKET_FLAG_RELIABLE);
 	Packet::chat_message *p = new (pkt->data) Packet::chat_message();
 	
 	if(from_user_name.length() < 11 && message.length() < 101) {
 		strcpy(p->from_user_name.data(), from_user_name.c_str());
 		strcpy(p->message.data(), message.c_str());
-						
-		enet_peer_send(peer, Channel::msg, pkt);
+		p->message_type = message_type;
+		
+		if(peer == nullptr) {
+			enet_host_broadcast(host, Channel::msg, pkt);
+		} else {
+			enet_peer_send(peer, Channel::msg, pkt);
+		}
 		enet_host_flush(host);
 	} else {
 		enet_packet_destroy(pkt);
@@ -216,17 +221,25 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 			Packet::chat_message* packet = (Packet::chat_message*)pkt->data;
 			//received message from author:
 			//players[peer]->user_name ==== author
-			std::cout << players[peer]->user_name << " (" << players[peer]->user_id << ") to: " << packet->to_user_name.data() << " msg: " << packet->message.data() << std::endl;
+			//std::cout << players[peer]->user_name << " (" << players[peer]->user_id << ") to: " << packet->to_user_name.data() << " msg: " << packet->message.data() << std::endl;
 			
-			for (auto const& player : players) {
-				std::cout << player.first  // string (key)
-						  << ':' 
-						  << player.second->user_name // string's value 
-						  << std::endl ;
-				if(player.second->user_name == packet->to_user_name.data()) {
-					ENetPeer* peer = player.first;
-					SendChatMessage(players[peer]->user_name, peer, packet->message.data());
-					break;
+			std::string to_user_name(packet->to_user_name.data());
+			
+			if(to_user_name.empty()) {
+				//broadcast message to everyone except author
+				
+				for (auto const& player : players) {
+					if(player.first != peer) {
+						SendChatMessage(players[peer]->user_name, player.first, packet->message.data(), 0);
+					}
+				}
+			} else {
+				//send private message
+				for (auto const& player : players) {
+					if(player.second->user_name == to_user_name && players[peer]->user_name != to_user_name) {
+						SendChatMessage(players[peer]->user_name, player.first, packet->message.data(), 1);
+						break;
+					}
 				}
 			}
 			

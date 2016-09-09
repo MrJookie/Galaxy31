@@ -23,6 +23,7 @@ using namespace ng;
 using std::cout;
 using std::endl;
 #include "server/network.hpp"
+
 namespace Network {
 	ENetHost *client;
 	ENetPeer *host;
@@ -80,14 +81,6 @@ namespace Network {
 		}
 		return true;
 	}
-	
-	/*
-	void send_message(std::string message) {
-		ENetPacket* packet = enet_packet_create((message).c_str(), message.size(), 
-			ENET_PACKET_FLAG_RELIABLE); 
-		enet_host_broadcast(client, Channel::msg, packet);
-	}
-	*/
 	
 	void flush() {
 		enet_host_flush(client);
@@ -191,47 +184,6 @@ namespace Network {
 		}
 	}
 	
-	//move to NetworkChat namespace
-	void SendChatLogin(unsigned int user_id, std::string user_name) {
-		CryptoPP::SHA1 sha1;
-		std::string source = user_name;
-		std::string hash = "";
-		CryptoPP::StringSource(source, true, new CryptoPP::HashFilter(sha1, new CryptoPP::HexEncoder(new CryptoPP::StringSink(hash), false)));
-		
-		/*
-		std::string hashChallenge = hash + std::to_string(GameState::account_challenge);
-		std::string finalHash = "";
-		CryptoPP::StringSource(hashChallenge, true, new CryptoPP::HashFilter(sha1, new CryptoPP::HexEncoder(new CryptoPP::StringSink(finalHash), false)));
-		user_password = finalHash;
-		*/
-		
-		ENetPacket* pkt = enet_packet_create(nullptr, sizeof(Packet::chat_login), ENET_PACKET_FLAG_RELIABLE);
-		Packet::chat_login *p = new (pkt->data) Packet::chat_login();
-		
-		p->user_id = user_id;
-		strcpy(p->hash.data(), hash.c_str());
-		strcpy(p->user_name.data(), user_name.c_str());
-						
-		enet_peer_send(host, Channel::control, pkt);
-		flush();
-	}
-	
-	//move to NetworkChat namespace
-	void SendChatMessage(std::string to_user_name, std::string message) {
-		ENetPacket* pkt = enet_packet_create(nullptr, sizeof(Packet::chat_message), ENET_PACKET_FLAG_RELIABLE);
-		Packet::chat_message *p = new (pkt->data) Packet::chat_message();
-		
-		if(to_user_name.length() < 11 && message.length() < 101) {
-			strcpy(p->to_user_name.data(), to_user_name.c_str());
-			strcpy(p->message.data(), message.c_str());
-							
-			enet_peer_send(host, Channel::msg, pkt);
-			flush();
-		} else {
-			enet_packet_destroy(pkt);
-		}
-	}
-	
 	void cleanup() {
 		enet_host_destroy(client);
 	}
@@ -286,8 +238,8 @@ namespace Network {
 				GameState::user_name = p->user_name.data();
 				
 				if(p->status_code == 0) { //login ok after registration login
-					Network::connect("89.177.76.215", 54301); //connect to chat server
-					Network::SendChatLogin(GameState::user_id, GameState::user_name);
+					NetworkChat::connect("89.177.76.215", 54301); //connect to chat server
+					NetworkChat::SendChatLogin(GameState::user_id, GameState::user_name);
 					
 					TextBox* tb_game_account = (TextBox*)GameState::gui.GetControlById("game_account"); //move this?
 					tb_game_account->SetText("Logged in as: " + std::to_string(GameState::user_id) + " | " + GameState::user_name);
@@ -316,16 +268,150 @@ namespace Network {
 				}
 				break;
 			}
-			//move to NetworkChat
+		}
+	}
+}
+
+namespace NetworkChat {
+	ENetHost *client;
+	ENetPeer *host;
+	
+	// private forwards
+	void parse_packet(ENetPeer* peer, ENetPacket* pkt);
+	//
+	
+	const int timeout = 5000;
+	void initialize() {
+		if (enet_initialize () != 0) {
+			cout << "An error occurred while initializing ENet." << endl;
+			return;
+		}
+		atexit (enet_deinitialize);
+	}
+	
+	bool connect(const char* ip, int port) {
+		cout << "Connecting to " << ip << ":" << port << endl;
+		ENetAddress address;
+		if(enet_address_set_host(&address, ip) != 0) {
+			cout << "failed to resolve ip address" << endl;
+			return false;
+		}
+		address.port = port;
+		
+		client = enet_host_create (NULL, 1, Channel::num_channels, 0, 0);
+		if (client == NULL)
+		{
+			cout << "An error occurred while trying to create an ENet client host." << endl;
+			return false;
+		}
+		
+		ENetPeer* peer;
+		ENetEvent event;
+		/* Initiate the connection, allocating the two channels 0 and 1. */
+		peer = enet_host_connect(client, &address, Channel::num_channels, 0);
+		if (peer == NULL)
+		{
+		   cout << "No available peers for initiating an ENet connection." << endl;
+		   return false;
+		}
+		host = peer;
+		/* Wait up to 5 seconds for the connection attempt to succeed. */
+		if (enet_host_service (client, &event, timeout) > 0 &&
+			event.type == ENET_EVENT_TYPE_CONNECT)
+		{
+			cout << "Connection to " << ip << ":" << port << " succeeded." << endl;
+			enet_host_flush (client);
+			enet_peer_ping_interval(host, 50);
+		} else {
+			enet_peer_reset (peer);
+			cout << "Connection to " << ip << ":" << port << " failed." << endl;
+			return false;
+		}
+		return true;
+	}
+
+	void flush() {
+		enet_host_flush(client);
+	}
+	
+	// process n events (set n to big number to process all events)
+	void handle_events(int n) {
+		flush();
+		ENetEvent event;
+		for(int i=0; i < n && enet_host_service(client, &event, 1) > 0; i++) {
+			switch(event.type) {
+			case ENET_EVENT_TYPE_RECEIVE:
+				parse_packet(event.peer, event.packet);
+				enet_packet_destroy(event.packet);
+				break;
+			default:
+				cout << "event: " << event.type << endl;
+			}
+		}
+	}
+
+	void SendChatLogin(unsigned int user_id, std::string user_name) {
+		CryptoPP::SHA1 sha1;
+		std::string source = user_name;
+		std::string hash = "";
+		CryptoPP::StringSource(source, true, new CryptoPP::HashFilter(sha1, new CryptoPP::HexEncoder(new CryptoPP::StringSink(hash), false)));
+		
+		/*
+		std::string hashChallenge = hash + std::to_string(GameState::account_challenge);
+		std::string finalHash = "";
+		CryptoPP::StringSource(hashChallenge, true, new CryptoPP::HashFilter(sha1, new CryptoPP::HexEncoder(new CryptoPP::StringSink(finalHash), false)));
+		user_password = finalHash;
+		*/
+		
+		ENetPacket* pkt = enet_packet_create(nullptr, sizeof(Packet::chat_login), ENET_PACKET_FLAG_RELIABLE);
+		Packet::chat_login *p = new (pkt->data) Packet::chat_login();
+		
+		p->user_id = user_id;
+		strcpy(p->hash.data(), hash.c_str());
+		strcpy(p->user_name.data(), user_name.c_str());
+						
+		enet_peer_send(host, Channel::control, pkt);
+		flush();
+	}
+	
+	void SendChatMessage(std::string to_user_name, std::string message) {
+		ENetPacket* pkt = enet_packet_create(nullptr, sizeof(Packet::chat_message), ENET_PACKET_FLAG_RELIABLE);
+		Packet::chat_message *p = new (pkt->data) Packet::chat_message();
+		
+		if(to_user_name.length() < 11 && message.length() < 101) {
+			strcpy(p->to_user_name.data(), to_user_name.c_str());
+			strcpy(p->message.data(), message.c_str());
+							
+			enet_peer_send(host, Channel::msg, pkt);
+			flush();
+		} else {
+			enet_packet_destroy(pkt);
+		}
+	}
+	
+	void cleanup() {
+		enet_host_destroy(client);
+	}
+	
+	int max_queue = 10000;
+	Ship::Chassis *chassis = nullptr;
+	void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
+		Packet::Packet *bp = (Packet::Packet *)pkt->data;
+		switch(bp->type) {
 			case PacketType::chat_message: {
 				Packet::chat_message *p = (Packet::chat_message *)pkt->data;
 				
 				Terminal* tm_game_chat = (Terminal*)GameState::gui.GetControlById("game_terminal"); //move this?
-				tm_game_chat->WriteLog(std::string(p->from_user_name.data()) + ": " + std::string(p->message.data()) );
+				if(p->message_type == 0) {
+					tm_game_chat->WriteLog( std::string(p->from_user_name.data()) + ": " + std::string(p->message.data()) );
+				} else if(p->message_type == 1) {
+					tm_game_chat->WriteLog( "^y" + std::string(p->from_user_name.data()) + "^w: " + std::string(p->message.data()) );
+				}
+				
+				std::cout << "message_type: " << p->message_type << std::endl;
 							
 				break;
 			}
 		}
 	}
-	
 }

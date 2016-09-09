@@ -79,6 +79,7 @@ namespace Packet {
 	//else only message is filled, so user is empty, broadcast it to all peers, except this peer (author), overlapping?
 	struct chat_message : public Packet {
 		chat_message() : Packet(PacketType::chat_message) {}
+		int message_type;
 		std::array<char, 11> from_user_name;
 		std::array<char, 11> to_user_name;
 		std::array<char, 101> message;
