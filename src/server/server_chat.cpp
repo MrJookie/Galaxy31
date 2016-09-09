@@ -27,7 +27,7 @@
 using std::cout;
 using std::endl;
 using std::thread;
-const int timeout = 1;
+const int timeout = 1000;
 std::mutex term;
 int nthread = 0;
 
@@ -73,8 +73,6 @@ void server_wait_for_packet() {
 			cout << "event: " << event.type << endl;
         }
     }
-    
-    std::this_thread::sleep_for(std::chrono::milliseconds(5));
 }
 
 void generate_keypair() {
@@ -162,9 +160,9 @@ void SendChatMessage(ENetPeer* peer, std::string to_user_name, std::string messa
 		}
 
 		enet_host_flush(host);
+	} else {
+		enet_packet_destroy(pkt);
 	}
-	
-	//enet_packet_destroy(pkt);
 }
 
 void parse_packet(ENetPeer* peer, ENetPacket* pkt) {

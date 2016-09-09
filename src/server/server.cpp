@@ -60,6 +60,8 @@ static uint32_t last_id = 0;
 static std::map<ENetPeer*, Player*> players;
 
 std::mutex host_mutex;
+std::mutex queue_mutex;
+std::mutex map_mutex;
 
 void server_wait_for_packet() {
     ENetEvent event;
@@ -71,9 +73,11 @@ void server_wait_for_packet() {
             cout << "A new client connected from " << event.peer->address.host << ":" << event.peer->address.port << endl;
             handle_new_client(event.peer);
             break;
-        case ENET_EVENT_TYPE_RECEIVE:
+        case ENET_EVENT_TYPE_RECEIVE: {
+			std::unique_lock<std::mutex> l(queue_mutex);
             packets.emplace(event.packet, event.peer);
             break;
+        }
         case ENET_EVENT_TYPE_DISCONNECT:
 			remove_client(event.peer);
             enet_peer_reset(event.peer);
@@ -100,19 +104,31 @@ void server_work() {
 		}
 		
 		std::pair<ENetPacket*, ENetPeer*> packet(0,0);
-		if(packets.size() == 0) {
-			std::this_thread::sleep_for(std::chrono::milliseconds(5));
-			continue;
-		} else {
-			std::unique_lock<std::mutex> l(host_mutex);
+		{
+			std::unique_lock<std::mutex> l(queue_mutex);
 			if(!packets.empty()) {
 				packet = packets.front();
 				packets.pop();				
 			} else {
-				std::this_thread::sleep_for(std::chrono::milliseconds(5));
+				//std::this_thread::sleep_for(std::chrono::milliseconds(5));
 				continue;
 			}
 		}
+		/*
+		if(packets.size() == 0) {
+			std::this_thread::sleep_for(std::chrono::milliseconds(5));
+			continue;
+		} else {
+			std::unique_lock<std::mutex> l(queue_mutex);
+			if(!packets.empty()) {
+				packet = packets.front();
+				packets.pop();				
+			} else {
+				//std::this_thread::sleep_for(std::chrono::milliseconds(5));
+				continue;
+			}
+		}
+		*/
 		
 		if(packet.second && (packet.second->state & ENET_PEER_STATE_CONNECTED > 0)) {
 		//if(packet.first) {
@@ -122,7 +138,6 @@ void server_work() {
 		
 		std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
 		if(now - last_status_update > std::chrono::milliseconds(50)) {
-			std::unique_lock<std::mutex> l(host_mutex);
 			last_status_update = now;
 			send_states();
 			// cout << "sending states\n";
@@ -213,7 +228,7 @@ void handle_new_client(ENetPeer* peer) {
 	
 	Player* player = new Player;
 	//player->id = last_id;
-	player->user_id = 0;
+	player->user_id = last_id; //0
 	player->challenge = challenge;
 	players[peer] = player;
 	
@@ -221,12 +236,15 @@ void handle_new_client(ENetPeer* peer) {
 }
 
 void remove_client(ENetPeer* peer) {
+	std::unique_lock<std::mutex> l(map_mutex);
 	cout << "removing client user_id: " << players[peer]->user_id << endl;
 	delete players[peer];
 	players.erase( peer );
 }
 
 void send_states() {
+	std::unique_lock<std::mutex> o(map_mutex);
+	
 	int len = sizeof(Packet::update_objects);
 	
 	int num_objects = 0;
@@ -249,6 +267,7 @@ void send_states() {
 		p.second->obj.clear();
 	}
 	
+	std::unique_lock<std::mutex> l(host_mutex);
 	enet_host_broadcast(host, Channel::data, pkt);
 	enet_host_flush(host);
 }
@@ -258,7 +277,7 @@ void send_authorize(ENetPeer* peer, int status_code = -1, unsigned int id = 0, s
 		
 	ENetPacket* pkt = enet_packet_create(nullptr, len, ENET_PACKET_FLAG_RELIABLE);
 	Packet::authorize *p = new (pkt->data) Packet::authorize();
-	p->user_id = id;
+	//p->user_id = id;
 	p->status_code = status_code;
 	strcpy(p->user_name.data(), user_name.c_str());
 	
@@ -306,7 +325,7 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 								unsigned int user_id = loggedUser["id"];
 								std::string user_name(loggedUser["username"]);
 								
-								players[peer]->user_id = user_id;
+								//players[peer]->user_id = user_id;
 
 								send_authorize(peer, 0, user_id, user_name);
 							}

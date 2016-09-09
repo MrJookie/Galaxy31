@@ -193,7 +193,7 @@ void App::init() {
 		GameState::activePage = "login";
 	});
 	
-	std::regex terminal_whisper("\\w '(.*)' (.*)");
+	std::regex terminal_whisper("\w '(.*)' (.*)");
 	
 	Terminal &tm_game_chat = *((Terminal*)GameState::gui.GetControlById("game_terminal"));
 	tm_game_chat.SubscribeEvent(Terminal::event::command, [&](Control* c) {
