@@ -15,7 +15,8 @@
 #include "server.hpp"
 #include "network.hpp"
 #include "../Object.hpp"
-//#include "database.hpp"
+#include "database.hpp"
+#include "RelocatedWork.hpp"
 
 //crypto
 #include <cryptopp/sha.h>
@@ -42,7 +43,8 @@ static void send_states();
 static std::queue<std::pair<ENetPacket*, ENetPeer*>> packets;
 
 struct Player {
-	uint32_t id;
+	//uint32_t id;
+	unsigned int user_id;
 	int challenge;
 	std::vector<Object> obj;
 };
@@ -152,7 +154,7 @@ void generate_keypair() {
 
 	CryptoPP::InvertibleRSAFunction params;
 	params.GenerateRandomWithKeySize(rng, KEY_SIZE);
-	
+
 	CryptoPP::RSA::PublicKey publicKey(params);
 	CryptoPP::RSA::PrivateKey privateKey(params);
 	_publicKey = publicKey;
@@ -210,15 +212,16 @@ void handle_new_client(ENetPeer* peer) {
 	enet_peer_send(peer, Channel::control, pkt);
 	
 	Player* player = new Player;
-	player->id = last_id;
+	//player->id = last_id;
+	player->user_id = 0;
 	player->challenge = challenge;
 	players[peer] = player;
 	
-	cout << "challenge: " << challenge << endl;
+	//cout << "challenge: " << challenge << endl;
 }
 
 void remove_client(ENetPeer* peer) {
-	cout << "removing client " << players[peer]->id << endl;
+	cout << "removing client user_id: " << players[peer]->user_id << endl;
 	delete players[peer];
 	players.erase( peer );
 }
@@ -240,7 +243,7 @@ void send_states() {
 	for(auto& p : players) {
 		for(auto& o : p.second->obj) {
 			obj[i] = o;
-			obj[i].SetId(p.second->id);
+			obj[i].SetId(p.second->user_id);
 			i++;
 		}
 		p.second->obj.clear();
@@ -302,8 +305,10 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 							[=](mysqlpp::Row loggedUser) {
 								unsigned int user_id = loggedUser["id"];
 								std::string user_name(loggedUser["username"]);
+								
+								players[peer]->user_id = user_id;
 
-								send_authorize(peer, 3, user_id, user_name);
+								send_authorize(peer, 0, user_id, user_name);
 							}
 						);
 					//send account banned status if login_account_id = 0?
@@ -368,5 +373,4 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 			cout << "received unknown packet! " << (int)ppkt->type << endl;
 			break;
 	}
-	
 }

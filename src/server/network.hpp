@@ -23,7 +23,8 @@ enum PacketType {
 	authorize,
 	signup,
 	test_packet,
-	chat_message
+	chat_message,
+	chat_login
 };
 
 namespace Packet {
@@ -73,17 +74,22 @@ namespace Packet {
 		std::array<char, 1000> data;
 	};
 	
-	/*
-	 * //always fill from_user_id
-	 * //if /w "Nick" message is set, then send message to Nick user (lookup by user_id on server), response to user, if user doesnt exist
-	 * //else only message is filled, so user is empty, broadcast it to all peers, except this peer (author), overlapping?
+	//always fill from_user_id
+	//if /w "Nick" message is set, then send message to Nick user (lookup by user_id on server), response to user, if user doesnt exist
+	//else only message is filled, so user is empty, broadcast it to all peers, except this peer (author), overlapping?
 	struct chat_message : public Packet {
 		chat_message() : Packet(PacketType::chat_message) {}
-		unsigned int from_user_id;
+		std::array<char, 11> from_user_name;
 		std::array<char, 11> to_user_name;
-		std::array<char, 256> message;
+		std::array<char, 101> message;
 	};
-	*/
+	
+	struct chat_login : public Packet {
+		chat_login() : Packet(PacketType::chat_login) {}
+		unsigned int user_id;
+		std::array<char, 41> hash;
+		std::array<char, 11> user_name;
+	};
 }
 
 

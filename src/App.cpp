@@ -3,6 +3,8 @@
 #include "GameState.hpp"
 #include "Quadtree.hpp"
 
+#include <regex>
+
 App::App() {
 	m_initialWindowSize = glm::vec2(1024, 768);
     this->setWindowSize(m_initialWindowSize);
@@ -188,10 +190,23 @@ void App::init() {
 		GameState::activePage = "login";
 	});
 	
+	std::regex terminal_whisper("\\w '(.*)' (.*)");
+	
 	Terminal &tm_game_chat = *((Terminal*)GameState::gui.GetControlById("game_terminal"));
-	tm_game_chat.SubscribeEvent(Terminal::event::command, [](Control* c) {
+	tm_game_chat.SubscribeEvent(Terminal::event::command, [&](Control* c) {
 		Terminal* t = (Terminal*)c;
-		std::cout << "command: " << t->GetText() << std::endl;
+		//std::cout << "command: " << t->GetText() << std::endl;
+
+		std::smatch matches;
+		if(std::regex_search(t->GetText(), matches, terminal_whisper)) {
+			/*
+			for (auto match : matches) {
+				std::cout << "match: " << match << std::endl;
+			}
+			*/
+
+			Network::SendChatMessage(matches[1], matches[2]);
+		}
 	});
 		
 	Ship::Chassis chassis("main_ship", "ship_01_skin.png", "ship_01_skin.png");

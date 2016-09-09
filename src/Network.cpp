@@ -7,6 +7,7 @@
 
 //gui
 #include "controls/TextBox.hpp"
+#include "controls/Terminal.hpp"
 
 //crypto
 #include <cryptopp/sha.h>
@@ -190,6 +191,47 @@ namespace Network {
 		}
 	}
 	
+	//move to NetworkChat namespace
+	void SendChatLogin(unsigned int user_id, std::string user_name) {
+		CryptoPP::SHA1 sha1;
+		std::string source = user_name;
+		std::string hash = "";
+		CryptoPP::StringSource(source, true, new CryptoPP::HashFilter(sha1, new CryptoPP::HexEncoder(new CryptoPP::StringSink(hash), false)));
+		
+		/*
+		std::string hashChallenge = hash + std::to_string(GameState::account_challenge);
+		std::string finalHash = "";
+		CryptoPP::StringSource(hashChallenge, true, new CryptoPP::HashFilter(sha1, new CryptoPP::HexEncoder(new CryptoPP::StringSink(finalHash), false)));
+		user_password = finalHash;
+		*/
+		
+		ENetPacket* pkt = enet_packet_create(nullptr, sizeof(Packet::chat_login), ENET_PACKET_FLAG_RELIABLE);
+		Packet::chat_login *p = new (pkt->data) Packet::chat_login();
+		
+		p->user_id = user_id;
+		strcpy(p->hash.data(), hash.c_str());
+		strcpy(p->user_name.data(), user_name.c_str());
+						
+		enet_peer_send(host, Channel::control, pkt);
+		flush();
+	}
+	
+	//move to NetworkChat namespace
+	void SendChatMessage(std::string to_user_name, std::string message) {
+		ENetPacket* pkt = enet_packet_create(nullptr, sizeof(Packet::chat_message), ENET_PACKET_FLAG_RELIABLE);
+		Packet::chat_message *p = new (pkt->data) Packet::chat_message();
+		
+		if(to_user_name.length() < 11 && message.length() < 101) {
+			strcpy(p->to_user_name.data(), to_user_name.c_str());
+			strcpy(p->message.data(), message.c_str());
+							
+			enet_peer_send(host, Channel::msg, pkt);
+			flush();
+		} else {
+			enet_packet_destroy(pkt);
+		}
+	}
+	
 	void cleanup() {
 		enet_host_destroy(client);
 	}
@@ -243,7 +285,10 @@ namespace Network {
 				GameState::user_id = p->user_id;
 				GameState::user_name = p->user_name.data();
 				
-				if(p->status_code == 0) {
+				if(p->status_code == 0) { //login ok after registration login
+					Network::connect("89.177.76.215", 54301); //connect to chat server
+					Network::SendChatLogin(GameState::user_id, GameState::user_name);
+					
 					TextBox* tb_game_account = (TextBox*)GameState::gui.GetControlById("game_account"); //move this?
 					tb_game_account->SetText("Logged in as: " + std::to_string(GameState::user_id) + " | " + GameState::user_name);
 					
@@ -258,7 +303,7 @@ namespace Network {
 					tb_register_status->SetText("Username taken!");
 					
 					GameState::activePage = "register";
-				} else if(p->status_code == 3) {
+				} else if(p->status_code == 3) { //login ok after just login ////REMOVE?
 					TextBox* tb_game_account = (TextBox*)GameState::gui.GetControlById("game_account"); //move this?
 					tb_game_account->SetText("Logged in as: " + std::to_string(GameState::user_id) + " | " + GameState::user_name);
 					
@@ -269,6 +314,15 @@ namespace Network {
 					
 					GameState::activePage = "login";
 				}
+				break;
+			}
+			//move to NetworkChat
+			case PacketType::chat_message: {
+				Packet::chat_message *p = (Packet::chat_message *)pkt->data;
+				
+				Terminal* tm_game_chat = (Terminal*)GameState::gui.GetControlById("game_terminal"); //move this?
+				tm_game_chat->WriteLog(std::string(p->from_user_name.data()) + ": " + std::string(p->message.data()) );
+							
 				break;
 			}
 		}
