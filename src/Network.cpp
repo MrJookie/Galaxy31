@@ -407,9 +407,7 @@ namespace NetworkChat {
 				} else if(p->message_type == 1) {
 					tm_game_chat->WriteLog( "^y" + std::string(p->from_user_name.data()) + "^w: " + std::string(p->message.data()) );
 				}
-				
-				std::cout << "message_type: " << p->message_type << std::endl;
-							
+											
 				break;
 			}
 		}

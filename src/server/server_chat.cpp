@@ -36,8 +36,6 @@ static void parse_packet(ENetPeer* peer, ENetPacket* pkt);
 static void handle_new_client(ENetPeer* peer);
 static void remove_client(ENetPeer* peer);
 
-static std::queue<std::pair<ENetPacket*, ENetPeer*>> packets;
-
 struct Player {
 	unsigned int user_id;
 	std::string user_name;
@@ -52,12 +50,10 @@ std::string _privateKeyStr;
 static ENetHost* host;
 static std::map<ENetPeer*, Player*> players;
 
-std::mutex host_mutex;
-
 void server_wait_for_packet() {
     ENetEvent event;
     /* Wait up to 1000 milliseconds for an event. */
-    std::unique_lock<std::mutex> l(host_mutex);
+
     while(enet_host_service(host, &event, timeout) > 0) {
         switch(event.type) {
         case ENET_EVENT_TYPE_CONNECT:
@@ -65,7 +61,9 @@ void server_wait_for_packet() {
             handle_new_client(event.peer);
             break;
         case ENET_EVENT_TYPE_RECEIVE:
-            packets.emplace(event.packet, event.peer);
+            //packets.emplace(event.packet, event.peer);
+            parse_packet(event.peer, event.packet);
+			enet_packet_destroy(event.packet);
             break;
         case ENET_EVENT_TYPE_DISCONNECT:
 			remove_client(event.peer);
@@ -77,36 +75,6 @@ void server_wait_for_packet() {
     }
     
     std::this_thread::sleep_for(std::chrono::milliseconds(5));
-}
-
-std::chrono::high_resolution_clock::time_point last_status_update = std::chrono::high_resolution_clock::now();
-void server_work() {
-	{
-		std::unique_lock<std::mutex> l(term);
-		cout << "started thread " << (nthread++) << endl;
-	}
-	while(1) {
-		std::pair<ENetPacket*, ENetPeer*> packet(0,0);
-		if(packets.size() == 0) {
-			std::this_thread::sleep_for(std::chrono::milliseconds(5));
-			continue;
-		} else {
-			std::unique_lock<std::mutex> l(host_mutex);
-			if(!packets.empty()) {
-				packet = packets.front();
-				packets.pop();				
-			} else {
-				std::this_thread::sleep_for(std::chrono::milliseconds(5));
-				continue;
-			}
-		}
-		
-		if(packet.second && (packet.second->state & ENET_PEER_STATE_CONNECTED > 0)) {
-		//if(packet.first) {
-			parse_packet(packet.second, packet.first);
-			enet_packet_destroy(packet.first);
-		}
-	}
 }
 
 void generate_keypair() {
@@ -141,17 +109,9 @@ void server_start(ushort port) {
                 "An error occurred while trying to create an ENet server host.\n");
         exit(EXIT_FAILURE);
     }
-    unsigned int num_cores = std::thread::hardware_concurrency();
-    if(num_cores == 0) num_cores = 1;
-    unsigned int num_threads = num_cores ;
-    thread *t = new thread[num_threads];
-    for(int i = 0; i < num_threads; i++) {
-		t[i] = thread(server_work);
-	}
-	for(int i=0; i < num_threads; i++) {
-		t[i].detach();
-	}
-    // delete[] t;
+    
+    std::cout << "Chat server started and listening on port " << port << std::endl;
+    
 }
 
 void handle_new_client(ENetPeer* peer) {
@@ -177,24 +137,34 @@ void remove_client(ENetPeer* peer) {
 	players.erase( peer );
 }
 
-void SendChatMessage(std::string from_user_name, ENetPeer* peer, std::string message, int message_type) {
+void SendChatMessage(ENetPeer* peer, std::string to_user_name, std::string message, int message_type) {
 	ENetPacket* pkt = enet_packet_create(nullptr, sizeof(Packet::chat_message), ENET_PACKET_FLAG_RELIABLE);
 	Packet::chat_message *p = new (pkt->data) Packet::chat_message();
+	
+	std::string from_user_name = players[peer]->user_name;
 	
 	if(from_user_name.length() < 11 && message.length() < 101) {
 		strcpy(p->from_user_name.data(), from_user_name.c_str());
 		strcpy(p->message.data(), message.c_str());
 		p->message_type = message_type;
-		
-		if(peer == nullptr) {
-			enet_host_broadcast(host, Channel::msg, pkt);
-		} else {
-			enet_peer_send(peer, Channel::msg, pkt);
+
+		for(auto const& player : players) {
+			if(message_type == 0) {
+				if(player.first != peer) {
+					enet_peer_send(player.first, Channel::msg, pkt);
+				}
+			} else if(message_type == 1) {
+				if(player.first != peer && player.second->user_name == to_user_name) {
+					enet_peer_send(player.first, Channel::msg, pkt);
+					break;
+				}
+			}
 		}
+
 		enet_host_flush(host);
-	} else {
-		enet_packet_destroy(pkt);
 	}
+	
+	//enet_packet_destroy(pkt);
 }
 
 void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
@@ -219,35 +189,20 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 		}
 		case PacketType::chat_message: {
 			Packet::chat_message* packet = (Packet::chat_message*)pkt->data;
-			//received message from author:
-			//players[peer]->user_name ==== author
-			//std::cout << players[peer]->user_name << " (" << players[peer]->user_id << ") to: " << packet->to_user_name.data() << " msg: " << packet->message.data() << std::endl;
-			
+
 			std::string to_user_name(packet->to_user_name.data());
-			
 			if(to_user_name.empty()) {
 				//broadcast message to everyone except author
-				
-				for (auto const& player : players) {
-					if(player.first != peer) {
-						SendChatMessage(players[peer]->user_name, player.first, packet->message.data(), 0);
-					}
-				}
+				SendChatMessage(peer, to_user_name, packet->message.data(), 0);
 			} else {
 				//send private message
-				for (auto const& player : players) {
-					if(player.second->user_name == to_user_name && players[peer]->user_name != to_user_name) {
-						SendChatMessage(players[peer]->user_name, player.first, packet->message.data(), 1);
-						break;
-					}
-				}
+				SendChatMessage(peer, to_user_name, packet->message.data(), 1);
 			}
 			
 			break;
 		}
 		default:
-			//cout << "received unknown packet! " << (int)ppkt->type << endl;
-			//add NetworkChat namespace in the Game
+			cout << "received unknown packet! " << (int)ppkt->type << endl;
 			break;
 	}
 }
