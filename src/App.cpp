@@ -5,6 +5,19 @@
 
 #include <regex>
 
+#include "server/network.hpp"
+
+//crypto
+#include <cryptopp/sha.h>
+#include <cryptopp/filters.h>
+#include <cryptopp/hex.h>
+#include <cryptopp/rsa.h>
+#include <cryptopp/osrng.h>
+#include <cryptopp/integer.h>
+#include <cryptopp/secblock.h>
+#include <cryptopp/aes.h>
+#include <cryptopp/modes.h>
+
 App::App() {
 	m_initialWindowSize = glm::vec2(1024, 768);
     this->setWindowSize(m_initialWindowSize);
@@ -19,7 +32,9 @@ App::App() {
 
     m_chrono_start = std::chrono::high_resolution_clock::now();
     m_chrono_elapsed = 0;
-
+    
+    this->generate_RSA_keypair();
+    
     this->init();
 }
 
@@ -193,7 +208,7 @@ void App::init() {
 		GameState::activePage = "login";
 	});
 	
-	std::regex terminal_whisper("\w '(.*)' (.*)");
+	std::regex terminal_whisper("/w '(.*)' (.*)");
 	
 	Terminal &tm_game_chat = *((Terminal*)GameState::gui.GetControlById("game_terminal"));
 	tm_game_chat.SubscribeEvent(Terminal::event::command, [&](Control* c) {
@@ -634,4 +649,41 @@ bool App::TODOserver_doPassRestore(std::string user_email) {
 	//if email was not restored <10 mins ago, return true; else false;
 	
 	return true;
+}
+
+void App::generate_RSA_keypair() {
+	CryptoPP::AutoSeededRandomPool rng;
+
+	CryptoPP::InvertibleRSAFunction params;
+	params.GenerateRandomWithKeySize(rng, KEY_SIZE);
+
+	CryptoPP::RSA::PublicKey publicKey(params);
+	CryptoPP::RSA::PrivateKey privateKey(params);
+
+	publicKey.Save(CryptoPP::HexEncoder(new CryptoPP::StringSink(GameState::clientPublicKeyStr)).Ref());
+	privateKey.Save(CryptoPP::HexEncoder(new CryptoPP::StringSink(GameState::clientPrivateKeyStr)).Ref());
+	
+	//////test
+	/*
+	std::string plain_cut = "Hello!"; 
+	std::string encrypted, decrypted;
+	
+	//CryptoPP::AutoSeededRandomPool rng;
+	
+	//encrypt
+	CryptoPP::RSA::PublicKey loadPublicKey;
+	loadPublicKey.Load(CryptoPP::StringSource(GameState::clientPublicKeyStr, true, new CryptoPP::HexDecoder()).Ref());
+	
+	CryptoPP::RSAES_OAEP_SHA_Encryptor e(loadPublicKey);
+	CryptoPP::StringSource ss1(plain_cut, true, new CryptoPP::PK_EncryptorFilter(rng, e, new CryptoPP::StringSink(encrypted)));
+
+	//decrypt
+	if(encrypted.length() == MAX_ENCRYPTED_LEN) {
+		CryptoPP::RSA::PrivateKey loadPrivateKey;
+		loadPrivateKey.Load(CryptoPP::StringSource(GameState::clientPrivateKeyStr, true, new CryptoPP::HexDecoder()).Ref());
+		
+		CryptoPP::RSAES_OAEP_SHA_Decryptor d(loadPrivateKey);
+		CryptoPP::StringSource ss2(encrypted, true, new CryptoPP::PK_DecryptorFilter(rng, d, new CryptoPP::StringSink(decrypted)));
+	}
+	*/
 }

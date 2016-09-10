@@ -155,16 +155,13 @@ namespace Network {
 		CryptoPP::StringSource(source, true, new CryptoPP::HashFilter(sha1, new CryptoPP::HexEncoder(new CryptoPP::StringSink(hash), false)));
 		user_password = hash;
 		
-		////////////////////////////////////////////////
-		// Encryption
+		std::string plain_cut = user_password.substr(0, MAX_PLAIN_LEN); 
+		std::string encrypted;
+		
 		CryptoPP::AutoSeededRandomPool rng;
 		
 		CryptoPP::RSA::PublicKey loadPublicKey;
-		loadPublicKey.Load(CryptoPP::StringSource(GameState::publicKeyStr, true, new CryptoPP::HexDecoder()).Ref());
-
-		std::string plain(user_password);
-		std::string plain_cut = plain.substr(0, MAX_PLAIN_LEN); 
-		std::string encrypted;
+		loadPublicKey.Load(CryptoPP::StringSource(GameState::serverPublicKeyStr, true, new CryptoPP::HexDecoder()).Ref());
 		
 		CryptoPP::RSAES_OAEP_SHA_Encryptor e(loadPublicKey);
 		CryptoPP::StringSource ss1(plain_cut, true, new CryptoPP::PK_EncryptorFilter(rng, e, new CryptoPP::StringSink(encrypted)));
@@ -198,7 +195,7 @@ namespace Network {
 				cout << "your client id is: " << p->new_id << ", challenge: " << p->challenge << endl;
 				GameState::player->SetId(p->new_id);
 				GameState::account_challenge = p->challenge; //move this?
-				GameState::publicKeyStr = p->public_key.data(); 
+				GameState::serverPublicKeyStr = p->public_key.data(); 
 							
 				break;
 			}

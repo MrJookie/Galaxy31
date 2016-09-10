@@ -33,6 +33,7 @@ class App {
         
         void takeScreenshot(int x, int y, int w, int h);
         void takeScreenshotPNG(int x, int y, int w, int h);
+        void generate_RSA_keypair();
         
         glm::vec2 m_initialWindowSize;
         glm::vec2 m_windowSize;

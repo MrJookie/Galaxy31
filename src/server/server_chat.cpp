@@ -22,7 +22,9 @@
 #include <cryptopp/rsa.h>
 #include <cryptopp/osrng.h>
 #include <cryptopp/integer.h>
-#include <cryptopp/files.h>
+#include <cryptopp/secblock.h>
+#include <cryptopp/aes.h>
+#include <cryptopp/modes.h>
 
 using std::cout;
 using std::endl;
@@ -46,9 +48,77 @@ CryptoPP::RSA::PrivateKey _privateKey;
 std::string _publicKeyStr;
 std::string _privateKeyStr;
 
+unsigned char AES_key[16];
+unsigned char AES_iv[16];
+
 // local data (statics)
 static ENetHost* host;
 static std::map<ENetPeer*, Player*> players;
+
+void generate_AES_key() {
+	CryptoPP::AutoSeededRandomPool prng;
+
+	CryptoPP::SecByteBlock key(CryptoPP::AES::DEFAULT_KEYLENGTH);
+	prng.GenerateBlock( key, key.size() );
+
+	unsigned char iv[ CryptoPP::AES::BLOCKSIZE ];
+	prng.GenerateBlock( iv, sizeof(iv) );
+
+	std::string plain = "CBC Mode Test";
+	std::string cipher, encoded, recovered;
+
+	try
+	{
+		std::cout << "plain text: " << plain << std::endl;
+
+		CryptoPP::CBC_Mode< CryptoPP::AES >::Encryption e;
+		e.SetKeyWithIV( key, key.size(), iv );
+
+		// The StreamTransformationFilter adds padding
+		//  as required. ECB and CBC Mode must be padded
+		//  to the block size of the cipher.
+		CryptoPP::StringSource ss( plain, true, 
+			new CryptoPP::StreamTransformationFilter( e,
+				new CryptoPP::StringSink( cipher )
+			) // StreamTransformationFilter      
+		); // StringSource
+	}
+	catch( const CryptoPP::Exception& e )
+	{
+		std::cerr << e.what() << std::endl;
+		exit(1);
+	}
+
+
+	// Pretty print cipher text
+	CryptoPP::StringSource ss( cipher, true,
+		new CryptoPP::HexEncoder(
+			new CryptoPP::StringSink( encoded )
+		) // HexEncoder
+	); // StringSource
+	std::cout << "cipher text: " << encoded << std::endl;
+
+	try
+	{
+		CryptoPP::CBC_Mode< CryptoPP::AES >::Decryption d;
+		d.SetKeyWithIV( key, key.size(), iv );
+
+		// The StreamTransformationFilter removes
+		//  padding as required.
+		CryptoPP::StringSource ss( cipher, true, 
+			new CryptoPP::StreamTransformationFilter( d,
+				new CryptoPP::StringSink( recovered )
+			) // StreamTransformationFilter
+		); // StringSource
+
+		std::cout << "recovered text: " << recovered << std::endl;
+	}
+	catch( const CryptoPP::Exception& e )
+	{
+		std::cerr << e.what() << std::endl;
+		exit(1);
+	}
+}
 
 void server_wait_for_packet() {
     ENetEvent event;
@@ -95,6 +165,7 @@ void generate_keypair() {
 
 void server_start(ushort port) {
 	//generate_keypair();
+	generate_AES_key();
 	
     ENetAddress address;
     ENetHost * server;
