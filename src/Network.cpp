@@ -203,7 +203,7 @@ namespace Network {
 				Packet::update_objects *p = (Packet::update_objects *)pkt->data;
 				if(p->num_objects * sizeof(Object) > pkt->dataLength) return;
 				Object* objs = (Object*)(pkt->data+sizeof(Packet::update_objects));
-				// cout << "updating objects " << nc->num_objects << endl;
+				//cout << "updating objects " << p->num_objects << endl;
 				for(int i=0; i < p->num_objects; i++) {
 					Object &o = objs[i];
 					

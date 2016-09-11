@@ -28,9 +28,8 @@
 
 using std::cout;
 using std::endl;
-using std::thread;
+
 const int timeout = 1000;
-std::mutex term;
 int nthread = 0;
 
 // local forwards
@@ -39,20 +38,17 @@ static void handle_new_client(ENetPeer* peer);
 static void remove_client(ENetPeer* peer);
 
 struct Player {
+	uint32_t id;
 	unsigned int user_id;
 	std::string user_name;
 };
-
-CryptoPP::RSA::PublicKey _publicKey;
-CryptoPP::RSA::PrivateKey _privateKey;
-std::string _publicKeyStr;
-std::string _privateKeyStr;
 
 unsigned char AES_key[16];
 unsigned char AES_iv[16];
 
 // local data (statics)
 static ENetHost* host;
+static uint32_t last_id = 0;
 static std::map<ENetPeer*, Player*> players;
 
 void generate_AES_key() {
@@ -69,7 +65,7 @@ void generate_AES_key() {
 
 	try
 	{
-		std::cout << "plain text: " << plain << std::endl;
+		cout << "plain text: " << plain << endl;
 
 		CryptoPP::CBC_Mode< CryptoPP::AES >::Encryption e;
 		e.SetKeyWithIV( key, key.size(), iv );
@@ -85,7 +81,7 @@ void generate_AES_key() {
 	}
 	catch( const CryptoPP::Exception& e )
 	{
-		std::cerr << e.what() << std::endl;
+		std::cerr << e.what() << endl;
 		exit(1);
 	}
 
@@ -96,7 +92,7 @@ void generate_AES_key() {
 			new CryptoPP::StringSink( encoded )
 		) // HexEncoder
 	); // StringSource
-	std::cout << "cipher text: " << encoded << std::endl;
+	cout << "cipher text: " << encoded << endl;
 
 	try
 	{
@@ -111,27 +107,24 @@ void generate_AES_key() {
 			) // StreamTransformationFilter
 		); // StringSource
 
-		std::cout << "recovered text: " << recovered << std::endl;
+		cout << "recovered text: " << recovered << endl;
 	}
 	catch( const CryptoPP::Exception& e )
 	{
-		std::cerr << e.what() << std::endl;
+		std::cerr << e.what() << endl;
 		exit(1);
 	}
 }
 
 void server_wait_for_packet() {
     ENetEvent event;
-    /* Wait up to 1000 milliseconds for an event. */
-
+    
     while(enet_host_service(host, &event, timeout) > 0) {
         switch(event.type) {
         case ENET_EVENT_TYPE_CONNECT:
-            cout << "A new client connected from " << event.peer->address.host << ":" << event.peer->address.port << endl;
             handle_new_client(event.peer);
             break;
         case ENET_EVENT_TYPE_RECEIVE:
-            //packets.emplace(event.packet, event.peer);
             parse_packet(event.peer, event.packet);
 			enet_packet_destroy(event.packet);
             break;
@@ -143,59 +136,32 @@ void server_wait_for_packet() {
 			cout << "event: " << event.type << endl;
         }
     }
-}
-
-void generate_keypair() {
-	CryptoPP::AutoSeededRandomPool rng;
-
-	CryptoPP::InvertibleRSAFunction params;
-	params.GenerateRandomWithKeySize(rng, KEY_SIZE);
-
-	CryptoPP::RSA::PublicKey publicKey(params);
-	CryptoPP::RSA::PrivateKey privateKey(params);
-	_publicKey = publicKey;
-	_privateKey = privateKey;
-
-	_publicKey.Save(CryptoPP::HexEncoder(new CryptoPP::StringSink(_publicKeyStr)).Ref());
-	_privateKey.Save(CryptoPP::HexEncoder(new CryptoPP::StringSink(_privateKeyStr)).Ref());
-                    
-    //std::cout << "publickey: " << _publicKeyStr.length() << " ---- " << _publicKeyStr << std::endl;
-    //std::cout << "privatekey: " << _privateKeyStr.length() << " ---- " << _privateKeyStr << std::endl;
+    
+    //enet_host_flush(host);
 }
 
 void server_start(ushort port) {
-	//generate_keypair();
 	generate_AES_key();
 	
     ENetAddress address;
-    ENetHost * server;
     address.host = ENET_HOST_ANY;
     address.port = port;
-    server = enet_host_create(&address,32,Channel::num_channels,0,0);
-	host = server;
-    if(server == NULL) {
-        fprintf(stderr,
-                "An error occurred while trying to create an ENet server host.\n");
+    host = enet_host_create(&address,32,Channel::num_channels,0,0);
+    if(host == nullptr) {
+        cout << "An error occurred while trying to create an ENet server host." << endl;
         exit(EXIT_FAILURE);
     }
     
-    std::cout << "Chat server started and listening on port " << port << std::endl;
-    
+    cout << "Chat server started and listening on port " << port << endl;
 }
 
 void handle_new_client(ENetPeer* peer) {
-	srand (time(NULL));
-	
-	Packet::new_client cl;
-	cl.new_id = 0;
-	cl.challenge = 0;
-	if(_publicKeyStr.length() < sizeof(cl.public_key)) {
-		memcpy(cl.public_key.data(), _publicKeyStr.c_str(), _publicKeyStr.length() + 1);
-	}
-	ENetPacket* pkt = enet_packet_create( &cl, sizeof(cl), ENET_PACKET_FLAG_RELIABLE );
-	enet_peer_send(peer, Channel::control, pkt);
+	cout << "A new client connected from " << peer->address.host << ":" << peer->address.port << endl;
+	 
+	last_id++;
 	
 	Player* player = new Player;
+	player->id = last_id;
 	player->user_id = 0;
 	players[peer] = player;
 }
@@ -229,8 +195,6 @@ void SendChatMessage(ENetPeer* peer, std::string to_user_name, std::string messa
 				}
 			}
 		}
-
-		enet_host_flush(host);
 	} else {
 		enet_packet_destroy(pkt);
 	}
@@ -252,7 +216,7 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 			players[peer]->user_id = packet->user_id;
 			players[peer]->user_name = packet->user_name.data();
 			
-			std::cout << "user_id: " << packet->user_id << " hash: " << packet->hash.data() << " user_name: " << packet->user_name.data() << std::endl;
+			cout << "id: " << players[peer]->id << " user_id: " << packet->user_id << " hash: " << packet->hash.data() << " user_name: " << packet->user_name.data() << endl;
 			
 			break;
 		}
@@ -278,7 +242,7 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 
 int main(int argc, char* argv[]) {
 	if (enet_initialize () != 0) {
-		std::cout << "An error occurred while initializing ENet." << std::endl;
+		cout << "An error occurred while initializing ENet." << endl;
 		return -1;
 	}
 	atexit (enet_deinitialize);

@@ -29,9 +29,12 @@
 
 using std::cout;
 using std::endl;
-using std::thread;
-const int timeout = 1;
+
 std::mutex term;
+std::mutex host_mutex;
+std::string serverPublicKeyStr;
+std::string serverPrivateKeyStr;
+const int timeout = 1;
 int nthread = 0;
 
 // local forwards
@@ -43,43 +46,48 @@ static void send_states();
 static std::queue<std::pair<ENetPacket*, ENetPeer*>> packets;
 
 struct Player {
-	//uint32_t id;
+	uint32_t id;
 	unsigned int user_id;
 	int challenge;
 	std::vector<Object> obj;
 };
-
-std::string serverPublicKeyStr;
-std::string serverPrivateKeyStr;
 
 // local data (statics)
 static ENetHost* host;
 static uint32_t last_id = 0;
 static std::map<ENetPeer*, Player*> players;
 
-std::mutex host_mutex;
-
 void server_wait_for_packet() {
     ENetEvent event;
-    /* Wait up to 1000 milliseconds for an event. */
-    std::unique_lock<std::mutex> l(host_mutex);
+
+    //std::unique_lock<std::mutex> l(host_mutex);
     while(enet_host_service(host, &event, timeout) > 0) {
         switch(event.type) {
-        case ENET_EVENT_TYPE_CONNECT:
-            cout << "A new client connected from " << event.peer->address.host << ":" << event.peer->address.port << endl;
-            handle_new_client(event.peer);
-            break;
-        case ENET_EVENT_TYPE_RECEIVE:
-            packets.emplace(event.packet, event.peer);
-            break;
-        case ENET_EVENT_TYPE_DISCONNECT:
-			remove_client(event.peer);
-            enet_peer_reset(event.peer);
-            break;
-        default:
-			cout << "event: " << event.type << endl;
+			case ENET_EVENT_TYPE_CONNECT:
+				{
+					std::unique_lock<std::mutex> l(host_mutex);
+					handle_new_client(event.peer);
+				}
+				break;
+			case ENET_EVENT_TYPE_RECEIVE:
+				{
+					std::unique_lock<std::mutex> l(host_mutex);
+					packets.emplace(event.packet, event.peer);
+				}
+				break;
+			case ENET_EVENT_TYPE_DISCONNECT:
+				{
+					std::unique_lock<std::mutex> l(host_mutex);
+					remove_client(event.peer);
+					enet_peer_reset(event.peer);
+				}
+				break;
+			default:
+				cout << "event: " << event.type << endl;
         }
     }
+    
+    enet_host_flush(host);
     
     std::this_thread::sleep_for(std::chrono::milliseconds(5));
 }
@@ -92,28 +100,23 @@ void server_work() {
 		std::unique_lock<std::mutex> l(term);
 		cout << "started thread " << (nthread++) << endl;
 	}
+
 	while(1) {
 		if(w.HasResult()) {
 			w.Continue();
 		}
-		
+
 		std::pair<ENetPacket*, ENetPeer*> packet(0,0);
-		if(packets.size() == 0) {
-			std::this_thread::sleep_for(std::chrono::milliseconds(5));
-			continue;
-		} else {
+
+		{
 			std::unique_lock<std::mutex> l(host_mutex);
 			if(!packets.empty()) {
 				packet = packets.front();
-				packets.pop();				
-			} else {
-				std::this_thread::sleep_for(std::chrono::milliseconds(5));
-				continue;
+				packets.pop();
 			}
 		}
 		
 		if(packet.second && (packet.second->state & ENET_PEER_STATE_CONNECTED > 0)) {
-		//if(packet.first) {
 			parse_packet(packet.second, packet.first);
 			enet_packet_destroy(packet.first);
 		}
@@ -122,21 +125,23 @@ void server_work() {
 		if(now - last_status_update > std::chrono::milliseconds(50)) {
 			std::unique_lock<std::mutex> l(host_mutex);
 			last_status_update = now;
+			
 			send_states();
-			// cout << "sending states\n";
 		}
+		
+		std::this_thread::sleep_for(std::chrono::milliseconds(5));
 	}
 }
 
 std::chrono::high_resolution_clock::time_point last_time_mysql_pinged = std::chrono::high_resolution_clock::now();
-void mysql_thread(const char *mdb, const char *mserver, const char *muser, const char *mpassword, ushort mport) {
+void mysql_work(const char *mdb, const char *mserver, const char *muser, const char *mpassword, ushort mport) {
 	mysqlpp::Connection con = mysql_connect(mdb, mserver, muser, mpassword, mport);
 	
 	while(1) {
 		std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
 		if(now - last_time_mysql_pinged > std::chrono::milliseconds(1000)) {
 			if(!con.ping()) {
-				cout << "(MySQL has gone away?): reconnecting to mysql" << std::endl;
+				cout << "(MySQL has gone away): reconnecting" << endl;
 			}
 			
 			last_time_mysql_pinged = now;
@@ -164,33 +169,35 @@ void server_start(ushort port, const char *mdb, const char *mserver, const char 
 	generate_RSA_keypair();
 	
     ENetAddress address;
-    ENetHost * server;
     address.host = ENET_HOST_ANY;
     address.port = port;
-    server = enet_host_create(&address,32,Channel::num_channels,0,0);
-	host = server;
-    if(server == NULL) {
-        fprintf(stderr,
-                "An error occurred while trying to create an ENet server host.\n");
+    host = enet_host_create(&address,32,Channel::num_channels,0,0);
+    if(host == nullptr) {
+        cout << "An error occurred while trying to create an ENet server host." << endl;
         exit(EXIT_FAILURE);
     }
+    
     unsigned int num_cores = std::thread::hardware_concurrency();
-    if(num_cores == 0) num_cores = 1;
-    unsigned int num_threads = num_cores ;
-    thread *t = new thread[num_threads];
+    unsigned int num_threads = (num_cores == 0) ?  1 : num_cores;
+    
+    std::thread *t = new std::thread[num_threads];
     for(int i = 0; i < num_threads; i++) {
-		t[i] = thread(server_work);
+		t[i] = std::thread(server_work);
+		
+		if(t[i].joinable()) {
+			t[i].detach();
+		}
 	}
-	for(int i=0; i < num_threads; i++) {
-		t[i].detach();
-	}
+
     // delete[] t;
     
-    std::thread mysql_thrd(mysql_thread, mdb, mserver, muser, mpassword, mport);
-	mysql_thrd.detach();
+    std::thread mysql_thread(mysql_work, mdb, mserver, muser, mpassword, mport);
+	mysql_thread.detach();
 }
 
 void handle_new_client(ENetPeer* peer) {
+	cout << "A new client connected from " << peer->address.host << ":" << peer->address.port << endl;
+	
 	srand (time(NULL));
 	int challenge = rand() % 9999999 + 1000000;
 	
@@ -205,8 +212,8 @@ void handle_new_client(ENetPeer* peer) {
 	enet_peer_send(peer, Channel::control, pkt);
 	
 	Player* player = new Player;
-	//player->id = last_id;
-	player->user_id = last_id; //0
+	player->id = last_id;
+	player->user_id = 0;
 	player->challenge = challenge;
 	players[peer] = player;
 	
@@ -243,7 +250,6 @@ void send_states() {
 	}
 	
 	enet_host_broadcast(host, Channel::data, pkt);
-	enet_host_flush(host);
 }
 
 void send_authorize(ENetPeer* peer, int status_code = -1, unsigned int id = 0, std::string user_name = "") {
@@ -256,7 +262,6 @@ void send_authorize(ENetPeer* peer, int status_code = -1, unsigned int id = 0, s
 	strcpy(p->user_name.data(), user_name.c_str());
 	
 	enet_peer_send(peer, Channel::control, pkt);
-	enet_host_flush(host);
 }
 
 void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
@@ -299,7 +304,7 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 								unsigned int user_id = loggedUser["id"];
 								std::string user_name(loggedUser["username"]);
 								
-								//players[peer]->user_id = user_id;
+								players[peer]->user_id = user_id;
 
 								send_authorize(peer, 0, user_id, user_name);
 							}
@@ -348,6 +353,8 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 							[=](mysqlpp::Row loggedUser) {
 								unsigned int user_id = loggedUser["id"];
 								std::string user_name(loggedUser["username"]);
+								
+								players[peer]->user_id = user_id;
 
 								send_authorize(peer, 0, user_id, user_name);
 							}
@@ -358,11 +365,6 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 				}
 			);
 
-			break;
-		}
-		case PacketType::test_packet: {
-			Packet::test_packet* packet = (Packet::test_packet*)pkt->data;
-				
 			break;
 		}
 		default:
