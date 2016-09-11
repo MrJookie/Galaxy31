@@ -662,28 +662,4 @@ void App::generate_RSA_keypair() {
 
 	publicKey.Save(CryptoPP::HexEncoder(new CryptoPP::StringSink(GameState::clientPublicKeyStr)).Ref());
 	privateKey.Save(CryptoPP::HexEncoder(new CryptoPP::StringSink(GameState::clientPrivateKeyStr)).Ref());
-	
-	//////test
-	/*
-	std::string plain_cut = "Hello!"; 
-	std::string encrypted, decrypted;
-	
-	//CryptoPP::AutoSeededRandomPool rng;
-	
-	//encrypt
-	CryptoPP::RSA::PublicKey loadPublicKey;
-	loadPublicKey.Load(CryptoPP::StringSource(GameState::clientPublicKeyStr, true, new CryptoPP::HexDecoder()).Ref());
-	
-	CryptoPP::RSAES_OAEP_SHA_Encryptor e(loadPublicKey);
-	CryptoPP::StringSource ss1(plain_cut, true, new CryptoPP::PK_EncryptorFilter(rng, e, new CryptoPP::StringSink(encrypted)));
-
-	//decrypt
-	if(encrypted.length() == MAX_ENCRYPTED_LEN) {
-		CryptoPP::RSA::PrivateKey loadPrivateKey;
-		loadPrivateKey.Load(CryptoPP::StringSource(GameState::clientPrivateKeyStr, true, new CryptoPP::HexDecoder()).Ref());
-		
-		CryptoPP::RSAES_OAEP_SHA_Decryptor d(loadPrivateKey);
-		CryptoPP::StringSource ss2(encrypted, true, new CryptoPP::PK_DecryptorFilter(rng, d, new CryptoPP::StringSink(decrypted)));
-	}
-	*/
 }

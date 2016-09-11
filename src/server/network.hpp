@@ -7,6 +7,7 @@
 #define PUBLIC_KEY_SIZE 320
 #define MAX_ENCRYPTED_LEN 128
 #define MAX_PLAIN_LEN MAX_ENCRYPTED_LEN-42
+#define MAX_AES_MESSAGE_LEN 128
 
 enum Channel {
 	control = 0,
@@ -22,8 +23,9 @@ enum PacketType {
 	authenticate,
 	authorize,
 	signup,
-	chat_message,
-	chat_login
+	chat_login,
+	chat_login_response,
+	chat_message
 };
 
 namespace Packet {
@@ -68,20 +70,27 @@ namespace Packet {
 		std::array<char, MAX_ENCRYPTED_LEN+1> user_password;
 	};
 
+	struct chat_login : public Packet {
+		chat_login() : Packet(PacketType::chat_login) {}
+		unsigned int user_id;
+		std::array<char, 11> user_name;
+		std::array<char, PUBLIC_KEY_SIZE+1> public_key;
+	};
+	
+	struct chat_login_response : public Packet {
+		chat_login_response() : Packet(PacketType::chat_login_response) {}
+		std::array<char, MAX_ENCRYPTED_LEN+1> AES_key;
+	};
+	
 	struct chat_message : public Packet {
 		chat_message() : Packet(PacketType::chat_message) {}
 		int message_type;
 		std::array<char, 11> from_user_name;
 		std::array<char, 11> to_user_name;
-		std::array<char, 101> message;
+		std::array<char, MAX_AES_MESSAGE_LEN+1> message;
+		//std::array<unsigned char, 129> AESiv;
 	};
 	
-	struct chat_login : public Packet {
-		chat_login() : Packet(PacketType::chat_login) {}
-		unsigned int user_id;
-		std::array<char, 41> hash;
-		std::array<char, 11> user_name;
-	};
 }
 
 

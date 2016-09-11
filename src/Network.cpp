@@ -17,6 +17,8 @@
 #include <cryptopp/osrng.h>
 #include <cryptopp/integer.h>
 #include <cryptopp/secblock.h>
+#include <cryptopp/aes.h>
+#include <cryptopp/modes.h>
 
 using namespace ng;
 
@@ -348,24 +350,12 @@ namespace NetworkChat {
 	}
 
 	void SendChatLogin(unsigned int user_id, std::string user_name) {
-		CryptoPP::SHA1 sha1;
-		std::string source = user_name;
-		std::string hash = "";
-		CryptoPP::StringSource(source, true, new CryptoPP::HashFilter(sha1, new CryptoPP::HexEncoder(new CryptoPP::StringSink(hash), false)));
-		
-		/*
-		std::string hashChallenge = hash + std::to_string(GameState::account_challenge);
-		std::string finalHash = "";
-		CryptoPP::StringSource(hashChallenge, true, new CryptoPP::HashFilter(sha1, new CryptoPP::HexEncoder(new CryptoPP::StringSink(finalHash), false)));
-		user_password = finalHash;
-		*/
-		
 		ENetPacket* pkt = enet_packet_create(nullptr, sizeof(Packet::chat_login), ENET_PACKET_FLAG_RELIABLE);
 		Packet::chat_login *p = new (pkt->data) Packet::chat_login();
 		
 		p->user_id = user_id;
-		strcpy(p->hash.data(), hash.c_str());
 		strcpy(p->user_name.data(), user_name.c_str());
+		strcpy(p->public_key.data(), GameState::clientPublicKeyStr.c_str());
 						
 		enet_peer_send(host, Channel::control, pkt);
 		flush();
@@ -395,6 +385,63 @@ namespace NetworkChat {
 	void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 		Packet::Packet *bp = (Packet::Packet *)pkt->data;
 		switch(bp->type) {
+			case PacketType::chat_login_response: {
+				Packet::chat_login_response *p = (Packet::chat_login_response *)pkt->data;
+				
+				//decryption
+				CryptoPP::AutoSeededRandomPool rng;
+					
+				std::string encrypted(p->AES_key.data(), MAX_ENCRYPTED_LEN);
+				std::string decrypted;
+				
+				if(encrypted.length() == MAX_ENCRYPTED_LEN) {
+					CryptoPP::RSA::PrivateKey privateKey;
+					privateKey.Load(CryptoPP::StringSource(GameState::clientPrivateKeyStr, true, new CryptoPP::HexDecoder()).Ref());
+					
+					CryptoPP::RSAES_OAEP_SHA_Decryptor d(privateKey);
+					CryptoPP::StringSource ss2(encrypted, true, new CryptoPP::PK_DecryptorFilter(rng, d, new CryptoPP::StringSink(decrypted)));
+					
+					std::cout << "decrypted.size(): " << decrypted.size() << " -- " << decrypted << std::endl;
+					
+					std::string nonHexKey;
+        
+					CryptoPP::ArraySource(reinterpret_cast<const unsigned char*>(decrypted.data()), decrypted.size(), true, new CryptoPP::HexDecoder(new CryptoPP::StringSink(nonHexKey)));
+
+					unsigned char AESkey[17];
+					memcpy(AESkey, nonHexKey.data(), nonHexKey.length() + 1);
+					
+					//send msg with aes + iv
+					std::string plain = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed eget suscipit libero. Maecenas fringilla lacinia lacus, eget metus.";
+					std::string plainMessage = plain.substr(0, MAX_AES_MESSAGE_LEN - 1); //must be -1 (127B, otherwise 128 padds to +16 bytes -> 144)
+
+					std::string encryptedMessage;
+					
+					
+					//remove iv?
+					//unsigned char iv[CryptoPP::AES::BLOCKSIZE];
+					//rng.GenerateBlock(iv, sizeof(iv));
+					
+					CryptoPP::ECB_Mode< CryptoPP::AES >::Encryption e;
+					e.SetKey( AESkey, sizeof(AESkey) - 1 );
+
+					CryptoPP::StringSource ss(plainMessage, true, new CryptoPP::StreamTransformationFilter(e, new CryptoPP::StringSink(encryptedMessage)));
+					
+					std::cout << "encryptedMessage.length(): " << encryptedMessage.length() << std::endl;
+					
+					ENetPacket* pkt = enet_packet_create(nullptr, sizeof(Packet::chat_message), ENET_PACKET_FLAG_RELIABLE);
+					Packet::chat_message *p = new (pkt->data) Packet::chat_message();
+					
+					memcpy(p->message.data(), encryptedMessage.c_str(), encryptedMessage.length() + 1);
+					//memcpy(p->AESiv.data(), iv, sizeof(iv) + 1);
+					
+					enet_peer_send(peer, Channel::control, pkt);
+					
+				} else {
+					break;
+				}
+									
+				break;
+			}
 			case PacketType::chat_message: {
 				Packet::chat_message *p = (Packet::chat_message *)pkt->data;
 				

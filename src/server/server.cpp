@@ -100,11 +100,15 @@ void server_work() {
 		std::unique_lock<std::mutex> l(term);
 		cout << "started thread " << (nthread++) << endl;
 	}
+	
+	int i = 0;
 
 	while(1) {
 		if(w.HasResult()) {
 			w.Continue();
 		}
+		
+		std::cout << i++ << std::endl;
 
 		std::pair<ENetPacket*, ENetPeer*> packet(0,0);
 
@@ -205,9 +209,10 @@ void handle_new_client(ENetPeer* peer) {
 	Packet::new_client cl;
 	cl.new_id = last_id;
 	cl.challenge = challenge;
-	if(serverPublicKeyStr.length() < sizeof(cl.public_key)) {
-		memcpy(cl.public_key.data(), serverPublicKeyStr.c_str(), serverPublicKeyStr.length() + 1);
-	}
+	//if(serverPublicKeyStr.length() < sizeof(cl.public_key)) {
+		////memcpy(cl.public_key.data(), serverPublicKeyStr.c_str(), serverPublicKeyStr.length() + 1);
+		strcpy(cl.public_key.data(), serverPublicKeyStr.c_str());
+	//}
 	ENetPacket* pkt = enet_packet_create( &cl, sizeof(cl), ENET_PACKET_FLAG_RELIABLE );
 	enet_peer_send(peer, Channel::control, pkt);
 	
@@ -253,9 +258,7 @@ void send_states() {
 }
 
 void send_authorize(ENetPeer* peer, int status_code = -1, unsigned int id = 0, std::string user_name = "") {
-	int len = sizeof(Packet::authorize);
-		
-	ENetPacket* pkt = enet_packet_create(nullptr, len, ENET_PACKET_FLAG_RELIABLE);
+	ENetPacket* pkt = enet_packet_create(nullptr, sizeof(Packet::authorize), ENET_PACKET_FLAG_RELIABLE);
 	Packet::authorize *p = new (pkt->data) Packet::authorize();
 	p->user_id = id;
 	p->status_code = status_code;
@@ -321,19 +324,18 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 		case PacketType::signup: {
 			Packet::signup* packet = (Packet::signup*)pkt->data;
 			
-			//////////////////////////////////////////////// 
-			// Decryption
+			//decryption
 			CryptoPP::AutoSeededRandomPool rng;
 				
-			std::string encryptedPass(packet->user_password.data(), MAX_ENCRYPTED_LEN);
-			std::string decryptedPass;
+			std::string encrypted(packet->user_password.data(), MAX_ENCRYPTED_LEN);
+			std::string decrypted;
 			
-			if(encryptedPass.length() == MAX_ENCRYPTED_LEN) {
+			if(encrypted.length() == MAX_ENCRYPTED_LEN) {
 				CryptoPP::RSA::PrivateKey privateKey;
 				privateKey.Load(CryptoPP::StringSource(serverPrivateKeyStr, true, new CryptoPP::HexDecoder()).Ref());
 				
 				CryptoPP::RSAES_OAEP_SHA_Decryptor d(privateKey);
-				CryptoPP::StringSource ss2(encryptedPass, true, new CryptoPP::PK_DecryptorFilter(rng, d, new CryptoPP::StringSink(decryptedPass)));
+				CryptoPP::StringSource ss2(encrypted, true, new CryptoPP::PK_DecryptorFilter(rng, d, new CryptoPP::StringSink(decrypted)));
 			} else {
 				break;
 			}
@@ -342,7 +344,7 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 				createAccount,
 				packet->user_email.data(),
 				packet->user_name.data(),
-				decryptedPass,
+				decrypted,
 				ipAddress
 			)
 			.then(
