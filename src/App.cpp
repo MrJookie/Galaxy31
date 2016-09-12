@@ -2,21 +2,9 @@
 #include "Network.hpp"
 #include "GameState.hpp"
 #include "Quadtree.hpp"
-
-#include <regex>
-
 #include "server/network.hpp"
 
-//crypto
-#include <cryptopp/sha.h>
-#include <cryptopp/filters.h>
-#include <cryptopp/hex.h>
-#include <cryptopp/rsa.h>
-#include <cryptopp/osrng.h>
-#include <cryptopp/integer.h>
-#include <cryptopp/secblock.h>
-#include <cryptopp/aes.h>
-#include <cryptopp/modes.h>
+#include <sstream>
 
 App::App() {
 	m_initialWindowSize = glm::vec2(1024, 768);
@@ -207,31 +195,10 @@ void App::init() {
 	bt_pass_restore_login.SubscribeEvent(Button::event::click, [&](Control* c) {
 		GameState::activePage = "login";
 	});
-	
-	/*
-	std::regex terminal_whisper("/w '(.*)' (.*)");
-	
-	Terminal &tm_game_chat = *((Terminal*)GameState::gui.GetControlById("game_terminal"));
-	tm_game_chat.SubscribeEvent(Terminal::event::command, [&](Control* c) {
-		Terminal* t = (Terminal*)c;
-		//std::cout << "command: " << t->GetText() << std::endl;
 
-		std::smatch matches;
-		if(std::regex_search(t->GetText(), matches, terminal_whisper)) {
-			if(GameState::user_name != matches[1]) {
-				NetworkChat::SendChatMessage(matches[1], matches[2]);
-			}
-		} else {
-			NetworkChat::SendChatMessage("", t->GetText());
-		}
-	});
-	*/
-	
-	//needs fix, because /w Zippo blah blah2 sends just blah without blah2
 	Terminal &tm_game_chat = *((Terminal*)GameState::gui.GetControlById("game_terminal"));
 	tm_game_chat.SubscribeEvent(Terminal::event::command, [&](Control* c) {
 		Terminal* t = (Terminal*)c;
-		//std::cout << "command: " << t->GetText() << std::endl;
 		
 		std::vector<std::string> exploded;
 		
@@ -246,7 +213,7 @@ void App::init() {
 		
 		if(exploded.size() != 0 && exploded[0] == "/w") {
 			if(GameState::user_name != exploded[1]) {
-				NetworkChat::SendChatMessage(exploded[1], exploded[2]);
+				NetworkChat::SendChatMessage(exploded[1], &t->GetText()[exploded[0].size()+exploded[1].size()+2]);
 			}
 		} else {
 			NetworkChat::SendChatMessage("", t->GetText());

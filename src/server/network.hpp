@@ -3,6 +3,13 @@
 
 #include <glm/glm.hpp>
 
+//crypto
+#include <cryptopp/hex.h>
+#include <cryptopp/rsa.h>
+#include <cryptopp/osrng.h>
+#include <cryptopp/aes.h>
+#include <cryptopp/modes.h>
+
 #define RSA_KEY_SIZE 1024
 #define RSA_PUBLIC_KEY_SIZE 320
 #define RSA_MAX_ENCRYPTED_LEN 128

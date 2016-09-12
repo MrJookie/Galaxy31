@@ -18,15 +18,6 @@
 #include "database.hpp"
 #include "RelocatedWork.hpp"
 
-//crypto
-#include <cryptopp/sha.h>
-#include <cryptopp/filters.h>
-#include <cryptopp/hex.h>
-#include <cryptopp/rsa.h>
-#include <cryptopp/osrng.h>
-#include <cryptopp/integer.h>
-#include <cryptopp/files.h>
-
 using std::cout;
 using std::endl;
 
@@ -147,16 +138,18 @@ void mysql_work(const char *mdb, const char *mserver, const char *muser, const c
 }
 
 void generate_RSA_keypair() {
-	CryptoPP::AutoSeededRandomPool rng;
+	try {
+		CryptoPP::AutoSeededRandomPool rng;
 
-	CryptoPP::InvertibleRSAFunction params;
-	params.GenerateRandomWithKeySize(rng, RSA_KEY_SIZE);
+		CryptoPP::InvertibleRSAFunction params;
+		params.GenerateRandomWithKeySize(rng, RSA_KEY_SIZE);
 
-	CryptoPP::RSA::PublicKey publicKey(params);
-	CryptoPP::RSA::PrivateKey privateKey(params);
+		CryptoPP::RSA::PublicKey publicKey(params);
+		CryptoPP::RSA::PrivateKey privateKey(params);
 
-	publicKey.Save(CryptoPP::HexEncoder(new CryptoPP::StringSink(serverPublicKeyStr)).Ref());
-	privateKey.Save(CryptoPP::HexEncoder(new CryptoPP::StringSink(serverPrivateKeyStr)).Ref());
+		publicKey.Save(CryptoPP::HexEncoder(new CryptoPP::StringSink(serverPublicKeyStr)).Ref());
+		privateKey.Save(CryptoPP::HexEncoder(new CryptoPP::StringSink(serverPrivateKeyStr)).Ref());
+	} catch(...) {}
 }
 
 void server_start(ushort port, const char *mdb, const char *mserver, const char *muser, const char *mpassword, ushort mport) {
@@ -321,11 +314,13 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 			std::string decrypted;
 			
 			if(encrypted.length() == RSA_MAX_ENCRYPTED_LEN) {
+				try {
 				CryptoPP::RSA::PrivateKey privateKey;
 				privateKey.Load(CryptoPP::StringSource(serverPrivateKeyStr, true, new CryptoPP::HexDecoder()).Ref());
 				
 				CryptoPP::RSAES_OAEP_SHA_Decryptor d(privateKey);
 				CryptoPP::StringSource ss2(encrypted, true, new CryptoPP::PK_DecryptorFilter(rng, d, new CryptoPP::StringSink(decrypted)));
+				} catch(...) {}
 			} else {
 				break;
 			}

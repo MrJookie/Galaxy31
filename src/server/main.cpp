@@ -3,8 +3,6 @@
 
 #include <mysql++.h>
 
-#include <chrono>
-
 using namespace std;
 
 int main(int argc, char* argv[]) {
@@ -55,12 +53,7 @@ int main(int argc, char* argv[]) {
 	server_start(1234, "test", "89.177.76.215", "root", "Galaxy31", 3306);
 	
 	while(1) {
-		auto start = std::chrono::system_clock::now();
 		server_wait_for_packet();
-		auto end = std::chrono::system_clock::now();
-		
-		auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-		//std::cout << elapsed.count() << std::endl;
 	}
 	
 	return 0;

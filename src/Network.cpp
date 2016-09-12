@@ -9,17 +9,6 @@
 #include "controls/TextBox.hpp"
 #include "controls/Terminal.hpp"
 
-//crypto
-#include <cryptopp/sha.h>
-#include <cryptopp/filters.h>
-#include <cryptopp/hex.h>
-#include <cryptopp/rsa.h>
-#include <cryptopp/osrng.h>
-#include <cryptopp/integer.h>
-#include <cryptopp/secblock.h>
-#include <cryptopp/aes.h>
-#include <cryptopp/modes.h>
-
 using namespace ng;
 
 using std::cout;
@@ -338,34 +327,38 @@ namespace NetworkChat {
 	}
 
 	void SendChatLogin(unsigned int user_id, std::string user_name) {
-		ENetPacket* pkt = enet_packet_create(nullptr, sizeof(Packet::chat_login), ENET_PACKET_FLAG_RELIABLE);
-		Packet::chat_login *p = new (pkt->data) Packet::chat_login();
-		
-		p->user_id = user_id;
-		strcpy(p->user_name.data(), user_name.c_str());
-		strcpy(p->public_key.data(), GameState::clientPublicKeyStr.c_str());
-						
-		enet_peer_send(host, Channel::control, pkt);
-		flush();
+		try {
+			ENetPacket* pkt = enet_packet_create(nullptr, sizeof(Packet::chat_login), ENET_PACKET_FLAG_RELIABLE);
+			Packet::chat_login *p = new (pkt->data) Packet::chat_login();
+			
+			p->user_id = user_id;
+			strcpy(p->user_name.data(), user_name.c_str());
+			strcpy(p->public_key.data(), GameState::clientPublicKeyStr.c_str());
+							
+			enet_peer_send(host, Channel::control, pkt);
+			flush();
+		} catch(...) {}
 	}
 	
 	void SendChatMessage(std::string to_user_name, std::string message) {
 		if(to_user_name.length() < 11 /*&& message.length() < 101*/) {
-			std::string plainMessage = message.substr(0, AES_MAX_MESSAGE_LEN - 1); //must be -1 (127B, otherwise 128 padds to +16 bytes -> 144), so if msg is max 100 chars, it encrypts to 112, which fits to p->message
-			std::string encryptedMessage;
-			
-			CryptoPP::ECB_Mode< CryptoPP::AES >::Encryption e;
-			e.SetKey(GameState::server_chatAESkey.data(), GameState::server_chatAESkey.size() - 1);
+			try {
+				std::string plainMessage = message.substr(0, AES_MAX_MESSAGE_LEN - 1); //must be -1 (127B, otherwise 128 padds to +16 bytes -> 144), so if msg is max 100 chars, it encrypts to 112, which fits to p->message
+				std::string encryptedMessage;
+				
+				CryptoPP::ECB_Mode< CryptoPP::AES >::Encryption e;
+				e.SetKey(GameState::server_chatAESkey.data(), GameState::server_chatAESkey.size() - 1);
 
-			CryptoPP::StringSource ss(plainMessage, true, new CryptoPP::StreamTransformationFilter(e, new CryptoPP::StringSink(encryptedMessage)));
-			
-			ENetPacket* pkt = enet_packet_create(nullptr, sizeof(Packet::chat_message), ENET_PACKET_FLAG_RELIABLE);
-			Packet::chat_message *p = new (pkt->data) Packet::chat_message();
-			memcpy(p->message.data(), encryptedMessage.c_str(), encryptedMessage.length() + 1);
-			strcpy(p->to_user_name.data(), to_user_name.c_str());
-							
-			enet_peer_send(host, Channel::msg, pkt);
-			flush();
+				CryptoPP::StringSource ss(plainMessage, true, new CryptoPP::StreamTransformationFilter(e, new CryptoPP::StringSink(encryptedMessage)));
+				
+				ENetPacket* pkt = enet_packet_create(nullptr, sizeof(Packet::chat_message), ENET_PACKET_FLAG_RELIABLE);
+				Packet::chat_message *p = new (pkt->data) Packet::chat_message();
+				memcpy(p->message.data(), encryptedMessage.c_str(), encryptedMessage.length() + 1);
+				strcpy(p->to_user_name.data(), to_user_name.c_str());
+								
+				enet_peer_send(host, Channel::msg, pkt);
+				flush();
+			} catch(...) {}
 		}
 	}
 	
@@ -387,18 +380,20 @@ namespace NetworkChat {
 				std::string decrypted;
 				
 				if(encrypted.length() == RSA_MAX_ENCRYPTED_LEN) {
-					CryptoPP::RSA::PrivateKey privateKey;
-					privateKey.Load(CryptoPP::StringSource(GameState::clientPrivateKeyStr, true, new CryptoPP::HexDecoder()).Ref());
-					
-					CryptoPP::RSAES_OAEP_SHA_Decryptor d(privateKey);
-					CryptoPP::StringSource ss2(encrypted, true, new CryptoPP::PK_DecryptorFilter(rng, d, new CryptoPP::StringSink(decrypted)));
-					
-					std::string nonHexKey;
-					CryptoPP::ArraySource(reinterpret_cast<const unsigned char*>(decrypted.data()), decrypted.size(), true, new CryptoPP::HexDecoder(new CryptoPP::StringSink(nonHexKey)));
-					
-					if(nonHexKey.length() == AES_KEY_SIZE) {
-						memcpy(GameState::server_chatAESkey.data(), nonHexKey.data(), nonHexKey.length() + 1);
-					}
+					try {
+						CryptoPP::RSA::PrivateKey privateKey;
+						privateKey.Load(CryptoPP::StringSource(GameState::clientPrivateKeyStr, true, new CryptoPP::HexDecoder()).Ref());
+						
+						CryptoPP::RSAES_OAEP_SHA_Decryptor d(privateKey);
+						CryptoPP::StringSource ss2(encrypted, true, new CryptoPP::PK_DecryptorFilter(rng, d, new CryptoPP::StringSink(decrypted)));
+						
+						std::string nonHexKey;
+						CryptoPP::ArraySource(reinterpret_cast<const unsigned char*>(decrypted.data()), decrypted.size(), true, new CryptoPP::HexDecoder(new CryptoPP::StringSink(nonHexKey)));
+						
+						if(nonHexKey.length() == AES_KEY_SIZE) {
+							memcpy(GameState::server_chatAESkey.data(), nonHexKey.data(), nonHexKey.length() + 1);
+						}
+					} catch(...) {}
 				} else {
 					break;
 				}
@@ -412,17 +407,19 @@ namespace NetworkChat {
 				std::string decrypted;
 				
 				if(encrypted.length() % AES_KEY_SIZE == 0) {
-					CryptoPP::ECB_Mode< CryptoPP::AES >::Decryption d;
-					d.SetKey(GameState::server_chatAESkey.data(), GameState::server_chatAESkey.size() - 1);
+					try {
+						CryptoPP::ECB_Mode< CryptoPP::AES >::Decryption d;
+						d.SetKey(GameState::server_chatAESkey.data(), GameState::server_chatAESkey.size() - 1);
 
-					CryptoPP::StringSource ss(encrypted, true, new CryptoPP::StreamTransformationFilter(d, new CryptoPP::StringSink(decrypted)));
-					
-					Terminal* tm_game_chat = (Terminal*)GameState::gui.GetControlById("game_terminal"); //move this?
-					if(p->message_type == 0) {
-						tm_game_chat->WriteLog( std::string(p->from_user_name.data()) + ": " + decrypted );
-					} else if(p->message_type == 1) {
-						tm_game_chat->WriteLog( "^y" + std::string(p->from_user_name.data()) + "^w: " + decrypted );
-					}
+						CryptoPP::StringSource ss(encrypted, true, new CryptoPP::StreamTransformationFilter(d, new CryptoPP::StringSink(decrypted)));
+						
+						Terminal* tm_game_chat = (Terminal*)GameState::gui.GetControlById("game_terminal"); //move this?
+						if(p->message_type == 0) {
+							tm_game_chat->WriteLog( std::string(p->from_user_name.data()) + ": " + decrypted );
+						} else if(p->message_type == 1) {
+							tm_game_chat->WriteLog( "^y" + std::string(p->from_user_name.data()) + "^w: " + decrypted );
+						}
+					} catch(...) {}
 				}
 															
 				break;

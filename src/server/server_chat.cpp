@@ -15,17 +15,6 @@
 #include <enet/enet.h>
 #include "network.hpp"
 
-//crypto
-#include <cryptopp/sha.h>
-#include <cryptopp/filters.h>
-#include <cryptopp/hex.h>
-#include <cryptopp/rsa.h>
-#include <cryptopp/osrng.h>
-#include <cryptopp/integer.h>
-#include <cryptopp/secblock.h>
-#include <cryptopp/aes.h>
-#include <cryptopp/modes.h>
-
 using std::cout;
 using std::endl;
 
@@ -52,12 +41,14 @@ static uint32_t last_id = 0;
 static std::map<ENetPeer*, Player*> players;
 
 void generate_AES_key() {
-	CryptoPP::AutoSeededRandomPool prng;
+	try {
+		CryptoPP::AutoSeededRandomPool prng;
 
-	CryptoPP::SecByteBlock key(AES_KEY_SIZE);
-	prng.GenerateBlock(key, key.size());
-	
-	memcpy(server_chatAESkey.data(), key, key.size() + 1);
+		CryptoPP::SecByteBlock key(AES_KEY_SIZE);
+		prng.GenerateBlock(key, key.size());
+		
+		memcpy(server_chatAESkey.data(), key, key.size() + 1);
+	} catch(...) {}
 }
 
 void server_wait_for_packet() {
@@ -117,27 +108,28 @@ void remove_client(ENetPeer* peer) {
 }
 
 void SendEncryptedAESKey(ENetPeer* peer) {
-	CryptoPP::AutoSeededRandomPool rng;
+	try {
+		CryptoPP::AutoSeededRandomPool rng;
 	
-	//std::string plain(reinterpret_cast<const char*>(serverAESkey), 16); 
-	std::string encrypted;
-	std::string hexKey;
-        
-	CryptoPP::ArraySource(server_chatAESkey.data(), server_chatAESkey.size() - 1, true, new CryptoPP::HexEncoder(new CryptoPP::StringSink(hexKey)));
-	
-	//exchange std::string public_key with CryptoPP::RSA::PublicKey, so there is no Load() every connection
-	CryptoPP::RSA::PublicKey loadPublicKey;
-	loadPublicKey.Load(CryptoPP::StringSource(players[peer]->public_key, true, new CryptoPP::HexDecoder()).Ref());
-	
-	CryptoPP::RSAES_OAEP_SHA_Encryptor e(loadPublicKey);
-	CryptoPP::StringSource ss1(hexKey, true, new CryptoPP::PK_EncryptorFilter(rng, e, new CryptoPP::StringSink(encrypted)));
-			
-	ENetPacket* pkt = enet_packet_create(nullptr, sizeof(Packet::chat_login_response), ENET_PACKET_FLAG_RELIABLE);
-	Packet::chat_login_response *p = new (pkt->data) Packet::chat_login_response();
-	
-	memcpy(p->AES_key.data(), encrypted.c_str(), encrypted.length() + 1);
-	
-	enet_peer_send(peer, Channel::control, pkt);
+		std::string encrypted;
+		std::string hexKey;
+
+		//exchange std::string public_key with CryptoPP::RSA::PublicKey, so there is no Load() every connection
+		
+		CryptoPP::RSA::PublicKey loadPublicKey;
+		CryptoPP::ArraySource(server_chatAESkey.data(), server_chatAESkey.size() - 1, true, new CryptoPP::HexEncoder(new CryptoPP::StringSink(hexKey)));
+		loadPublicKey.Load(CryptoPP::StringSource(players[peer]->public_key, true, new CryptoPP::HexDecoder()).Ref());
+		
+		CryptoPP::RSAES_OAEP_SHA_Encryptor e(loadPublicKey);
+		CryptoPP::StringSource ss1(hexKey, true, new CryptoPP::PK_EncryptorFilter(rng, e, new CryptoPP::StringSink(encrypted)));
+				
+		ENetPacket* pkt = enet_packet_create(nullptr, sizeof(Packet::chat_login_response), ENET_PACKET_FLAG_RELIABLE);
+		Packet::chat_login_response *p = new (pkt->data) Packet::chat_login_response();
+		
+		memcpy(p->AES_key.data(), encrypted.c_str(), encrypted.length() + 1);
+		
+		enet_peer_send(peer, Channel::control, pkt);
+	} catch(...) {}
 }
 
 void SendChatMessage(ENetPeer* peer, std::string to_user_name, std::string message, int message_type) {

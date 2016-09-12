@@ -81,9 +81,6 @@ TODO:
 			+ chat
 				- protect against spam, a message could be sent only if elapsed >1s from last message (same as for server, but make this visible for client, probably block terminal submit)
 			- sending controls and stats
-	terminal
-		- impossible to write one character/letter (messages like "k"), idea on commands?
-
 
 ; ------ network plan -------
 network key tradeoffs: latency, smoothness, responsiveness, bandwidth
