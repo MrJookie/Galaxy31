@@ -93,28 +93,6 @@ $(exe): $(obj)
 $(build)/%.o: %.cpp
 	$(CXX) -c $< -o $@ -std=c++14 $(arch) $(flags) $(includes)
 
-
-# ----------------
-
-make_dirs_server_chat:
-	@mkdir -p $(build)/server/src/server
-server_chat_cpp := \
-		src/server/server_chat.cpp \
-		
-server_chat_exe := Galaxy31_server_chat
-server_chat_build := $(build)/server/
-server_chat_obj := $(addprefix $(server_chat_build)/, $(patsubst %.cpp, %.o, $(server_chat_cpp)))
-server_chat_link := -Llibs/enet-1.3.13 -lenet -lcryptopp
-server_chat_includes := -Ilibs/enet-1.3.13/
-server_chat_flags := -Wno-deprecated-declarations -g -DSERVER_CHAT
-
-server_chat: make_dirs_server_chat $(server_chat_exe)
-	
-$(server_chat_build)/%.o: %.cpp
-	$(CXX) -c $< -o $@ -std=c++14 $(arch) $(server_chat_flags) $(server_chat_includes) 
-$(server_chat_exe): $(server_chat_obj)
-	$(CXX) $^ -o $(server_chat_exe) $(server_chat_link) $(arch) -pthread
-	
 	
 # ----------------
 
@@ -139,4 +117,25 @@ $(server_build)/%.o: %.cpp
 	$(CXX) -c $< -o $@ -std=c++14 $(arch) $(server_flags) $(server_includes) 
 $(server_exe): $(server_obj)
 	$(CXX) $^ -o $(server_exe) $(server_link) $(arch) -pthread
+
+# ----------------
+
+make_dirs_server_chat:
+	@mkdir -p $(build)/server_chat/src/server
+server_chat_cpp := \
+		src/server/server_chat.cpp \
+		
+server_chat_exe := Galaxy31_server_chat
+server_chat_build := $(build)/server_chat/
+server_chat_obj := $(addprefix $(server_chat_build)/, $(patsubst %.cpp, %.o, $(server_chat_cpp)))
+server_chat_link := -Llibs/enet-1.3.13 -lenet -lcryptopp
+server_chat_includes := -Ilibs/enet-1.3.13/
+server_chat_flags := -Wno-deprecated-declarations -g -DSERVER_CHAT
+
+server_chat: make_dirs_server_chat $(server_chat_exe)
+	
+$(server_chat_build)/%.o: %.cpp
+	$(CXX) -c $< -o $@ -std=c++14 $(arch) $(server_chat_flags) $(server_chat_includes) 
+$(server_chat_exe): $(server_chat_obj)
+	$(CXX) $^ -o $(server_chat_exe) $(server_chat_link) $(arch) -pthread
 

@@ -68,16 +68,21 @@ TODO:
 	network
 		master server
 		server network
-			- chat
-			- secure channel
+			+ chat
+				- protect against spam, a message could be sent only if elapsed >1s from last message
+			+ secure channel
 			- ship controls
 			- handling lot of players
 			- multiple servers?
 			+ server mysql connection
 		client network
 			+ join
-			- chat
+				- check if user_id is already loggedin (exists in the players map), if yes, kick him and approve new login attempt
+			+ chat
+				- protect against spam, a message could be sent only if elapsed >1s from last message (same as for server, but make this visible for client, probably block terminal submit)
 			- sending controls and stats
+	terminal
+		- impossible to write one character/letter (messages like "k"), idea on commands?
 
 
 ; ------ network plan -------

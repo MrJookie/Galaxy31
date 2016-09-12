@@ -45,41 +45,35 @@ namespace Network {
 	
 	bool connect(const char* ip, int port) {
 		cout << "Connecting to " << ip << ":" << port << endl;
+		
 		ENetAddress address;
 		if(enet_address_set_host(&address, ip) != 0) {
-			cout << "failed to resolve ip address" << endl;
-			return false;
+			throw std::string("Failed to resolve ip address.");
 		}
 		address.port = port;
 		
 		client = enet_host_create (NULL, 1, Channel::num_channels, 0, 0);
-		if (client == NULL)
-		{
-			cout << "An error occurred while trying to create an ENet client host." << endl;
-			return false;
+		if(client == nullptr) {
+			throw std::string("An error occurred while trying to create an ENet client host.");
 		}
 		
 		ENetPeer* peer;
 		ENetEvent event;
-		/* Initiate the connection, allocating the two channels 0 and 1. */
 		peer = enet_host_connect(client, &address, Channel::num_channels, 0);
-		if (peer == NULL)
-		{
-		   cout << "No available peers for initiating an ENet connection." << endl;
-		   return false;
+		if(peer == NULL) {
+		   throw std::string("No available peers for initiating an ENet connection.");
 		}
 		host = peer;
-		/* Wait up to 5 seconds for the connection attempt to succeed. */
-		if (enet_host_service (client, &event, timeout) > 0 &&
-			event.type == ENET_EVENT_TYPE_CONNECT)
-		{
-			cout << "Connection to " << ip << ":" << port << " succeeded." << endl;
+
+		if(enet_host_service (client, &event, timeout) > 0 && event.type == ENET_EVENT_TYPE_CONNECT) {
+			cout << "Connection to succeeded." << endl;
+
 			enet_host_flush (client);
 			enet_peer_ping_interval(host, 50);
 		} else {
 			enet_peer_reset (peer);
-			cout << "Connection to " << ip << ":" << port << " failed." << endl;
-			return false;
+			
+			throw std::string("Connection failed.");
 		}
 		return true;
 	}
@@ -157,7 +151,7 @@ namespace Network {
 		CryptoPP::StringSource(source, true, new CryptoPP::HashFilter(sha1, new CryptoPP::HexEncoder(new CryptoPP::StringSink(hash), false)));
 		user_password = hash;
 		
-		std::string plain_cut = user_password.substr(0, MAX_PLAIN_LEN); 
+		std::string plain_cut = user_password.substr(0, RSA_MAX_PLAIN_LEN); 
 		std::string encrypted;
 		
 		CryptoPP::AutoSeededRandomPool rng;
@@ -290,41 +284,35 @@ namespace NetworkChat {
 	
 	bool connect(const char* ip, int port) {
 		cout << "Connecting to " << ip << ":" << port << endl;
+		
 		ENetAddress address;
 		if(enet_address_set_host(&address, ip) != 0) {
-			cout << "failed to resolve ip address" << endl;
-			return false;
+			throw std::string("Failed to resolve ip address.");
 		}
 		address.port = port;
 		
 		client = enet_host_create (NULL, 1, Channel::num_channels, 0, 0);
-		if (client == NULL)
-		{
-			cout << "An error occurred while trying to create an ENet client host." << endl;
-			return false;
+		if(client == nullptr) {
+			throw std::string("An error occurred while trying to create an ENet client host.");
 		}
 		
 		ENetPeer* peer;
 		ENetEvent event;
-		/* Initiate the connection, allocating the two channels 0 and 1. */
 		peer = enet_host_connect(client, &address, Channel::num_channels, 0);
-		if (peer == NULL)
-		{
-		   cout << "No available peers for initiating an ENet connection." << endl;
-		   return false;
+		if(peer == NULL) {
+		   throw std::string("No available peers for initiating an ENet connection.");
 		}
 		host = peer;
-		/* Wait up to 5 seconds for the connection attempt to succeed. */
-		if (enet_host_service (client, &event, timeout) > 0 &&
-			event.type == ENET_EVENT_TYPE_CONNECT)
-		{
-			cout << "Connection to " << ip << ":" << port << " succeeded." << endl;
+
+		if(enet_host_service (client, &event, timeout) > 0 && event.type == ENET_EVENT_TYPE_CONNECT) {
+			cout << "Connection to succeeded." << endl;
+
 			enet_host_flush (client);
 			enet_peer_ping_interval(host, 50);
 		} else {
 			enet_peer_reset (peer);
-			cout << "Connection to " << ip << ":" << port << " failed." << endl;
-			return false;
+			
+			throw std::string("Connection failed.");
 		}
 		return true;
 	}
@@ -362,17 +350,22 @@ namespace NetworkChat {
 	}
 	
 	void SendChatMessage(std::string to_user_name, std::string message) {
-		ENetPacket* pkt = enet_packet_create(nullptr, sizeof(Packet::chat_message), ENET_PACKET_FLAG_RELIABLE);
-		Packet::chat_message *p = new (pkt->data) Packet::chat_message();
-		
-		if(to_user_name.length() < 11 && message.length() < 101) {
+		if(to_user_name.length() < 11 /*&& message.length() < 101*/) {
+			std::string plainMessage = message.substr(0, AES_MAX_MESSAGE_LEN - 1); //must be -1 (127B, otherwise 128 padds to +16 bytes -> 144), so if msg is max 100 chars, it encrypts to 112, which fits to p->message
+			std::string encryptedMessage;
+			
+			CryptoPP::ECB_Mode< CryptoPP::AES >::Encryption e;
+			e.SetKey(GameState::server_chatAESkey.data(), GameState::server_chatAESkey.size() - 1);
+
+			CryptoPP::StringSource ss(plainMessage, true, new CryptoPP::StreamTransformationFilter(e, new CryptoPP::StringSink(encryptedMessage)));
+			
+			ENetPacket* pkt = enet_packet_create(nullptr, sizeof(Packet::chat_message), ENET_PACKET_FLAG_RELIABLE);
+			Packet::chat_message *p = new (pkt->data) Packet::chat_message();
+			memcpy(p->message.data(), encryptedMessage.c_str(), encryptedMessage.length() + 1);
 			strcpy(p->to_user_name.data(), to_user_name.c_str());
-			strcpy(p->message.data(), message.c_str());
 							
 			enet_peer_send(host, Channel::msg, pkt);
 			flush();
-		} else {
-			enet_packet_destroy(pkt);
 		}
 	}
 	
@@ -387,55 +380,25 @@ namespace NetworkChat {
 		switch(bp->type) {
 			case PacketType::chat_login_response: {
 				Packet::chat_login_response *p = (Packet::chat_login_response *)pkt->data;
-				
-				//decryption
+
 				CryptoPP::AutoSeededRandomPool rng;
 					
-				std::string encrypted(p->AES_key.data(), MAX_ENCRYPTED_LEN);
+				std::string encrypted(p->AES_key.data(), RSA_MAX_ENCRYPTED_LEN);
 				std::string decrypted;
 				
-				if(encrypted.length() == MAX_ENCRYPTED_LEN) {
+				if(encrypted.length() == RSA_MAX_ENCRYPTED_LEN) {
 					CryptoPP::RSA::PrivateKey privateKey;
 					privateKey.Load(CryptoPP::StringSource(GameState::clientPrivateKeyStr, true, new CryptoPP::HexDecoder()).Ref());
 					
 					CryptoPP::RSAES_OAEP_SHA_Decryptor d(privateKey);
 					CryptoPP::StringSource ss2(encrypted, true, new CryptoPP::PK_DecryptorFilter(rng, d, new CryptoPP::StringSink(decrypted)));
 					
-					std::cout << "decrypted.size(): " << decrypted.size() << " -- " << decrypted << std::endl;
-					
 					std::string nonHexKey;
-        
 					CryptoPP::ArraySource(reinterpret_cast<const unsigned char*>(decrypted.data()), decrypted.size(), true, new CryptoPP::HexDecoder(new CryptoPP::StringSink(nonHexKey)));
-
-					unsigned char AESkey[17];
-					memcpy(AESkey, nonHexKey.data(), nonHexKey.length() + 1);
 					
-					//send msg with aes + iv
-					std::string plain = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed eget suscipit libero. Maecenas fringilla lacinia lacus, eget metus.";
-					std::string plainMessage = plain.substr(0, MAX_AES_MESSAGE_LEN - 1); //must be -1 (127B, otherwise 128 padds to +16 bytes -> 144)
-
-					std::string encryptedMessage;
-					
-					
-					//remove iv?
-					//unsigned char iv[CryptoPP::AES::BLOCKSIZE];
-					//rng.GenerateBlock(iv, sizeof(iv));
-					
-					CryptoPP::ECB_Mode< CryptoPP::AES >::Encryption e;
-					e.SetKey( AESkey, sizeof(AESkey) - 1 );
-
-					CryptoPP::StringSource ss(plainMessage, true, new CryptoPP::StreamTransformationFilter(e, new CryptoPP::StringSink(encryptedMessage)));
-					
-					std::cout << "encryptedMessage.length(): " << encryptedMessage.length() << std::endl;
-					
-					ENetPacket* pkt = enet_packet_create(nullptr, sizeof(Packet::chat_message), ENET_PACKET_FLAG_RELIABLE);
-					Packet::chat_message *p = new (pkt->data) Packet::chat_message();
-					
-					memcpy(p->message.data(), encryptedMessage.c_str(), encryptedMessage.length() + 1);
-					//memcpy(p->AESiv.data(), iv, sizeof(iv) + 1);
-					
-					enet_peer_send(peer, Channel::control, pkt);
-					
+					if(nonHexKey.length() == AES_KEY_SIZE) {
+						memcpy(GameState::server_chatAESkey.data(), nonHexKey.data(), nonHexKey.length() + 1);
+					}
 				} else {
 					break;
 				}
@@ -445,13 +408,23 @@ namespace NetworkChat {
 			case PacketType::chat_message: {
 				Packet::chat_message *p = (Packet::chat_message *)pkt->data;
 				
-				Terminal* tm_game_chat = (Terminal*)GameState::gui.GetControlById("game_terminal"); //move this?
-				if(p->message_type == 0) {
-					tm_game_chat->WriteLog( std::string(p->from_user_name.data()) + ": " + std::string(p->message.data()) );
-				} else if(p->message_type == 1) {
-					tm_game_chat->WriteLog( "^y" + std::string(p->from_user_name.data()) + "^w: " + std::string(p->message.data()) );
+				std::string encrypted(p->message.data());
+				std::string decrypted;
+				
+				if(encrypted.length() % AES_KEY_SIZE == 0) {
+					CryptoPP::ECB_Mode< CryptoPP::AES >::Decryption d;
+					d.SetKey(GameState::server_chatAESkey.data(), GameState::server_chatAESkey.size() - 1);
+
+					CryptoPP::StringSource ss(encrypted, true, new CryptoPP::StreamTransformationFilter(d, new CryptoPP::StringSink(decrypted)));
+					
+					Terminal* tm_game_chat = (Terminal*)GameState::gui.GetControlById("game_terminal"); //move this?
+					if(p->message_type == 0) {
+						tm_game_chat->WriteLog( std::string(p->from_user_name.data()) + ": " + decrypted );
+					} else if(p->message_type == 1) {
+						tm_game_chat->WriteLog( "^y" + std::string(p->from_user_name.data()) + "^w: " + decrypted );
+					}
 				}
-											
+															
 				break;
 			}
 		}

@@ -44,8 +44,7 @@ struct Player {
 	std::string public_key;
 };
 
-unsigned char serverAESkey[17];
-unsigned char serverAESiv[16];
+std::array<unsigned char, 17> server_chatAESkey;
 
 // local data (statics)
 static ENetHost* host;
@@ -55,69 +54,10 @@ static std::map<ENetPeer*, Player*> players;
 void generate_AES_key() {
 	CryptoPP::AutoSeededRandomPool prng;
 
-	CryptoPP::SecByteBlock key(CryptoPP::AES::DEFAULT_KEYLENGTH);
-	prng.GenerateBlock( key, key.size() );
-
-	unsigned char iv[ CryptoPP::AES::BLOCKSIZE ];
-	prng.GenerateBlock( iv, sizeof(iv) );
+	CryptoPP::SecByteBlock key(AES_KEY_SIZE);
+	prng.GenerateBlock(key, key.size());
 	
-	memcpy(serverAESkey, key, key.size() + 1);
-	memcpy(serverAESiv, iv, sizeof(iv) + 1);
-
-	std::string plain = "CBC Mode Test";
-	std::string cipher, encoded, recovered;
-
-	try
-	{
-		cout << "plain text: " << plain << endl;
-
-		CryptoPP::CBC_Mode< CryptoPP::AES >::Encryption e;
-		e.SetKeyWithIV( key, key.size(), iv );
-
-		// The StreamTransformationFilter adds padding
-		//  as required. ECB and CBC Mode must be padded
-		//  to the block size of the cipher.
-		CryptoPP::StringSource ss( plain, true, 
-			new CryptoPP::StreamTransformationFilter( e,
-				new CryptoPP::StringSink( cipher )
-			) // StreamTransformationFilter      
-		); // StringSource
-	}
-	catch( const CryptoPP::Exception& e )
-	{
-		std::cerr << e.what() << endl;
-		exit(1);
-	}
-
-
-	// Pretty print cipher text
-	CryptoPP::StringSource ss( cipher, true,
-		new CryptoPP::HexEncoder(
-			new CryptoPP::StringSink( encoded )
-		) // HexEncoder
-	); // StringSource
-	cout << "cipher text: " << encoded << endl;
-
-	try
-	{
-		CryptoPP::CBC_Mode< CryptoPP::AES >::Decryption d;
-		d.SetKeyWithIV( serverAESkey, sizeof(serverAESkey) - 1, serverAESiv );
-
-		// The StreamTransformationFilter removes
-		//  padding as required.
-		CryptoPP::StringSource ss( cipher, true, 
-			new CryptoPP::StreamTransformationFilter( d,
-				new CryptoPP::StringSink( recovered )
-			) // StreamTransformationFilter
-		); // StringSource
-
-		cout << "recovered text: " << recovered << endl;
-	}
-	catch( const CryptoPP::Exception& e )
-	{
-		std::cerr << e.what() << endl;
-		exit(1);
-	}
+	memcpy(server_chatAESkey.data(), key, key.size() + 1);
 }
 
 void server_wait_for_packet() {
@@ -176,13 +116,37 @@ void remove_client(ENetPeer* peer) {
 	players.erase( peer );
 }
 
+void SendEncryptedAESKey(ENetPeer* peer) {
+	CryptoPP::AutoSeededRandomPool rng;
+	
+	//std::string plain(reinterpret_cast<const char*>(serverAESkey), 16); 
+	std::string encrypted;
+	std::string hexKey;
+        
+	CryptoPP::ArraySource(server_chatAESkey.data(), server_chatAESkey.size() - 1, true, new CryptoPP::HexEncoder(new CryptoPP::StringSink(hexKey)));
+	
+	//exchange std::string public_key with CryptoPP::RSA::PublicKey, so there is no Load() every connection
+	CryptoPP::RSA::PublicKey loadPublicKey;
+	loadPublicKey.Load(CryptoPP::StringSource(players[peer]->public_key, true, new CryptoPP::HexDecoder()).Ref());
+	
+	CryptoPP::RSAES_OAEP_SHA_Encryptor e(loadPublicKey);
+	CryptoPP::StringSource ss1(hexKey, true, new CryptoPP::PK_EncryptorFilter(rng, e, new CryptoPP::StringSink(encrypted)));
+			
+	ENetPacket* pkt = enet_packet_create(nullptr, sizeof(Packet::chat_login_response), ENET_PACKET_FLAG_RELIABLE);
+	Packet::chat_login_response *p = new (pkt->data) Packet::chat_login_response();
+	
+	memcpy(p->AES_key.data(), encrypted.c_str(), encrypted.length() + 1);
+	
+	enet_peer_send(peer, Channel::control, pkt);
+}
+
 void SendChatMessage(ENetPeer* peer, std::string to_user_name, std::string message, int message_type) {
 	ENetPacket* pkt = enet_packet_create(nullptr, sizeof(Packet::chat_message), ENET_PACKET_FLAG_RELIABLE);
 	Packet::chat_message *p = new (pkt->data) Packet::chat_message();
 	
 	std::string from_user_name = players[peer]->user_name;
 	
-	if(from_user_name.length() < 11 && message.length() < 101) {
+	if(from_user_name.length() < 11 && message.length() < p->message.size()) {
 		strcpy(p->from_user_name.data(), from_user_name.c_str());
 		strcpy(p->message.data(), message.c_str());
 		p->message_type = message_type;
@@ -204,37 +168,6 @@ void SendChatMessage(ENetPeer* peer, std::string to_user_name, std::string messa
 	}
 }
 
-void SendEncryptedAESKey(ENetPeer* peer) {
-	//std::string plain(reinterpret_cast<const char*>(serverAESkey), 16); 
-	std::string encrypted;
-	
-	std::string hexKey;
-        
-	CryptoPP::ArraySource        (serverAESkey, sizeof(serverAESkey) - 1, true, 
-			new CryptoPP::HexEncoder (
-					new CryptoPP::StringSink (hexKey)
-					)
-			);
-
-	CryptoPP::AutoSeededRandomPool rng;
-	
-	//exchange std::string public_key with CryptoPP::RSA::PublicKey 
-	CryptoPP::RSA::PublicKey loadPublicKey;
-	loadPublicKey.Load(CryptoPP::StringSource(players[peer]->public_key, true, new CryptoPP::HexDecoder()).Ref());
-	
-	CryptoPP::RSAES_OAEP_SHA_Encryptor e(loadPublicKey);
-	CryptoPP::StringSource ss1(hexKey, true, new CryptoPP::PK_EncryptorFilter(rng, e, new CryptoPP::StringSink(encrypted)));
-			
-	ENetPacket* pkt = enet_packet_create(nullptr, sizeof(Packet::chat_login_response), ENET_PACKET_FLAG_RELIABLE);
-	Packet::chat_login_response *p = new (pkt->data) Packet::chat_login_response();
-	
-	memcpy(p->AES_key.data(), encrypted.c_str(), encrypted.length() + 1);
-	
-	std::cout << "hexKey: " << hexKey << std::endl;
-	
-	enet_peer_send(peer, Channel::control, pkt);
-}
-
 void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 	if(pkt == nullptr) { cout << "null pkt!!" << endl; return; }
 	if(players.find(peer) == players.end()) return;
@@ -252,32 +185,21 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 			players[peer]->user_name = packet->user_name.data();
 			players[peer]->public_key = packet->public_key.data();
 			
-			if(players[peer]->user_id > 0 && !players[peer]->user_name.empty() && players[peer]->public_key.length() == PUBLIC_KEY_SIZE) {
+			if(players[peer]->user_id > 0 && !players[peer]->user_name.empty() && players[peer]->public_key.length() == RSA_PUBLIC_KEY_SIZE) {
 				cout << "id: " << players[peer]->id << " user_id: " << packet->user_id << " user_name: " << packet->user_name.data() << endl;
 				
 				//send back encrypted aes
 				SendEncryptedAESKey(peer);
 			} else {
-				//save log to file
-				cout << "User: " << packet->user_name.data() << " could not be verified. Kicking!" << endl;
+				cout << "User (" << players[peer]->user_id << ") " << packet->user_name.data() << " could not be verified. Kicking!" << endl;
 				enet_peer_disconnect(peer, 0);
+				//+save log to file
 			}
 			
 			break;
 		}
 		case PacketType::chat_message: {
 			Packet::chat_message* packet = (Packet::chat_message*)pkt->data;
-			
-			std::string cipher(packet->message.data());
-			std::string recovered;
-			
-			CryptoPP::ECB_Mode< CryptoPP::AES >::Decryption d;
-			d.SetKey( serverAESkey, sizeof(serverAESkey) - 1 );
-
-			
-			CryptoPP::StringSource ss(cipher, true, new CryptoPP::StreamTransformationFilter(d, new CryptoPP::StringSink(recovered)));
-
-			cout << "recovered text: " << recovered << endl;
 			
 			std::string to_user_name(packet->to_user_name.data());
 			if(to_user_name.empty()) {

@@ -38,6 +38,7 @@ namespace GameState {
 	extern std::string serverPublicKeyStr;
 	extern std::string clientPublicKeyStr;
 	extern std::string clientPrivateKeyStr;
+	extern std::array<unsigned char, 17> server_chatAESkey;
 }
 
 #endif

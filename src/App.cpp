@@ -208,6 +208,7 @@ void App::init() {
 		GameState::activePage = "login";
 	});
 	
+	/*
 	std::regex terminal_whisper("/w '(.*)' (.*)");
 	
 	Terminal &tm_game_chat = *((Terminal*)GameState::gui.GetControlById("game_terminal"));
@@ -217,13 +218,35 @@ void App::init() {
 
 		std::smatch matches;
 		if(std::regex_search(t->GetText(), matches, terminal_whisper)) {
-			/*
-			for (auto match : matches) {
-				std::cout << "match: " << match << std::endl;
-			}
-			*/
 			if(GameState::user_name != matches[1]) {
 				NetworkChat::SendChatMessage(matches[1], matches[2]);
+			}
+		} else {
+			NetworkChat::SendChatMessage("", t->GetText());
+		}
+	});
+	*/
+	
+	//needs fix, because /w Zippo blah blah2 sends just blah without blah2
+	Terminal &tm_game_chat = *((Terminal*)GameState::gui.GetControlById("game_terminal"));
+	tm_game_chat.SubscribeEvent(Terminal::event::command, [&](Control* c) {
+		Terminal* t = (Terminal*)c;
+		//std::cout << "command: " << t->GetText() << std::endl;
+		
+		std::vector<std::string> exploded;
+		
+		std::string buf;
+		std::stringstream ss(t->GetText());
+
+		int i = 0;
+		while(ss >> buf && i < 3) {
+			exploded.push_back(buf);
+			i++;
+		}
+		
+		if(exploded.size() != 0 && exploded[0] == "/w") {
+			if(GameState::user_name != exploded[1]) {
+				NetworkChat::SendChatMessage(exploded[1], exploded[2]);
 			}
 		} else {
 			NetworkChat::SendChatMessage("", t->GetText());
@@ -655,7 +678,7 @@ void App::generate_RSA_keypair() {
 	CryptoPP::AutoSeededRandomPool rng;
 
 	CryptoPP::InvertibleRSAFunction params;
-	params.GenerateRandomWithKeySize(rng, KEY_SIZE);
+	params.GenerateRandomWithKeySize(rng, RSA_KEY_SIZE);
 
 	CryptoPP::RSA::PublicKey publicKey(params);
 	CryptoPP::RSA::PrivateKey privateKey(params);

@@ -32,6 +32,7 @@ using std::endl;
 
 std::mutex term;
 std::mutex host_mutex;
+std::mutex queue_mutex;
 std::string serverPublicKeyStr;
 std::string serverPrivateKeyStr;
 const int timeout = 1;
@@ -60,34 +61,27 @@ static std::map<ENetPeer*, Player*> players;
 void server_wait_for_packet() {
     ENetEvent event;
 
-    //std::unique_lock<std::mutex> l(host_mutex);
+    std::unique_lock<std::mutex> l(host_mutex);
     while(enet_host_service(host, &event, timeout) > 0) {
         switch(event.type) {
 			case ENET_EVENT_TYPE_CONNECT:
-				{
-					std::unique_lock<std::mutex> l(host_mutex);
 					handle_new_client(event.peer);
-				}
 				break;
 			case ENET_EVENT_TYPE_RECEIVE:
-				{
-					std::unique_lock<std::mutex> l(host_mutex);
 					packets.emplace(event.packet, event.peer);
-				}
 				break;
-			case ENET_EVENT_TYPE_DISCONNECT:
-				{
-					std::unique_lock<std::mutex> l(host_mutex);
+			case ENET_EVENT_TYPE_DISCONNECT: 
 					remove_client(event.peer);
 					enet_peer_reset(event.peer);
-				}
 				break;
 			default:
 				cout << "event: " << event.type << endl;
         }
     }
     
-    enet_host_flush(host);
+    l.unlock();
+    
+    //enet_host_flush(host);
     
     std::this_thread::sleep_for(std::chrono::milliseconds(5));
 }
@@ -101,19 +95,15 @@ void server_work() {
 		cout << "started thread " << (nthread++) << endl;
 	}
 	
-	int i = 0;
-
 	while(1) {
 		if(w.HasResult()) {
 			w.Continue();
 		}
-		
-		std::cout << i++ << std::endl;
-
+				
 		std::pair<ENetPacket*, ENetPeer*> packet(0,0);
 
 		{
-			std::unique_lock<std::mutex> l(host_mutex);
+			std::unique_lock<std::mutex> l(queue_mutex);
 			if(!packets.empty()) {
 				packet = packets.front();
 				packets.pop();
@@ -160,7 +150,7 @@ void generate_RSA_keypair() {
 	CryptoPP::AutoSeededRandomPool rng;
 
 	CryptoPP::InvertibleRSAFunction params;
-	params.GenerateRandomWithKeySize(rng, KEY_SIZE);
+	params.GenerateRandomWithKeySize(rng, RSA_KEY_SIZE);
 
 	CryptoPP::RSA::PublicKey publicKey(params);
 	CryptoPP::RSA::PrivateKey privateKey(params);
@@ -327,10 +317,10 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 			//decryption
 			CryptoPP::AutoSeededRandomPool rng;
 				
-			std::string encrypted(packet->user_password.data(), MAX_ENCRYPTED_LEN);
+			std::string encrypted(packet->user_password.data(), RSA_MAX_ENCRYPTED_LEN);
 			std::string decrypted;
 			
-			if(encrypted.length() == MAX_ENCRYPTED_LEN) {
+			if(encrypted.length() == RSA_MAX_ENCRYPTED_LEN) {
 				CryptoPP::RSA::PrivateKey privateKey;
 				privateKey.Load(CryptoPP::StringSource(serverPrivateKeyStr, true, new CryptoPP::HexDecoder()).Ref());
 				
