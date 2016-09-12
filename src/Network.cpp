@@ -417,7 +417,7 @@ namespace NetworkChat {
 						if(p->message_type == 0) {
 							tm_game_chat->WriteLog( std::string(p->from_user_name.data()) + ": " + decrypted );
 						} else if(p->message_type == 1) {
-							tm_game_chat->WriteLog( "^y" + std::string(p->from_user_name.data()) + "^w: " + decrypted );
+							tm_game_chat->WriteLog( "^y[pm from " + std::string(p->from_user_name.data())  + "]^w: " + decrypted );
 						}
 					} catch(...) {}
 				}

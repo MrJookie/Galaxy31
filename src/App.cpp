@@ -213,9 +213,11 @@ void App::init() {
 		
 		if(exploded.size() != 0 && exploded[0] == "/w") {
 			if(GameState::user_name != exploded[1]) {
+				t->WriteLog("^p[pm to " + exploded[1] + "]^w: " + &t->GetText()[exploded[0].size()+exploded[1].size()+2]);
 				NetworkChat::SendChatMessage(exploded[1], &t->GetText()[exploded[0].size()+exploded[1].size()+2]);
 			}
 		} else {
+			t->WriteLog(GameState::user_name + ": " + t->GetText());
 			NetworkChat::SendChatMessage("", t->GetText());
 		}
 	});
