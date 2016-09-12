@@ -14,6 +14,7 @@ using namespace ng;
 using std::cout;
 using std::endl;
 #include "server/network.hpp"
+#include "PacketSerializer.hpp"
 
 namespace Network {
 	ENetHost *client;
@@ -401,9 +402,12 @@ namespace NetworkChat {
 				break;
 			}
 			case PacketType::chat_message: {
-				Packet::chat_message *p = (Packet::chat_message *)pkt->data;
+				// Packet::chat_message *p = (Packet::chat_message *)pkt->data;
 				
-				std::string encrypted(p->message.data());
+				PacketSerializer p(pkt);
+				
+				// std::string encrypted(p->message.data());
+				std::string encrypted = p.get_string("message");
 				std::string decrypted;
 				
 				if(encrypted.length() % AES_KEY_SIZE == 0) {
@@ -414,10 +418,14 @@ namespace NetworkChat {
 						CryptoPP::StringSource ss(encrypted, true, new CryptoPP::StreamTransformationFilter(d, new CryptoPP::StringSink(decrypted)));
 						
 						Terminal* tm_game_chat = (Terminal*)GameState::gui.GetControlById("game_terminal"); //move this?
-						if(p->message_type == 0) {
-							tm_game_chat->WriteLog( std::string(p->from_user_name.data()) + ": " + decrypted );
-						} else if(p->message_type == 1) {
-							tm_game_chat->WriteLog( "^y[pm from " + std::string(p->from_user_name.data())  + "]^w: " + decrypted );
+						// if(p->message_type == 0) {
+						if(p.get_int("message_type") == 0) {
+							// tm_game_chat->WriteLog( std::string(p->from_user_name.data()) + ": " + decrypted );
+							tm_game_chat->WriteLog( p.get_string("from_username") + ": " + decrypted );
+						// } else if(p->message_type == 1) {
+						} else if(p.get_int("message_type") == 1) {
+							// tm_game_chat->WriteLog( "^y[pm from " + std::string(p->from_user_name.data())  + "]^w: " + decrypted );
+							tm_game_chat->WriteLog( "^y[pm from " + p.get_string("from_username") + "]^w: " + decrypted );
 						}
 					} catch(...) {}
 				}

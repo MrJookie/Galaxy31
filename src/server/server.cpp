@@ -17,6 +17,7 @@
 #include "../Object.hpp"
 #include "database.hpp"
 #include "RelocatedWork.hpp"
+#include "../PacketSerializer.hpp"
 
 using std::cout;
 using std::endl;

@@ -15,6 +15,8 @@
 #include <enet/enet.h>
 #include "network.hpp"
 
+#include "../PacketSerializer.hpp"
+
 using std::cout;
 using std::endl;
 
@@ -133,31 +135,38 @@ void SendEncryptedAESKey(ENetPeer* peer) {
 }
 
 void SendChatMessage(ENetPeer* peer, std::string to_user_name, std::string message, int message_type) {
-	ENetPacket* pkt = enet_packet_create(nullptr, sizeof(Packet::chat_message), ENET_PACKET_FLAG_RELIABLE);
-	Packet::chat_message *p = new (pkt->data) Packet::chat_message();
+	// ENetPacket* pkt = enet_packet_create(nullptr, sizeof(Packet::chat_message), ENET_PACKET_FLAG_RELIABLE);
+	PacketSerializer s;
+	// Packet::chat_message *p = new (pkt->data) Packet::chat_message();
 	
 	std::string from_user_name = players[peer]->user_name;
 	
-	if(from_user_name.length() < 11 && message.length() < p->message.size()) {
-		strcpy(p->from_user_name.data(), from_user_name.c_str());
-		strcpy(p->message.data(), message.c_str());
-		p->message_type = message_type;
+	s.put("from_username", from_user_name);
+	s.put("message", message);
+	s.put("message_type", message_type);
+	
+	// if(from_user_name.length() < 11 && message.length() < p->message.size()) {
+		// strcpy(p->from_user_name.data(), from_user_name.c_str());
+		// strcpy(p->message.data(), message.c_str());
+		// p->message_type = message_type;
 
 		for(auto const& player : players) {
 			if(message_type == 0) {
 				if(player.first != peer) {
-					enet_peer_send(player.first, Channel::msg, pkt);
+					s.send(player.first, Channel::msg, ENET_PACKET_FLAG_RELIABLE);
+					// enet_peer_send(player.first, Channel::msg, pkt);
 				}
 			} else if(message_type == 1) {
 				if(player.first != peer && player.second->user_name == to_user_name) {
-					enet_peer_send(player.first, Channel::msg, pkt);
+					// enet_peer_send(player.first, Channel::msg, pkt);
+					s.send(player.first, Channel::msg, ENET_PACKET_FLAG_RELIABLE);
 					break;
 				}
 			}
 		}
-	} else {
-		enet_packet_destroy(pkt);
-	}
+	// } else {
+		// enet_packet_destroy(pkt);
+	// }
 }
 
 void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
@@ -191,15 +200,15 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 			break;
 		}
 		case PacketType::chat_message: {
-			Packet::chat_message* packet = (Packet::chat_message*)pkt->data;
-			
-			std::string to_user_name(packet->to_user_name.data());
-			if(to_user_name.empty()) {
+			PacketSerializer p(pkt);
+			// Packet::chat_message* packet = (Packet::chat_message*)pkt->data;
+						
+			if(p.get_string("to_username").empty()) {
 				//broadcast message to everyone except author
-				SendChatMessage(peer, to_user_name, packet->message.data(), 0);
+				SendChatMessage(peer, p.get_string("to_username"), p.get_string("message"), 0);
 			} else {
 				//send private message
-				SendChatMessage(peer, to_user_name, packet->message.data(), 1);
+				SendChatMessage(peer, p.get_string("to_username"), p.get_string("message"), 1);
 			}
 			
 			break;
