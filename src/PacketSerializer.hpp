@@ -40,7 +40,10 @@ class PacketSerializer {
 			num_keys = s[0];
 			m_keys_offset = s[1];
 			
-			if(num_keys < 0 || m_keys_offset < 0 || m_keys_offset >= m_size || m_keys_offset + num_keys*bytes_per_key >= m_size) return;
+			if(num_keys < 0 || m_keys_offset < 0 || m_keys_offset >= m_size || m_keys_offset + num_keys*bytes_per_key > m_size) {
+				// cout << dec << (m_keys_offset >= m_size) << " " << (m_keys_offset + num_keys*bytes_per_key >= m_size) << " " << bytes_per_key << " " << num_keys << " " << m_keys_offset << "\nfail to parse" << endl;
+				return;
+			}
 			
 			size_type *keys = (size_type*)(m_data+m_keys_offset);
 			for(int i=0; i < num_keys; i++) {
