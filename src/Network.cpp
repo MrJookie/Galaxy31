@@ -343,6 +343,7 @@ namespace NetworkChat {
 	
 	void SendChatMessage(std::string to_user_name, std::string message) {
 		if(to_user_name.length() < 11 /*&& message.length() < 101*/) {
+			PacketSerializer p;
 			try {
 				std::string plainMessage = message.substr(0, AES_MAX_MESSAGE_LEN - 1); //must be -1 (127B, otherwise 128 padds to +16 bytes -> 144), so if msg is max 100 chars, it encrypts to 112, which fits to p->message
 				std::string encryptedMessage;
@@ -352,12 +353,19 @@ namespace NetworkChat {
 
 				CryptoPP::StringSource ss(plainMessage, true, new CryptoPP::StreamTransformationFilter(e, new CryptoPP::StringSink(encryptedMessage)));
 				
+				
+				p.put("message", encryptedMessage);
+				p.put("to_username", to_user_name);
+				p.put("type", PacketType::chat_message);
+				p.send(host, Channel::msg, ENET_PACKET_FLAG_RELIABLE);
+				/*
 				ENetPacket* pkt = enet_packet_create(nullptr, sizeof(Packet::chat_message), ENET_PACKET_FLAG_RELIABLE);
 				Packet::chat_message *p = new (pkt->data) Packet::chat_message();
 				memcpy(p->message.data(), encryptedMessage.c_str(), encryptedMessage.length() + 1);
 				strcpy(p->to_user_name.data(), to_user_name.c_str());
 								
 				enet_peer_send(host, Channel::msg, pkt);
+				*/
 				flush();
 			} catch(...) {}
 		}
@@ -371,6 +379,35 @@ namespace NetworkChat {
 	Ship::Chassis *chassis = nullptr;
 	void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 		Packet::Packet *bp = (Packet::Packet *)pkt->data;
+		
+		PacketSerializer p(pkt);
+		
+		if(p.get_int("type") == PacketType::chat_message) {
+			// std::string encrypted(p->message.data());
+			std::string encrypted = p.get_string("message");
+			std::string decrypted;
+			
+			if(encrypted.length() % AES_KEY_SIZE == 0) {
+				try {
+					CryptoPP::ECB_Mode< CryptoPP::AES >::Decryption d;
+					d.SetKey(GameState::server_chatAESkey.data(), GameState::server_chatAESkey.size() - 1);
+
+					CryptoPP::StringSource ss(encrypted, true, new CryptoPP::StreamTransformationFilter(d, new CryptoPP::StringSink(decrypted)));
+					
+					Terminal* tm_game_chat = (Terminal*)GameState::gui.GetControlById("game_terminal"); //move this?
+					// if(p->message_type == 0) {
+					if(p.get_int("message_type") == 0) {
+						// tm_game_chat->WriteLog( std::string(p->from_user_name.data()) + ": " + decrypted );
+						tm_game_chat->WriteLog( p.get_string("from_username") + ": " + decrypted );
+					// } else if(p->message_type == 1) {
+					} else if(p.get_int("message_type") == 1) {
+						// tm_game_chat->WriteLog( "^y[pm from " + std::string(p->from_user_name.data())  + "]^w: " + decrypted );
+						tm_game_chat->WriteLog( "^y[pm from " + p.get_string("from_username") + "]^w: " + decrypted );
+					}
+				} catch(...) {}
+			}
+		} else 
+				
 		switch(bp->type) {
 			case PacketType::chat_login_response: {
 				Packet::chat_login_response *p = (Packet::chat_login_response *)pkt->data;
@@ -404,6 +441,7 @@ namespace NetworkChat {
 			case PacketType::chat_message: {
 				// Packet::chat_message *p = (Packet::chat_message *)pkt->data;
 				
+				/*
 				PacketSerializer p(pkt);
 				
 				// std::string encrypted(p->message.data());
@@ -429,6 +467,7 @@ namespace NetworkChat {
 						}
 					} catch(...) {}
 				}
+				*/
 															
 				break;
 			}

@@ -23,6 +23,7 @@ class PacketSerializer {
 		char* m_data;
 		bool m_sent;
 		bool m_readonly;
+		const int bytes_per_key = sizeof(key_type)+sizeof(size_type)*2;
 		
 		// key, (offset, length)
 		std::map<key_type, std::pair<size_type, size_type>> m_offsets;
@@ -31,14 +32,22 @@ class PacketSerializer {
 			if(!m_offsets.empty())
 				m_offsets.clear();
 			
+			if(m_size < 4) return;
+			
 			// read keys
 			size_type num_keys;
 			size_type* s = (size_type*)m_data;
 			num_keys = s[0];
 			m_keys_offset = s[1];
 			
+			if(num_keys < 0 || m_keys_offset < 0 || m_keys_offset >= m_size || m_keys_offset + num_keys*bytes_per_key >= m_size) return;
+			
 			size_type *keys = (size_type*)(m_data+m_keys_offset);
 			for(int i=0; i < num_keys; i++) {
+				if(keys[i*3+1] > m_size) {
+					m_offsets.clear();
+					return;
+				}
 				m_offsets[keys[i*3]] = std::make_pair((size_type)keys[i*3+1], (size_type)keys[i*3+2]);
 			}
 		}
@@ -54,7 +63,7 @@ class PacketSerializer {
 		}
 		
 		inline int keys_size() {
-			return m_offsets.size()*(sizeof(key_type)+sizeof(size_type)*2);
+			return m_offsets.size()*bytes_per_key;
 		}
 		
 		void appendKeysToPacket() {			

@@ -8,7 +8,6 @@ tmp_link := $(tmp_binaries)/linux$(cpu_arch)
 link64bit :=    -lSDL2 \
 				-lSDL2_image \
 				-lSDL2_mixer \
-				-lSDL2_gfx \
 				-lSDL2_ttf \
 				-lGL \
 				-lGLEW \
