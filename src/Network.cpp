@@ -180,7 +180,7 @@ namespace Network {
 				int num_objects = p.get_int("num_objects");
 				if(num_objects * sizeof(Object) > pkt->dataLength) return;
 				//Object* objs = (Object*)(pkt->data+sizeof(Packet::update_objects)); //????
-				Object* objs = new (p.allocate("objects", num_objects*sizeof(Object))) Object[num_objects];
+				Object* objs = (Object*)p.get_pair("objects").first;
 				
 				//cout << "updating objects " << p->num_objects << endl;
 				for(int i=0; i < p.get_int("num_objects"); i++) {

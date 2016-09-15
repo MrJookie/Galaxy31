@@ -255,6 +255,7 @@ void send_states() {
 	// Packet::update_objects *upd = new (pkt->data) Packet::update_objects;
 	// upd->num_objects = num_objects;
 	Packet p;
+	p.put("type", PacketType::update_objects);
 	p.put("num_objects", num_objects);
 	
 	// Object* obj = (Object*)(pkt->data + sizeof(Packet::update_objects));
