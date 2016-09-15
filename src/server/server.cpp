@@ -17,7 +17,7 @@
 #include "../Object.hpp"
 #include "database.hpp"
 #include "RelocatedWork.hpp"
-#include "../PacketSerializer.hpp"
+#include "../Packet.hpp"
 
 using std::cout;
 using std::endl;
@@ -190,15 +190,13 @@ void handle_new_client(ENetPeer* peer) {
 	int challenge = rand() % 9999999 + 1000000;
 	
 	last_id++;
-	Packet::new_client cl;
-	cl.new_id = last_id;
-	cl.challenge = challenge;
-	//if(serverPublicKeyStr.length() < sizeof(cl.public_key)) {
-		////memcpy(cl.public_key.data(), serverPublicKeyStr.c_str(), serverPublicKeyStr.length() + 1);
-		strcpy(cl.public_key.data(), serverPublicKeyStr.c_str());
-	//}
-	ENetPacket* pkt = enet_packet_create( &cl, sizeof(cl), ENET_PACKET_FLAG_RELIABLE );
-	enet_peer_send(peer, Channel::control, pkt);
+	
+	Packet s;
+	s.put("type", PacketType::new_client);
+	s.put("new_id", last_id);
+	s.put("challenge", challenge);
+	s.put("public_key", serverPublicKeyStr);
+	s.send(peer, Channel::control, ENET_PACKET_FLAG_RELIABLE);
 	
 	Player* player = new Player;
 	player->id = last_id;
@@ -215,6 +213,7 @@ void remove_client(ENetPeer* peer) {
 	players.erase( peer );
 }
 
+/*
 void send_states() {
 	int len = sizeof(Packet::update_objects);
 	
@@ -240,15 +239,46 @@ void send_states() {
 	
 	enet_host_broadcast(host, Channel::data, pkt);
 }
+*/
+
+void send_states() {
+	// int len = sizeof(Packet::update_objects);
+	
+	int num_objects = 0;
+	for(auto& p : players) {
+		num_objects += p.second->obj.size();
+	}
+	// len += sizeof(Object) * num_objects;
+	
+	// ENetPacket* pkt = enet_packet_create( nullptr, len, 0);
+	int i=0;
+	// Packet::update_objects *upd = new (pkt->data) Packet::update_objects;
+	// upd->num_objects = num_objects;
+	Packet p;
+	p.put("num_objects", num_objects);
+	
+	// Object* obj = (Object*)(pkt->data + sizeof(Packet::update_objects));
+	Object* obj = new (p.allocate("objects", num_objects*sizeof(Object))) Object[num_objects];
+	for(auto& p : players) {
+		for(auto& o : p.second->obj) {
+			obj[i] = o;
+			obj[i].SetId(p.second->user_id);
+			i++;
+		}
+		p.second->obj.clear();
+	}
+	
+	p.broadcast(host, Channel::data, 0);
+	// enet_host_broadcast(host, Channel::data, pkt);
+}
 
 void send_authorize(ENetPeer* peer, int status_code = -1, unsigned int id = 0, std::string user_name = "") {
-	ENetPacket* pkt = enet_packet_create(nullptr, sizeof(Packet::authorize), ENET_PACKET_FLAG_RELIABLE);
-	Packet::authorize *p = new (pkt->data) Packet::authorize();
-	p->user_id = id;
-	p->status_code = status_code;
-	strcpy(p->user_name.data(), user_name.c_str());
-	
-	enet_peer_send(peer, Channel::control, pkt);
+	Packet s;
+	s.put("type", PacketType::authorize);
+	s.put("user_id", id);
+	s.put("status_code", status_code);
+	s.put("user_name", user_name);
+	s.send(peer, Channel::control, ENET_PACKET_FLAG_RELIABLE);
 }
 
 void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
@@ -260,25 +290,26 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 	std::string ipAddress(ipAddr);
             
 	// cout << "rcv packet: " << pkt->data << endl;
-	Packet::Packet *ppkt = (Packet::Packet*)pkt->data;
-	switch(ppkt->type) {
+	
+	Packet p(pkt);
+	switch(p.get_int("type")) {
 		case PacketType::update_objects: {
-			Player& p = *players[peer];
-			Packet::update_objects* packet = (Packet::update_objects*)pkt->data;
-			if(packet->num_objects != 1) return;
+			Player& player = *players[peer];
+			
+			int num_objects = p.get_int("num_objects");
+			if(num_objects != 1) return;
 			
 			std::unique_lock<std::mutex> l(host_mutex);
-			p.obj.push_back( *(Object*)(pkt->data + sizeof(Packet::update_objects)) );
-			// cout << "receiving states from " << p.id << "\n";
+			player.obj.push_back( *((Object*)p.get_pair("objects").first)  );
+			// cout << "receiving states from " << player.id << "\n";
+				
 			break;
 		}
 		case PacketType::authenticate: {
-			Packet::authenticate* packet = (Packet::authenticate*)pkt->data;
-			
 			w.MakeWork(
 				loginAccount,
-				packet->user_email.data(),
-				packet->user_password.data(),
+				p.get_string("user_email"),
+				p.get_string("user_password"),
 				ipAddress,
 				players[peer]->challenge
 			)
@@ -306,12 +337,10 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 			break;
 		}
 		case PacketType::signup: {
-			Packet::signup* packet = (Packet::signup*)pkt->data;
-			
 			//decryption
 			CryptoPP::AutoSeededRandomPool rng;
 				
-			std::string encrypted(packet->user_password.data(), RSA_MAX_ENCRYPTED_LEN);
+			std::string encrypted(p.get_string("user_password"), RSA_MAX_ENCRYPTED_LEN);
 			std::string decrypted;
 			
 			if(encrypted.length() == RSA_MAX_ENCRYPTED_LEN) {
@@ -328,8 +357,8 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 
 			w.MakeWork(
 				createAccount,
-				packet->user_email.data(),
-				packet->user_name.data(),
+				p.get_string("user_email"),
+				p.get_string("user_name"),
 				decrypted,
 				ipAddress
 			)
@@ -356,7 +385,7 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 			break;
 		}
 		default:
-			cout << "received unknown packet! " << (int)ppkt->type << endl;
+			cout << "received unknown packet! " << p.get_int("type") << endl;
 			break;
 	}
 }

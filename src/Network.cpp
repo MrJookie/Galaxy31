@@ -14,7 +14,7 @@ using namespace ng;
 using std::cout;
 using std::endl;
 #include "server/network.hpp"
-#include "PacketSerializer.hpp"
+#include "Packet.hpp"
 
 namespace Network {
 	ENetHost *client;
@@ -97,15 +97,21 @@ namespace Network {
 		} else {
 			return;
 		}
-			
+		
+		Packet p;
+		p.put("type", PacketType::update_objects);
+		p.put("num_objects", 1);
+		
 		Object* obj = GameState::player;
 		obj->UpdateTicks();
-		int len = sizeof(Packet::update_objects) + sizeof(Object);
-		ENetPacket* pkt = enet_packet_create(nullptr, len, 0);
-		Packet::update_objects *p = new (pkt->data) Packet::update_objects;
-		p->num_objects = 1;
-		memcpy(pkt->data+sizeof(Packet::update_objects), obj, sizeof(Object));
-		enet_peer_send(host, Channel::data, pkt);
+		memcpy(p.allocate("objects",sizeof(Object)), obj, sizeof(Object));
+		p.send(host, Channel::data, 0);
+		// int len = sizeof(Packet::update_objects) + sizeof(Object);
+		// ENetPacket* pkt = enet_packet_create(nullptr, len, 0);
+		// Packet::update_objects *p = new (pkt->data) Packet::update_objects;
+		// p->num_objects = 1;
+		// memcpy(pkt->data+sizeof(Packet::update_objects), obj, sizeof(Object));
+		// enet_peer_send(host, Channel::data, pkt);
 	}
 	
 	void SendAuthentication(std::string user_email, std::string user_password) {
@@ -119,19 +125,11 @@ namespace Network {
 		CryptoPP::StringSource(hashChallenge, true, new CryptoPP::HashFilter(sha1, new CryptoPP::HexEncoder(new CryptoPP::StringSink(finalHash), false)));
 		user_password = finalHash;
 		
-		ENetPacket* pkt = enet_packet_create(nullptr, sizeof(Packet::authenticate), ENET_PACKET_FLAG_RELIABLE);
-		Packet::authenticate *p = new (pkt->data) Packet::authenticate();
-		
-		// && user_password.length() < sizeof(p->user_password)) // not needed, since sha1 is 40 chars always, thus will fit 40+1 null terminator
-		if(user_email.length() < sizeof(p->user_email)) {
-			strcpy(p->user_email.data(), user_email.c_str());
-			strcpy(p->user_password.data(), user_password.c_str());
-						
-			enet_peer_send(host, Channel::control, pkt);
-			flush();
-		} else {
-			enet_packet_destroy(pkt);
-		}
+		Packet s;
+		s.put("type", PacketType::authenticate);
+		s.put("user_email", user_email);
+		s.put("user_password", user_password);
+		s.send(host, Channel::control, ENET_PACKET_FLAG_RELIABLE);
 	}
 	
 	void SendRegistration(std::string user_email, std::string user_name, std::string user_password) {
@@ -151,20 +149,13 @@ namespace Network {
 		
 		CryptoPP::RSAES_OAEP_SHA_Encryptor e(loadPublicKey);
 		CryptoPP::StringSource ss1(plain_cut, true, new CryptoPP::PK_EncryptorFilter(rng, e, new CryptoPP::StringSink(encrypted)));
-
-		ENetPacket* pkt = enet_packet_create(nullptr, sizeof(Packet::signup), ENET_PACKET_FLAG_RELIABLE);
-		Packet::signup *p = new (pkt->data) Packet::signup();
 		
-		if(user_email.length() < sizeof(p->user_email)) {
-			strcpy(p->user_email.data(), user_email.c_str());
-			strcpy(p->user_name.data(), user_name.c_str());
-			memcpy(p->user_password.data(), encrypted.c_str(), encrypted.length() + 1);
-						
-			enet_peer_send(host, Channel::control, pkt);
-			flush();
-		} else {
-			enet_packet_destroy(pkt);
-		}
+		Packet s;
+		s.put("type", PacketType::signup);
+		s.put("user_email", user_email);
+		s.put("user_name", user_name);
+		s.put("user_password", user_password);
+		s.send(host, Channel::control, ENET_PACKET_FLAG_RELIABLE);
 	}
 	
 	void cleanup() {
@@ -174,17 +165,49 @@ namespace Network {
 	int max_queue = 10000;
 	Ship::Chassis *chassis = nullptr;
 	void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
-		Packet::Packet *bp = (Packet::Packet *)pkt->data;
-		switch(bp->type) {
+		Packet p(pkt);
+		switch(p.get_int("type")) {
 			case PacketType::new_client: {
-				Packet::new_client *p = (Packet::new_client *)pkt->data;
-				cout << "your client id is: " << p->new_id << ", challenge: " << p->challenge << endl;
-				GameState::player->SetId(p->new_id);
-				GameState::account_challenge = p->challenge; //move this?
-				GameState::serverPublicKeyStr = p->public_key.data(); 
-							
+				cout << "your client id is: " << p.get_int("new_id") << ", challenge: " << p.get_int("challenge") << endl;
+				
+				GameState::player->SetId(p.get_int("new_id"));
+				GameState::account_challenge = p.get_int("challenge"); //move this?
+				GameState::serverPublicKeyStr = p.get_string("public_key"); 
+					
 				break;
 			}
+			case PacketType::update_objects: {
+				int num_objects = p.get_int("num_objects");
+				if(num_objects * sizeof(Object) > pkt->dataLength) return;
+				//Object* objs = (Object*)(pkt->data+sizeof(Packet::update_objects)); //????
+				Object* objs = new (p.allocate("objects", num_objects*sizeof(Object))) Object[num_objects];
+				
+				//cout << "updating objects " << p->num_objects << endl;
+				for(int i=0; i < p.get_int("num_objects"); i++) {
+					Object &o = objs[i];
+					
+					if(GameState::player->GetId() == o.GetId()) continue;
+					
+					
+					if(GameState::ships.find(o.GetId()) == GameState::ships.end()) {
+						cout << "added new ship" << endl;
+						if(!chassis)
+							chassis = new Ship::Chassis("main_ship", "ship_01_skin.png", "ship_01_skin.png");
+						Ship *s = new Ship({0,0}, 0, *chassis);
+						s->CopyObjectState(o);
+						GameState::ships[o.GetId()] = std::pair<Ship*, std::queue<Object>>(s, std::queue<Object>());
+					} else {
+						std::queue<Object> &q = GameState::ships[o.GetId()].second;
+						while(q.size() > max_queue)
+							q.pop();
+						
+						q.push(o);
+					}
+				}
+				// cout << "ping: " << peer->roundTripTime << endl;
+				break;
+			}
+		/*
 			case PacketType::update_objects: {
 				Packet::update_objects *p = (Packet::update_objects *)pkt->data;
 				if(p->num_objects * sizeof(Object) > pkt->dataLength) return;
@@ -214,13 +237,12 @@ namespace Network {
 				// cout << "ping: " << peer->roundTripTime << endl;
 				break;
 			}
+			*/
 			case PacketType::authorize: {
-				Packet::authorize *p = (Packet::authorize *)pkt->data;
+				GameState::user_id = p.get_int("user_id");
+				GameState::user_name = p.get_string("user_name");
 				
-				GameState::user_id = p->user_id;
-				GameState::user_name = p->user_name.data();
-				
-				if(p->status_code == 0) { //login ok after registration login
+				if(p.get_int("status_code") == 0) { //login ok after registration login
 					NetworkChat::connect("89.177.76.215", 54301); //connect to chat server
 					NetworkChat::SendChatLogin(GameState::user_id, GameState::user_name);
 					
@@ -228,22 +250,22 @@ namespace Network {
 					tb_game_account->SetText("Logged in as: " + std::to_string(GameState::user_id) + " | " + GameState::user_name);
 					
 					GameState::activePage = "game";
-				} else if(p->status_code == 1) {
+				} else if(p.get_int("status_code") == 1) {
 					TextBox* tb_register_status = (TextBox*)GameState::gui.GetControlById("register_status"); //move this?
 					tb_register_status->SetText("Error email exists!");
 					
 					GameState::activePage = "register";
-				} else if(p->status_code == 2) {
+				} else if(p.get_int("status_code") == 2) {
 					TextBox* tb_register_status = (TextBox*)GameState::gui.GetControlById("register_status"); //move this?
 					tb_register_status->SetText("Username taken!");
 					
 					GameState::activePage = "register";
-				} else if(p->status_code == 3) { //login ok after just login ////REMOVE?
+				} else if(p.get_int("status_code") == 3) { //login ok after just login ////REMOVE?
 					TextBox* tb_game_account = (TextBox*)GameState::gui.GetControlById("game_account"); //move this?
 					tb_game_account->SetText("Logged in as: " + std::to_string(GameState::user_id) + " | " + GameState::user_name);
 					
 					GameState::activePage = "game";
-				} else if(p->status_code == 4) {
+				} else if(p.get_int("status_code") == 4) {
 					TextBox* tb_login_status = (TextBox*)GameState::gui.GetControlById("login_status"); //move this?
 					tb_login_status->SetText("Error logging in!");
 					
@@ -329,21 +351,19 @@ namespace NetworkChat {
 
 	void SendChatLogin(unsigned int user_id, std::string user_name) {
 		try {
-			ENetPacket* pkt = enet_packet_create(nullptr, sizeof(Packet::chat_login), ENET_PACKET_FLAG_RELIABLE);
-			Packet::chat_login *p = new (pkt->data) Packet::chat_login();
+			Packet s;
+			s.put("type", PacketType::chat_login);
+			s.put("user_id", user_id);
+			s.put("user_name", user_name);
+			s.put("public_key", GameState::clientPublicKeyStr);
+			s.send(host, Channel::control, ENET_PACKET_FLAG_RELIABLE);
 			
-			p->user_id = user_id;
-			strcpy(p->user_name.data(), user_name.c_str());
-			strcpy(p->public_key.data(), GameState::clientPublicKeyStr.c_str());
-							
-			enet_peer_send(host, Channel::control, pkt);
 			flush();
 		} catch(...) {}
 	}
 	
 	void SendChatMessage(std::string to_user_name, std::string message) {
 		if(to_user_name.length() < 11 /*&& message.length() < 101*/) {
-			PacketSerializer p;
 			try {
 				std::string plainMessage = message.substr(0, AES_MAX_MESSAGE_LEN - 1); //must be -1 (127B, otherwise 128 padds to +16 bytes -> 144), so if msg is max 100 chars, it encrypts to 112, which fits to p->message
 				std::string encryptedMessage;
@@ -353,19 +373,12 @@ namespace NetworkChat {
 
 				CryptoPP::StringSource ss(plainMessage, true, new CryptoPP::StreamTransformationFilter(e, new CryptoPP::StringSink(encryptedMessage)));
 				
-				
+				Packet p;
 				p.put("message", encryptedMessage);
 				p.put("to_username", to_user_name);
 				p.put("type", PacketType::chat_message);
 				p.send(host, Channel::msg, ENET_PACKET_FLAG_RELIABLE);
-				/*
-				ENetPacket* pkt = enet_packet_create(nullptr, sizeof(Packet::chat_message), ENET_PACKET_FLAG_RELIABLE);
-				Packet::chat_message *p = new (pkt->data) Packet::chat_message();
-				memcpy(p->message.data(), encryptedMessage.c_str(), encryptedMessage.length() + 1);
-				strcpy(p->to_user_name.data(), to_user_name.c_str());
-								
-				enet_peer_send(host, Channel::msg, pkt);
-				*/
+				
 				flush();
 			} catch(...) {}
 		}
@@ -376,45 +389,15 @@ namespace NetworkChat {
 	}
 	
 	int max_queue = 10000;
-	Ship::Chassis *chassis = nullptr;
+	//Ship::Chassis *chassis = nullptr;
 	void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
-		Packet::Packet *bp = (Packet::Packet *)pkt->data;
+		Packet p(pkt);
 		
-		PacketSerializer p(pkt);
-		
-		if(p.get_int("type") == PacketType::chat_message) {
-			// std::string encrypted(p->message.data());
-			std::string encrypted = p.get_string("message");
-			std::string decrypted;
-			
-			if(encrypted.length() % AES_KEY_SIZE == 0) {
-				try {
-					CryptoPP::ECB_Mode< CryptoPP::AES >::Decryption d;
-					d.SetKey(GameState::server_chatAESkey.data(), GameState::server_chatAESkey.size() - 1);
-
-					CryptoPP::StringSource ss(encrypted, true, new CryptoPP::StreamTransformationFilter(d, new CryptoPP::StringSink(decrypted)));
-					
-					Terminal* tm_game_chat = (Terminal*)GameState::gui.GetControlById("game_terminal"); //move this?
-					// if(p->message_type == 0) {
-					if(p.get_int("message_type") == 0) {
-						// tm_game_chat->WriteLog( std::string(p->from_user_name.data()) + ": " + decrypted );
-						tm_game_chat->WriteLog( p.get_string("from_username") + ": " + decrypted );
-					// } else if(p->message_type == 1) {
-					} else if(p.get_int("message_type") == 1) {
-						// tm_game_chat->WriteLog( "^y[pm from " + std::string(p->from_user_name.data())  + "]^w: " + decrypted );
-						tm_game_chat->WriteLog( "^y[pm from " + p.get_string("from_username") + "]^w: " + decrypted );
-					}
-				} catch(...) {}
-			}
-		} else 
-				
-		switch(bp->type) {
+		switch(p.get_int("type")) {
 			case PacketType::chat_login_response: {
-				Packet::chat_login_response *p = (Packet::chat_login_response *)pkt->data;
-
 				CryptoPP::AutoSeededRandomPool rng;
 					
-				std::string encrypted(p->AES_key.data(), RSA_MAX_ENCRYPTED_LEN);
+				std::string encrypted = p.get_string("AES_key");
 				std::string decrypted;
 				
 				if(encrypted.length() == RSA_MAX_ENCRYPTED_LEN) {
@@ -432,19 +415,11 @@ namespace NetworkChat {
 							memcpy(GameState::server_chatAESkey.data(), nonHexKey.data(), nonHexKey.length() + 1);
 						}
 					} catch(...) {}
-				} else {
-					break;
 				}
-									
+								
 				break;
 			}
 			case PacketType::chat_message: {
-				// Packet::chat_message *p = (Packet::chat_message *)pkt->data;
-				
-				/*
-				PacketSerializer p(pkt);
-				
-				// std::string encrypted(p->message.data());
 				std::string encrypted = p.get_string("message");
 				std::string decrypted;
 				
@@ -456,19 +431,14 @@ namespace NetworkChat {
 						CryptoPP::StringSource ss(encrypted, true, new CryptoPP::StreamTransformationFilter(d, new CryptoPP::StringSink(decrypted)));
 						
 						Terminal* tm_game_chat = (Terminal*)GameState::gui.GetControlById("game_terminal"); //move this?
-						// if(p->message_type == 0) {
 						if(p.get_int("message_type") == 0) {
-							// tm_game_chat->WriteLog( std::string(p->from_user_name.data()) + ": " + decrypted );
 							tm_game_chat->WriteLog( p.get_string("from_username") + ": " + decrypted );
-						// } else if(p->message_type == 1) {
 						} else if(p.get_int("message_type") == 1) {
-							// tm_game_chat->WriteLog( "^y[pm from " + std::string(p->from_user_name.data())  + "]^w: " + decrypted );
 							tm_game_chat->WriteLog( "^y[pm from " + p.get_string("from_username") + "]^w: " + decrypted );
 						}
 					} catch(...) {}
 				}
-				*/
-															
+				
 				break;
 			}
 		}

@@ -1,5 +1,5 @@
-#ifndef PACKET_SERIALIZER_HPP
-#define PACKET_SERIALIZER_HPP
+#ifndef PACKET_HPP
+#define PACKET_HPP
 
 #include <enet/enet.h>
 #include <cstring>
@@ -12,7 +12,7 @@ void packetFreeCallback(ENetPacket* pkt) {
 	delete[] pkt->data;
 }
 
-class PacketSerializer {
+class Packet {
 	// num_keys, keys_offset, data..., keys
 	private:
 		using key_type = unsigned short;
@@ -41,7 +41,6 @@ class PacketSerializer {
 			m_keys_offset = s[1];
 			
 			if(num_keys < 0 || m_keys_offset < 0 || m_keys_offset >= m_size || m_keys_offset + num_keys*bytes_per_key > m_size) {
-				// cout << dec << (m_keys_offset >= m_size) << " " << (m_keys_offset + num_keys*bytes_per_key >= m_size) << " " << bytes_per_key << " " << num_keys << " " << m_keys_offset << "\nfail to parse" << endl;
 				return;
 			}
 			
@@ -91,21 +90,21 @@ class PacketSerializer {
 		
 	public:
 	
-		PacketSerializer(ENetPacket* pkt) {
+		Packet(ENetPacket* pkt) {
 			m_data = (char*)pkt->data;
 			m_size = pkt->dataLength;
 			m_readonly = true;
 			parsePacket();
 		}
 		
-		PacketSerializer(char* data, int length) {
+		Packet(char* data, int length) {
 			m_data = data;
 			m_size = length;
 			m_readonly = true;
 			parsePacket();
 		}
 		
-		PacketSerializer(const PacketSerializer& p, int additional_alloc = 512) {
+		Packet(const Packet& p, int additional_alloc = 512) {
 			m_allocated_size = p.m_size + additional_alloc;
 			m_data = new char[m_allocated_size];
 			m_offsets = p.m_offsets;
@@ -119,7 +118,7 @@ class PacketSerializer {
 			memcpy(m_data, p.m_data, m_size);
 		}
 		
-		PacketSerializer(int initial_allocation = INITIAL_ALLOCATION) {
+		Packet(int initial_allocation = INITIAL_ALLOCATION) {
 			m_size = sizeof(size_type)*2;
 			
 			if(initial_allocation < 0) initial_allocation = INITIAL_ALLOCATION;
@@ -130,17 +129,11 @@ class PacketSerializer {
 			m_keys_offset = 0;
 		}
 		
-		~PacketSerializer() {
+		~Packet() {
 			if(!m_sent && !m_readonly && m_data) {
 				delete [] m_data;
 			}
 		}
-		
-		// pkt["hehe"] = std::string("something")
-		// char *buffer = allocate("hehe", 500);
-		
-		// auto h = get("hehe");
-		// memcpy(h.first, whatever, h.second);
 		
 		char* data() {
 			if(m_keys_offset == 0)
@@ -151,7 +144,7 @@ class PacketSerializer {
 		
 		size_t allocated_size() { return m_allocated_size; }
 		
-		std::pair<char*,int> get(const std::string& key) {
+		std::pair<char*,int> get_pair(const std::string& key) {
 			auto it = m_offsets.find(std::hash<std::string>{}(key));
 			if(it != m_offsets.end())
 				return std::make_pair((char*)&m_data[it->second.first], (int)it->second.second);
@@ -159,15 +152,23 @@ class PacketSerializer {
 				return std::make_pair((char*)0,(int)0);
 		}
 		
+		
+		template<typename T>
+		void get(const std::string& key, T& value) {
+			auto p = get_pair(key);
+			if(p.first && p.second == sizeof(T))
+				value = *((T*)p.first);
+		}
+		
 		int get_int(const std::string& key) {
-			auto p = get(key);
+			auto p = get_pair(key);
 			if(p.first && p.second == sizeof(int))
 				return *((int*)p.first);
 			return -1;
 		}
 		
 		std::string get_string(const std::string& key) {
-			auto p = get(key);
+			auto p = get_pair(key);
 			if(p.first)
 				return std::string(p.first, p.second);
 			else
@@ -196,10 +197,19 @@ class PacketSerializer {
 		}
 		
 		void make_writeable() {
-			// to implement
+			if(!m_sent && !m_readonly) return;
+			
+			// allocate new resource and copy data
+			m_allocated_size = m_size*3/2;
+			char* new_alloc = new char[m_allocated_size];
+			memcpy(new_alloc, m_data, m_size);
+			m_data = new_alloc;
+			
+			m_sent = false;
+			m_readonly = false;
 		}
 		
-		void send(ENetPeer* peer, int channel, int flags) {
+		void send(ENetPeer* peer, int channel = 0, int flags = ENET_PACKET_FLAG_RELIABLE) {
 			if(m_readonly) return;
 			if(m_keys_offset == 0)
 				appendKeysToPacket();
@@ -209,7 +219,7 @@ class PacketSerializer {
 			enet_peer_send(peer, channel, pkt);
 		}
 		
-		void broadcast(ENetHost* host, int channel, int flags) {
+		void broadcast(ENetHost* host, int channel = 0, int flags = ENET_PACKET_FLAG_RELIABLE) {
 			if(m_readonly) return;
 			if(m_keys_offset == 0)
 				appendKeysToPacket();

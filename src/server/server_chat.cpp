@@ -15,7 +15,7 @@
 #include <enet/enet.h>
 #include "network.hpp"
 
-#include "../PacketSerializer.hpp"
+#include "../Packet.hpp"
 
 using std::cout;
 using std::endl;
@@ -124,50 +124,35 @@ void SendEncryptedAESKey(ENetPeer* peer) {
 		
 		CryptoPP::RSAES_OAEP_SHA_Encryptor e(loadPublicKey);
 		CryptoPP::StringSource ss1(hexKey, true, new CryptoPP::PK_EncryptorFilter(rng, e, new CryptoPP::StringSink(encrypted)));
-				
-		ENetPacket* pkt = enet_packet_create(nullptr, sizeof(Packet::chat_login_response), ENET_PACKET_FLAG_RELIABLE);
-		Packet::chat_login_response *p = new (pkt->data) Packet::chat_login_response();
 		
-		memcpy(p->AES_key.data(), encrypted.c_str(), encrypted.length() + 1);
-		
-		enet_peer_send(peer, Channel::control, pkt);
+		Packet s;
+		s.put("type", PacketType::chat_login_response);
+		s.put("AES_key", encrypted);
+		s.send(peer, Channel::control, ENET_PACKET_FLAG_RELIABLE);
 	} catch(...) {}
 }
 
 void SendChatMessage(ENetPeer* peer, std::string to_user_name, std::string message, int message_type) {
-	// ENetPacket* pkt = enet_packet_create(nullptr, sizeof(Packet::chat_message), ENET_PACKET_FLAG_RELIABLE);
-	PacketSerializer s;
-	// Packet::chat_message *p = new (pkt->data) Packet::chat_message();
-	
 	std::string from_user_name = players[peer]->user_name;
 	
+	Packet s;
+	s.put("type", PacketType::chat_message);
 	s.put("from_username", from_user_name);
 	s.put("message", message);
 	s.put("message_type", message_type);
-	s.put("type", PacketType::chat_message);
-	
-	// if(from_user_name.length() < 11 && message.length() < p->message.size()) {
-		// strcpy(p->from_user_name.data(), from_user_name.c_str());
-		// strcpy(p->message.data(), message.c_str());
-		// p->message_type = message_type;
 
-		for(auto const& player : players) {
-			if(message_type == 0) {
-				if(player.first != peer) {
-					s.send(player.first, Channel::msg, ENET_PACKET_FLAG_RELIABLE);
-					// enet_peer_send(player.first, Channel::msg, pkt);
-				}
-			} else if(message_type == 1) {
-				if(player.first != peer && player.second->user_name == to_user_name) {
-					// enet_peer_send(player.first, Channel::msg, pkt);
-					s.send(player.first, Channel::msg, ENET_PACKET_FLAG_RELIABLE);
-					break;
-				}
+	for(auto const& player : players) {
+		if(message_type == 0) {
+			if(player.first != peer) {
+				s.send(player.first, Channel::msg, ENET_PACKET_FLAG_RELIABLE);
+			}
+		} else if(message_type == 1) {
+			if(player.first != peer && player.second->user_name == to_user_name) {
+				s.send(player.first, Channel::msg, ENET_PACKET_FLAG_RELIABLE);
+				break;
 			}
 		}
-	// } else {
-		// enet_packet_destroy(pkt);
-	// }
+	}
 }
 
 void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
@@ -179,45 +164,41 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 	std::string ipAddress(ipAddr);
             
 	// cout << "rcv packet: " << pkt->data << endl;
-	Packet::Packet *ppkt = (Packet::Packet*)pkt->data;
 	
-	PacketSerializer p(pkt);
-	if(p.get_int("type") == PacketType::chat_message) {
-		
-		// Packet::chat_message* packet = (Packet::chat_message*)pkt->data;		
-		if(p.get_string("to_username").empty()) {
-			//broadcast message to everyone except author
-			SendChatMessage(peer, p.get_string("to_username"), p.get_string("message"), 0);
-		} else {
-			//send private message
-			SendChatMessage(peer, p.get_string("to_username"), p.get_string("message"), 1);
-		}
-	} else {
-		switch(ppkt->type) {
-			case PacketType::chat_login: {
-				Packet::chat_login* packet = (Packet::chat_login*)pkt->data;
-				players[peer]->user_id = packet->user_id;
-				players[peer]->user_name = packet->user_name.data();
-				players[peer]->public_key = packet->public_key.data();
+	Packet p(pkt);
+	switch(p.get_int("type")) {
+		case PacketType::chat_login: {
+			players[peer]->user_id = p.get_int("user_id");
+			players[peer]->user_name = p.get_string("user_name");
+			players[peer]->public_key = p.get_string("public_key");
+			
+			if(players[peer]->user_id > 0 && !players[peer]->user_name.empty() && players[peer]->public_key.length() == RSA_PUBLIC_KEY_SIZE) {
+				cout << "id: " << players[peer]->id << " user_id: " << p.get_int("user_id") << " user_name: " << p.get_string("user_name") << endl;
 				
-				if(players[peer]->user_id > 0 && !players[peer]->user_name.empty() && players[peer]->public_key.length() == RSA_PUBLIC_KEY_SIZE) {
-					cout << "id: " << players[peer]->id << " user_id: " << packet->user_id << " user_name: " << packet->user_name.data() << endl;
-					
-					//send back encrypted aes
-					SendEncryptedAESKey(peer);
-				} else {
-					cout << "User (" << players[peer]->user_id << ") " << packet->user_name.data() << " could not be verified. Kicking!" << endl;
-					enet_peer_disconnect(peer, 0);
-					//+save log to file
-				}
-				
-				break;
+				//send back encrypted aes
+				SendEncryptedAESKey(peer);
+			} else {
+				cout << "User (" << players[peer]->user_id << ") " << p.get_string("user_name") << " could not be verified. Kicking!" << endl;
+				enet_peer_disconnect(peer, 0);
+				//+save log to file
 			}
 			
-			default:
-				cout << "received unknown packet! " << (int)ppkt->type << endl;
-				break;
+			break;
 		}
+		case PacketType::chat_message: {
+			if(p.get_string("to_username").empty()) {
+				//broadcast message to everyone except author
+				SendChatMessage(peer, p.get_string("to_username"), p.get_string("message"), 0);
+			} else {
+				//send private message
+				SendChatMessage(peer, p.get_string("to_username"), p.get_string("message"), 1);
+			}
+			
+			break;
+		}			
+		default:
+			cout << "received unknown packet! " << p.get_int("type") << endl;
+			break;
 	}
 }
 
