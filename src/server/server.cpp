@@ -213,53 +213,18 @@ void remove_client(ENetPeer* peer) {
 	players.erase( peer );
 }
 
-/*
 void send_states() {
-	int len = sizeof(Packet::update_objects);
-	
 	int num_objects = 0;
 	for(auto& p : players) {
 		num_objects += p.second->obj.size();
 	}
-	len += sizeof(Object) * num_objects;
+	int i = 0;
 	
-	ENetPacket* pkt = enet_packet_create( nullptr, len, 0);
-	int i=0;
-	Packet::update_objects *upd = new (pkt->data) Packet::update_objects;
-	upd->num_objects = num_objects;
-	Object* obj = (Object*)(pkt->data + sizeof(Packet::update_objects));
-	for(auto& p : players) {
-		for(auto& o : p.second->obj) {
-			obj[i] = o;
-			obj[i].SetId(p.second->user_id);
-			i++;
-		}
-		p.second->obj.clear();
-	}
-	
-	enet_host_broadcast(host, Channel::data, pkt);
-}
-*/
+	Packet s;
+	s.put("type", PacketType::update_objects);
+	s.put("num_objects", num_objects);
 
-void send_states() {
-	// int len = sizeof(Packet::update_objects);
-	
-	int num_objects = 0;
-	for(auto& p : players) {
-		num_objects += p.second->obj.size();
-	}
-	// len += sizeof(Object) * num_objects;
-	
-	// ENetPacket* pkt = enet_packet_create( nullptr, len, 0);
-	int i=0;
-	// Packet::update_objects *upd = new (pkt->data) Packet::update_objects;
-	// upd->num_objects = num_objects;
-	Packet p;
-	p.put("type", PacketType::update_objects);
-	p.put("num_objects", num_objects);
-	
-	// Object* obj = (Object*)(pkt->data + sizeof(Packet::update_objects));
-	Object* obj = new (p.allocate("objects", num_objects*sizeof(Object))) Object[num_objects];
+	Object* obj = new (s.allocate("objects", num_objects*sizeof(Object))) Object[num_objects];
 	for(auto& p : players) {
 		for(auto& o : p.second->obj) {
 			obj[i] = o;
@@ -269,8 +234,7 @@ void send_states() {
 		p.second->obj.clear();
 	}
 	
-	p.broadcast(host, Channel::data, 0);
-	// enet_host_broadcast(host, Channel::data, pkt);
+	s.broadcast(host, Channel::data, 0);
 }
 
 void send_authorize(ENetPeer* peer, int status_code = -1, unsigned int id = 0, std::string user_name = "") {
@@ -301,7 +265,7 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 			if(num_objects != 1) return;
 			
 			std::unique_lock<std::mutex> l(host_mutex);
-			player.obj.push_back( *((Object*)p.get_pair("objects").first)  );
+			player.obj.push_back( *((Object*)p.get_pair("objects").first) );
 			// cout << "receiving states from " << player.id << "\n";
 				
 			break;

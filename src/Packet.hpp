@@ -1,5 +1,5 @@
-#ifndef PACKET_HPP
-#define PACKET_HPP
+#ifndef PACKET_SERIALIZER_HPP
+#define PACKET_SERIALIZER_HPP
 
 #include <enet/enet.h>
 #include <cstring>
@@ -24,7 +24,7 @@ class Packet {
 		bool m_sent;
 		bool m_readonly;
 		const int bytes_per_key = sizeof(key_type)+sizeof(size_type)*2;
-		
+		ENetPacket* last_packet;
 		// key, (offset, length)
 		std::map<key_type, std::pair<size_type, size_type>> m_offsets;
 		
@@ -213,20 +213,24 @@ class Packet {
 			if(m_readonly) return;
 			if(m_keys_offset == 0)
 				appendKeysToPacket();
-			ENetPacket* pkt = enet_packet_create(m_data, size(), flags | ENET_PACKET_FLAG_NO_ALLOCATE);
-			pkt->freeCallback = packetFreeCallback;
-			m_sent = true;
-			enet_peer_send(peer, channel, pkt);
+			if(!m_sent) {
+				last_packet = enet_packet_create(m_data, size(), flags | ENET_PACKET_FLAG_NO_ALLOCATE);
+				last_packet->freeCallback = packetFreeCallback;
+				m_sent = true;
+			}
+			enet_peer_send(peer, channel, last_packet);
 		}
 		
 		void broadcast(ENetHost* host, int channel = 0, int flags = ENET_PACKET_FLAG_RELIABLE) {
 			if(m_readonly) return;
 			if(m_keys_offset == 0)
 				appendKeysToPacket();
-			ENetPacket* pkt = enet_packet_create(m_data, size(), flags | ENET_PACKET_FLAG_NO_ALLOCATE);
-			pkt->freeCallback = packetFreeCallback;
-			m_sent = true;
-			enet_host_broadcast(host, channel, pkt);
+			if(!m_sent) {
+				last_packet = enet_packet_create(m_data, size(), flags | ENET_PACKET_FLAG_NO_ALLOCATE);
+				last_packet->freeCallback = packetFreeCallback;
+				m_sent = true;
+			}
+			enet_host_broadcast(host, channel, last_packet);
 		}
 		
 		void release() {

@@ -66,7 +66,7 @@
 		<textbox id="game_user_name" multiline="false" terminal_mode="false" rect="0,0,200,28" value="My ship" readonly="true" backgroundcolor="#00111111" bordercolor="#FF00FF000" hoverbordercolor="#00000000" />
 		
 		<anchor pos="L,B">
-			<terminal rect="0,0,400,300" id="game_terminal" textwrap="true" />
+			<terminal rect="0,0,400,300" id="game_terminal" textwrap="true" log_colors="true" />
 		</anchor>
 	</widget>
 </gui>

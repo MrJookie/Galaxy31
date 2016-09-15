@@ -179,7 +179,6 @@ namespace Network {
 			case PacketType::update_objects: {
 				int num_objects = p.get_int("num_objects");
 				if(num_objects * sizeof(Object) > pkt->dataLength) return;
-				//Object* objs = (Object*)(pkt->data+sizeof(Packet::update_objects)); //????
 				Object* objs = (Object*)p.get_pair("objects").first;
 				
 				//cout << "updating objects " << p->num_objects << endl;
@@ -432,9 +431,9 @@ namespace NetworkChat {
 						
 						Terminal* tm_game_chat = (Terminal*)GameState::gui.GetControlById("game_terminal"); //move this?
 						if(p.get_int("message_type") == 0) {
-							tm_game_chat->WriteLog( p.get_string("from_username") + ": " + decrypted );
+							tm_game_chat->WriteLog( p.get_string("from_username") + ": " + decrypted + "^w" );
 						} else if(p.get_int("message_type") == 1) {
-							tm_game_chat->WriteLog( "^y[pm from " + p.get_string("from_username") + "]^w: " + decrypted );
+							tm_game_chat->WriteLog( "^y[pm from " + p.get_string("from_username") + "]^w: " + decrypted + "^w" );
 						}
 					} catch(...) {}
 				}
