@@ -228,7 +228,7 @@ void send_states() {
 	for(auto& p : players) {
 		for(auto& o : p.second->obj) {
 			obj[i] = o;
-			obj[i].SetId(p.second->user_id);
+			obj[i].SetId(p.second->id);
 			i++;
 		}
 		p.second->obj.clear();

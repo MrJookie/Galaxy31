@@ -80,7 +80,7 @@ void Object::CopyObjectState(Object &obj) {
 
 static std::chrono::high_resolution_clock::time_point first_tick = std::chrono::high_resolution_clock::now();
 void Object::UpdateTicks() {
-	m_ticks = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - first_tick).count();
+	m_ticks = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - first_tick).count();
 }
 
 glm::vec2 Object::local_to_world_coord(const glm::vec2& local_coord) {

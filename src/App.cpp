@@ -238,7 +238,7 @@ void App::init() {
 	}
 
     int skipMouseResolution = 0;
-
+	bool wait_for_packets = false;
     bool running = true;
 	bool isFiring = false;
     while(running) {
@@ -469,6 +469,13 @@ void App::init() {
 			// handle multiplayer states interpolation (this code should be moved elsewhere later)
 			for(auto& obj : GameState::ships) {
 				auto& p = obj.second;
+				// if(wait_for_packets) {
+					// if(p.second.size() > 5)
+						// wait_for_packets = false;
+					// break;
+				// }
+				// else if(p.second.size() < 2)
+					// wait_for_packets = true;
 				
 				while(p.second.size() > 1 && p.second.front().GetTicks() <= p.first->GetTicks()) {
 					// std::cout << "poping : " << p.second.size() << std::endl;
@@ -481,14 +488,17 @@ void App::init() {
 					p.second.pop();
 				}
 				
+				double dtime = GameState::deltaTime*1000000.0;
 				if(p.second.empty()) {
 					// cout << "processing\n";
 					((Object*)p.first)->Process();
 				} else {
-					// std::cout << "interpolating [" << p.second.size() << "] : " << (GameState::deltaTime * 1000.0) << "  (" << p.second.front().GetTicks() << ", " << p.first->GetTicks() << ")\n";
-					p.first->InterpolateToState(p.second.front(), (GameState::deltaTime*1000.0 / ((float)p.second.front().GetTicks() - (float)p.first->GetTicks()) ) );
+					double diff = p.second.front().GetTicks()+dtime - p.first->GetTicks();
+					// std::cout << "interpolating [" << p.second.size() << "] : " << (dtime) << "  (" << p.second.front().GetTicks() << ", " << p.first->GetTicks() << ") " << "diff: " << diff << "\n";
+					if(diff > dtime)
+						p.first->InterpolateToState(p.second.front(), dtime / diff );
 				}
-				p.first->AddTicks( std::round(GameState::deltaTime * 1000.0) );
+				p.first->AddTicks( dtime );
 				
 			}
 			

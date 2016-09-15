@@ -134,9 +134,6 @@ void Ship::Stabilizers() {
 	m_stabilizers_on = !m_stabilizers_on;
 }
 
-
-
-
 Ship::Chassis::Chassis() {}
 Ship::Chassis::Chassis(std::string _name, std::string _texture, std::string _skin) {
 	name = _name;

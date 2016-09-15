@@ -92,7 +92,7 @@ namespace Network {
 	void SendOurState() {
 		std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
 		
-		if(now - last_time_state_sent > std::chrono::milliseconds(10)) {
+		if(now - last_time_state_sent > std::chrono::milliseconds(15)) {
 			last_time_state_sent = now;
 		} else {
 			return;
@@ -178,16 +178,17 @@ namespace Network {
 			}
 			case PacketType::update_objects: {
 				int num_objects = p.get_int("num_objects");
-				if(num_objects * sizeof(Object) > pkt->dataLength) return;
 				Object* objs = (Object*)p.get_pair("objects").first;
 				
 				//cout << "updating objects " << p->num_objects << endl;
-				for(int i=0; i < p.get_int("num_objects"); i++) {
+				for(int i=0; i < num_objects; i++) {
 					Object &o = objs[i];
-					
-					if(GameState::player->GetId() == o.GetId()) continue;
-					
-					
+					if(GameState::player->GetId() == o.GetId())  {
+						
+						cout << "id: " << o.GetId() << endl;
+						continue;
+					}
+
 					if(GameState::ships.find(o.GetId()) == GameState::ships.end()) {
 						cout << "added new ship" << endl;
 						if(!chassis)
