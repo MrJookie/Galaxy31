@@ -52,21 +52,24 @@
 	<!-- lobby goes here -->
 	
 	<widget rect="0,0,100%,100%" id="game">
-		<anchor pos="rL+50,T+50">
-			<textbox id="game_debug" multiline="true" terminal_mode="false" rect="0,0,400,200" value=":)" />
+		<anchor pos="L,T">
+			<textbox id="game_user_name" multiline="false" terminal_mode="false" rect="0,0,200,28" value="My ship" readonly="true" backgroundcolor="#00111111" bordercolor="#FF00FF000" hoverbordercolor="#00000000" />
 		</anchor>
+		
+		<anchor pos="L,T+50%-270">
+			<textbox id="game_players_online" multiline="true" terminal_mode="false" rect="0,0,200,400" value="Players online" />
+		</anchor>
+		
+		<anchor pos="R,T">
+			<textbox id="game_debug" multiline="true" terminal_mode="false" rect="0,0,400,200" value="debug" />
+		</anchor>
+		
 		<anchor pos="R,B">
 			<canvas rect="0,0,250,250" id="game_minimap" grid="false" color="#FF0021FF" pixelsize="4" aligntogrid="false" grid_color="#FF220000" backgroundcolor="#00000000" bordercolor="#FF1228D1" hoverbordercolor="#FF1228D1" readonly="true" />
 		</anchor>
 		
-		<anchor pos="rL+50,T+50">
-			<textbox id="game_account" multiline="true" terminal_mode="false" rect="0,0,400,200" value=":)" />
-		</anchor>
-		
-		<textbox id="game_user_name" multiline="false" terminal_mode="false" rect="0,0,200,28" value="My ship" readonly="true" backgroundcolor="#00111111" bordercolor="#FF00FF000" hoverbordercolor="#00000000" />
-		
 		<anchor pos="L,B">
-			<terminal rect="0,0,400,300" id="game_terminal" textwrap="true" log_colors="true" />
+			<terminal rect="0,0,400,150" id="game_terminal" textwrap="true" log_colors="true" placeholder="Type message" />
 		</anchor>
 	</widget>
 </gui>

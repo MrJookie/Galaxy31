@@ -21,11 +21,17 @@ class Ship : public Object {
 		Ship(glm::vec2 position, float rotation, const Chassis& chassis);
 		~Ship();
 		
-		void Process();
+		//void Process();
 		void Process2();
 		void Draw();
 		void Fire();
 		void Stabilizers();
+		
+		//move to Object
+		void UpdateHullVertices(std::vector<glm::vec2>& hullVertices);
+		void RenderCollisionHull();
+		std::vector<glm::vec2> GetCollisionHull();
+		glm::vec4 CollisionHullColor = glm::vec4(1.0, 0.0, 1.0, 1.0);
 		
 		Object* GetObject();
 		//move here all account_user info
@@ -41,6 +47,7 @@ class Ship : public Object {
 		float m_engine_propulsion_coefficient;
 		bool m_stabilizers_on;
 		Sprite m_engine_propulsion;
+		std::vector<glm::vec2> m_hullVertices;
 };
 
 

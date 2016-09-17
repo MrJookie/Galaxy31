@@ -115,6 +115,11 @@ void App::init() {
     GameState::asset.LoadShader("sprite.vs", "sprite.fs");
     GameState::asset.LoadShader("shader1.vs", "shader1.fs");
     
+    /////////////////////////////////////////////////////load collision texture
+    std::vector<glm::vec2> collisionVertices;
+    collisionVertices = this->hullFromTexture("Assets/Textures/ship_01_skin_collision.png");
+
+    
     //gui
     GameState::gui = ng::GuiEngine(this->getWindowSize().x, this->getWindowSize().y);
 	//GameState::gui->SetSize(this->getWindowSize().x, this->getWindowSize().y);
@@ -233,7 +238,7 @@ void App::init() {
     for(int x = 0; x < 20; ++x) {
 		for(int y = 0; y < 20; y++) {
 			Ship* ship = new Ship({x*500, y*500}, 0.0, chassis);
-			ships.push_back(ship);
+			//ships.push_back(ship);
 		}
 	}
 
@@ -525,7 +530,10 @@ void App::init() {
 			}
 			
 			for(auto& ship : ships) {
-				//quadtree.AddObject(ship->GetObject());
+				quadtree.AddObject(ship->GetObject());
+				
+				ship->UpdateHullVertices(collisionVertices);
+				ship->RenderCollisionHull();
 			}
 			
 			// quadtree
@@ -539,6 +547,24 @@ void App::init() {
 			quadtree.QueryRectangle(ship.GetPosition().x - ship.GetSize().x/2, ship.GetPosition().y - ship.GetSize().y/2, ship.GetSize().x, ship.GetSize().y, nearObjects);
 			for(auto& object : nearObjects) {
 				quadtree.DrawRect(object.first->GetPosition().x - object.first->GetSize().x/2, object.first->GetPosition().y - object.first->GetSize().y/2, object.first->GetSize().x, object.first->GetSize().y, glm::vec4(1, 1, 1, 1));
+				
+				((Ship*)object.first)->CollisionHullColor = glm::vec4(1.0, 0.0, 1.0, 1.0);
+					
+				// check whether AABB of the objects intersect
+				if(ship.GetObject()->DoObjectsIntersect(object.first)) {
+					std::vector<glm::vec2> hullVerticesA = ship.GetCollisionHull();
+					std::vector<glm::vec2> hullVerticesB = ((Ship*)object.first)->GetCollisionHull();
+					
+					for(int a = 0; a < hullVerticesA.size() - 1; ++a) {
+						for(int b = 0; b < hullVerticesB.size() - 1; ++b) {
+							if(ship.GetObject()->DoLinesIntersect(hullVerticesA[a], hullVerticesA[a+1], hullVerticesB[b], hullVerticesB[b+1])) {
+								std::cout << "intersects!" << std::endl;
+								((Ship*)object.first)->CollisionHullColor = glm::vec4(0.0, 1.0, 0.0, 1.0);
+							}
+						}
+					}
+				}
+				
 			}
 			
 			quadtree.Draw();
@@ -547,9 +573,11 @@ void App::init() {
 			//
 			
 			ship.Draw();
+			ship.UpdateHullVertices(collisionVertices);
+			ship.RenderCollisionHull();
 			
 			TextBox* tb_game_user_name = (TextBox*)GameState::gui.GetControlById("game_user_name");
-			tb_game_user_name->SetText(GameState::user_name);
+			tb_game_user_name->SetText(std::to_string(GameState::user_id) + " | " + GameState::user_name);
 			//tb_game_user_name->SetRect(ship.GetPosition().x - ship.GetSize().x/2, ship.GetPosition().y - ship.GetSize().y/2, 200, 28);
 			
 			for(Projectile& projectile : GameState::projectiles) {
@@ -648,7 +676,7 @@ float App::getZoom() const {
 }
 
 bool App::TODOserver_doPassRestore(std::string user_email) {
-	//if email was not restored <10 mins ago, return true; else false;
+	//if email was not restored >10 mins ago, return true; else false;
 	
 	return true;
 }
@@ -664,4 +692,43 @@ void App::generate_RSA_keypair() {
 
 	publicKey.Save(CryptoPP::HexEncoder(new CryptoPP::StringSink(GameState::clientPublicKeyStr)).Ref());
 	privateKey.Save(CryptoPP::HexEncoder(new CryptoPP::StringSink(GameState::clientPrivateKeyStr)).Ref());
+}
+
+std::vector<glm::vec2> App::hullFromTexture(std::string fileName) {
+	std::vector<glm::vec2> orderedVertices;
+	std::map<double, glm::vec2> vertices;
+	
+	SDL_Surface* image = IMG_Load(fileName.c_str());
+	if(!image) {
+		throw std::string("Error loading image: ") + IMG_GetError();
+	}
+	
+	glm::vec2 texCenter(image->h / 2, image->w / 2);
+	
+	Uint32 *pixels = (Uint32 *)image->pixels;
+	
+	for(int x = 0; x < image->w; ++x) {
+		for(int y = 0; y < image->h; ++y) {
+			Uint32 color = pixels[(y * image->w) + x];
+			
+			int ca = (color >> 24) & 0xff;
+			int cb = (color >> 16) & 0xff;
+			int cg = (color >> 8) & 0xff;
+			int cr = color & 0xff;
+			
+			//magenta
+			if(cr == 255 && cg == 0 && cb == 255) {
+				double angleBetweenVectors = atan2(y - texCenter.y, x - texCenter.x);
+				vertices[angleBetweenVectors] = glm::vec2(x,y);
+			}
+		}
+	}
+	
+	SDL_FreeSurface(image);
+	
+	for(auto& v : vertices) {
+		orderedVertices.push_back(v.second);
+	}
+	
+	return orderedVertices;
 }

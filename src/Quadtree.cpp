@@ -13,18 +13,13 @@ Quadtree::Quadtree(int left, int right, int top, int down, unsigned int maxObjec
 Quadtree::~Quadtree() {}
 
 void Quadtree::DrawRect(int x, int y, int w, int h, glm::vec4 color) {
-	GLuint vao, vbo_position, vbo_color;
+	GLuint vao, vbo[2];
 	glGenVertexArrays(1, &vao);
 	
     glBindVertexArray(vao);
-    
-    glGenBuffers(1, &vbo_position);
-    glGenBuffers(1, &vbo_color);
-    
-    glBindVertexArray(0);
+    glGenBuffers(2, vbo);
     
 	glUseProgram(GameState::asset.GetShader("shader1.vs").id);
-	glBindVertexArray(vao);
 
     glm::mat4 modelMat;
     modelMat = glm::translate(modelMat, glm::vec3(glm::vec2(x,y), 0.0f));
@@ -48,12 +43,12 @@ void Quadtree::DrawRect(int x, int y, int w, int h, glm::vec4 color) {
 		 color.r, color.g, color.b, color.a,
 	};
    
-	glBindBuffer(GL_ARRAY_BUFFER, vbo_position);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(positions), positions, GL_STATIC_DRAW);
 	glEnableVertexAttribArray(0);    
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
 	
-	glBindBuffer(GL_ARRAY_BUFFER, vbo_color);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(colors), colors, GL_STATIC_DRAW);
 	glEnableVertexAttribArray(1);    
 	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
@@ -63,8 +58,7 @@ void Quadtree::DrawRect(int x, int y, int w, int h, glm::vec4 color) {
 	glBindVertexArray(0);
 	glUseProgram(0);
 	
-	glDeleteBuffers(1, &vbo_position);
-    glDeleteBuffers(1, &vbo_color);
+	glDeleteBuffers(2, vbo);
 
     glDeleteVertexArrays(1, &vao);
 }

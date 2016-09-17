@@ -27,6 +27,8 @@ class Object {
 		void SetRotationSpeed( float rotation_speed );
 		
 		void Accelerate(glm::vec2 acceleration);
+		bool DoObjectsIntersect(Object* obj);
+		bool DoLinesIntersect(glm::vec2 p1, glm::vec2 p2, glm::vec2 p3, glm::vec2 p4);
 		
 		virtual void Draw() {};
 		

@@ -5,6 +5,10 @@
 #include <chrono>
 #include <iostream>
 
+#include <vector>
+#include <glm/glm.hpp>
+#include <algorithm>
+
 using namespace ng;
 
 class App {
@@ -18,6 +22,7 @@ class App {
         void showFPS();
         
         bool TODOserver_doPassRestore(std::string user_email);
+        std::vector<glm::vec2> hullFromTexture(std::string fileName);
         
         void setWindowSize(glm::vec2 windowSize);
         void setScreenMousePosition(glm::vec2 screenMousePosition);

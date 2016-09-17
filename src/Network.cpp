@@ -1,20 +1,20 @@
 #include "Network.hpp"
 #include <enet/enet.h>
 #include <iostream>
-#include <cstring>
-#include "GameState.hpp"
 #include <chrono>
+#include "GameState.hpp"
 
 //gui
 #include "controls/TextBox.hpp"
 #include "controls/Terminal.hpp"
 
+#include "server/network.hpp"
+#include "Packet.hpp"
+
 using namespace ng;
 
 using std::cout;
 using std::endl;
-#include "server/network.hpp"
-#include "Packet.hpp"
 
 namespace Network {
 	ENetHost *client;
@@ -106,12 +106,6 @@ namespace Network {
 		obj->UpdateTicks();
 		memcpy(p.allocate("objects",sizeof(Object)), obj, sizeof(Object));
 		p.send(host, Channel::data, 0);
-		// int len = sizeof(Packet::update_objects) + sizeof(Object);
-		// ENetPacket* pkt = enet_packet_create(nullptr, len, 0);
-		// Packet::update_objects *p = new (pkt->data) Packet::update_objects;
-		// p->num_objects = 1;
-		// memcpy(pkt->data+sizeof(Packet::update_objects), obj, sizeof(Object));
-		// enet_peer_send(host, Channel::data, pkt);
 	}
 	
 	void SendAuthentication(std::string user_email, std::string user_password) {
@@ -185,7 +179,7 @@ namespace Network {
 					Object &o = objs[i];
 					if(GameState::player->GetId() == o.GetId())  {
 						
-						cout << "id: " << o.GetId() << endl;
+						//cout << "id: " << o.GetId() << endl;
 						continue;
 					}
 
@@ -207,37 +201,6 @@ namespace Network {
 				// cout << "ping: " << peer->roundTripTime << endl;
 				break;
 			}
-		/*
-			case PacketType::update_objects: {
-				Packet::update_objects *p = (Packet::update_objects *)pkt->data;
-				if(p->num_objects * sizeof(Object) > pkt->dataLength) return;
-				Object* objs = (Object*)(pkt->data+sizeof(Packet::update_objects));
-				//cout << "updating objects " << p->num_objects << endl;
-				for(int i=0; i < p->num_objects; i++) {
-					Object &o = objs[i];
-					
-					if(GameState::player->GetId() == o.GetId()) continue;
-					
-					
-					if(GameState::ships.find(o.GetId()) == GameState::ships.end()) {
-						cout << "added new ship" << endl;
-						if(!chassis)
-							chassis = new Ship::Chassis("main_ship", "ship_01_skin.png", "ship_01_skin.png");
-						Ship *s = new Ship({0,0}, 0, *chassis);
-						s->CopyObjectState(o);
-						GameState::ships[o.GetId()] = std::pair<Ship*, std::queue<Object>>(s, std::queue<Object>());
-					} else {
-						std::queue<Object> &q = GameState::ships[o.GetId()].second;
-						while(q.size() > max_queue)
-							q.pop();
-						
-						q.push(o);
-					}
-				}
-				// cout << "ping: " << peer->roundTripTime << endl;
-				break;
-			}
-			*/
 			case PacketType::authorize: {
 				GameState::user_id = p.get_int("user_id");
 				GameState::user_name = p.get_string("user_name");
@@ -245,10 +208,7 @@ namespace Network {
 				if(p.get_int("status_code") == 0) { //login ok after registration login
 					NetworkChat::connect("89.177.76.215", 54301); //connect to chat server
 					NetworkChat::SendChatLogin(GameState::user_id, GameState::user_name);
-					
-					TextBox* tb_game_account = (TextBox*)GameState::gui.GetControlById("game_account"); //move this?
-					tb_game_account->SetText("Logged in as: " + std::to_string(GameState::user_id) + " | " + GameState::user_name);
-					
+
 					GameState::activePage = "game";
 				} else if(p.get_int("status_code") == 1) {
 					TextBox* tb_register_status = (TextBox*)GameState::gui.GetControlById("register_status"); //move this?
@@ -261,9 +221,7 @@ namespace Network {
 					
 					GameState::activePage = "register";
 				} else if(p.get_int("status_code") == 3) { //login ok after just login ////REMOVE?
-					TextBox* tb_game_account = (TextBox*)GameState::gui.GetControlById("game_account"); //move this?
-					tb_game_account->SetText("Logged in as: " + std::to_string(GameState::user_id) + " | " + GameState::user_name);
-					
+	
 					GameState::activePage = "game";
 				} else if(p.get_int("status_code") == 4) {
 					TextBox* tb_login_status = (TextBox*)GameState::gui.GetControlById("login_status"); //move this?
