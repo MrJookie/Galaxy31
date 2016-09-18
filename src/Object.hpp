@@ -2,11 +2,10 @@
 #define OBJECT_HPP
 
 #include <glm/glm.hpp>
+#include <vector>
 
 class Object {
 	public:
-
-		
 		Object(glm::vec2 size = {0,0}, glm::vec2 position = {0,0}, float rotation = 0, glm::vec2 speed = {0,0}) : 
 			m_size(size), m_position(position), m_rotation(rotation), m_speed(speed) {}
 		~Object() {}
@@ -27,9 +26,10 @@ class Object {
 		void SetRotationSpeed( float rotation_speed );
 		
 		void Accelerate(glm::vec2 acceleration);
+		
 		bool DoObjectsIntersect(Object* obj);
 		bool DoLinesIntersect(glm::vec2 p1, glm::vec2 p2, glm::vec2 p3, glm::vec2 p4);
-		
+				
 		virtual void Draw() {};
 		
 		void Process(float dt = 0);

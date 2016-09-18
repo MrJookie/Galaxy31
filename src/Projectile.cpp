@@ -2,7 +2,8 @@
 #include <iostream>
 #include "GameState.hpp"
 
-Projectile::Projectile(const Asset::Texture& texture, glm::vec2 pos, glm::vec2 speed) : Object(glm::vec2(0), pos, 0, speed) {
+Projectile::Projectile(const Asset::Texture& texture, glm::vec2 pos, glm::vec2 speed) : SolidObject(glm::vec2(0), pos, 0, speed) {
+	
 	m_sprite.SetTexture(texture);
 	m_size = texture.size;
 	timer = 20;

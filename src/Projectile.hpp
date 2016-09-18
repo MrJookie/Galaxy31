@@ -1,11 +1,11 @@
 #ifndef PROJECTILE_HPP
 #define PROJECTILE_HPP
 
-#include "Object.hpp"
 #include "Asset.hpp"
 #include "Sprite.hpp"
+#include "SolidObject.hpp"
 
-class Projectile : public Object {
+class Projectile : public SolidObject {
 	public:
 		Projectile() {}
 		Projectile(const Projectile& projectile);

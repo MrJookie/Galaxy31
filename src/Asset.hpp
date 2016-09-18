@@ -50,6 +50,12 @@ class Asset {
 			//SDL_Surface* image;
 		};
 		
+		struct TextureHull {
+			std::string fileName;
+			glm::vec2 size;
+			std::vector<glm::vec2> vertices;
+		};
+		
 		struct Shader {
 			std::string fileName;
 			GLuint id;
@@ -57,6 +63,9 @@ class Asset {
 		
 		void LoadTexture(std::string fileName);
 		Texture GetTexture(std::string fileName);
+		
+		void LoadTextureHull(std::string fileName);
+		TextureHull GetTextureHull(std::string fileName);
 		
 		void LoadShader(std::string vertexShaderFile, std::string fragmentShaderFile, std::string geometryShaderFile = "");
 		Shader GetShader(std::string fileName);
@@ -74,6 +83,7 @@ class Asset {
 		GLuint readShader(std::string shaderFile, GLenum shaderType);
 		
 		std::unordered_map<std::string, Texture> m_textures;
+		std::unordered_map<std::string, TextureHull> m_textures_hull;
 		std::unordered_map<std::string, Shader> m_shaders;
 		std::unordered_map<std::string, Mix_Music*> m_musics;
 		std::unordered_map<std::string, Mix_Chunk*> m_sounds;

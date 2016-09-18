@@ -109,16 +109,13 @@ void App::init() {
     
     //load all textures here
     GameState::asset.LoadTexture("ship_01_skin.png");
+    GameState::asset.LoadTextureHull("ship_01_skin_collision.png");
+    
     GameState::asset.LoadTexture("propulsion.png");
 
     GameState::asset.LoadShader("background.vs", "background.fs");
     GameState::asset.LoadShader("sprite.vs", "sprite.fs");
     GameState::asset.LoadShader("shader1.vs", "shader1.fs");
-    
-    /////////////////////////////////////////////////////load collision texture
-    std::vector<glm::vec2> collisionVertices;
-    collisionVertices = this->hullFromTexture("Assets/Textures/ship_01_skin_collision.png");
-
     
     //gui
     GameState::gui = ng::GuiEngine(this->getWindowSize().x, this->getWindowSize().y);
@@ -307,7 +304,7 @@ void App::init() {
 					Ship* ship = new Ship(this->getWorldMousePosition(), 0.0, chassis);
 					ships.push_back(ship);
 					
-					//isFiring = true;
+					isFiring = true;
 				} else {
 					ship.Stabilizers();
 				}
@@ -469,7 +466,7 @@ void App::init() {
 			//
 
 			//Network::handle_events(5);
-			ship.Process2();
+			ship.Process();
 			
 			// handle multiplayer states interpolation (this code should be moved elsewhere later)
 			for(auto& obj : GameState::ships) {
@@ -530,9 +527,9 @@ void App::init() {
 			}
 			
 			for(auto& ship : ships) {
-				quadtree.AddObject(ship->GetObject());
+				quadtree.AddObject(ship);
 				
-				ship->UpdateHullVertices(collisionVertices);
+				ship->UpdateHullVertices(GameState::asset.GetTextureHull("ship_01_skin_collision.png").vertices);
 				ship->RenderCollisionHull();
 			}
 			
@@ -543,28 +540,27 @@ void App::init() {
 				object.first->Draw();
 			}
 			
+			ship.CollisionHullColor = glm::vec4(1.0, 0.0, 1.0, 1.0);
+			
 			std::unordered_map<Object*, Quadtree*> nearObjects;
 			quadtree.QueryRectangle(ship.GetPosition().x - ship.GetSize().x/2, ship.GetPosition().y - ship.GetSize().y/2, ship.GetSize().x, ship.GetSize().y, nearObjects);
 			for(auto& object : nearObjects) {
 				quadtree.DrawRect(object.first->GetPosition().x - object.first->GetSize().x/2, object.first->GetPosition().y - object.first->GetSize().y/2, object.first->GetSize().x, object.first->GetSize().y, glm::vec4(1, 1, 1, 1));
-				
-				((Ship*)object.first)->CollisionHullColor = glm::vec4(1.0, 0.0, 1.0, 1.0);
-					
-				// check whether AABB of the objects intersect
-				if(ship.GetObject()->DoObjectsIntersect(object.first)) {
+									
+				// check whether object's AABB intersect
+				if(ship.DoObjectsIntersect(object.first)) {
 					std::vector<glm::vec2> hullVerticesA = ship.GetCollisionHull();
-					std::vector<glm::vec2> hullVerticesB = ((Ship*)object.first)->GetCollisionHull();
+					std::vector<glm::vec2> hullVerticesB = ((SolidObject*)object.first)->GetCollisionHull();
 					
 					for(int a = 0; a < hullVerticesA.size() - 1; ++a) {
 						for(int b = 0; b < hullVerticesB.size() - 1; ++b) {
-							if(ship.GetObject()->DoLinesIntersect(hullVerticesA[a], hullVerticesA[a+1], hullVerticesB[b], hullVerticesB[b+1])) {
-								std::cout << "intersects!" << std::endl;
-								((Ship*)object.first)->CollisionHullColor = glm::vec4(0.0, 1.0, 0.0, 1.0);
+							if(ship.DoLinesIntersect(hullVerticesA[a], hullVerticesA[a+1], hullVerticesB[b], hullVerticesB[b+1])) {
+								//std::cout << "intersects!" << std::endl;
+								ship.CollisionHullColor = glm::vec4(0.0, 1.0, 0.0, 1.0);
 							}
 						}
 					}
 				}
-				
 			}
 			
 			quadtree.Draw();
@@ -573,7 +569,7 @@ void App::init() {
 			//
 			
 			ship.Draw();
-			ship.UpdateHullVertices(collisionVertices);
+			ship.UpdateHullVertices(GameState::asset.GetTextureHull("ship_01_skin_collision.png").vertices);
 			ship.RenderCollisionHull();
 			
 			TextBox* tb_game_user_name = (TextBox*)GameState::gui.GetControlById("game_user_name");
@@ -692,43 +688,4 @@ void App::generate_RSA_keypair() {
 
 	publicKey.Save(CryptoPP::HexEncoder(new CryptoPP::StringSink(GameState::clientPublicKeyStr)).Ref());
 	privateKey.Save(CryptoPP::HexEncoder(new CryptoPP::StringSink(GameState::clientPrivateKeyStr)).Ref());
-}
-
-std::vector<glm::vec2> App::hullFromTexture(std::string fileName) {
-	std::vector<glm::vec2> orderedVertices;
-	std::map<double, glm::vec2> vertices;
-	
-	SDL_Surface* image = IMG_Load(fileName.c_str());
-	if(!image) {
-		throw std::string("Error loading image: ") + IMG_GetError();
-	}
-	
-	glm::vec2 texCenter(image->h / 2, image->w / 2);
-	
-	Uint32 *pixels = (Uint32 *)image->pixels;
-	
-	for(int x = 0; x < image->w; ++x) {
-		for(int y = 0; y < image->h; ++y) {
-			Uint32 color = pixels[(y * image->w) + x];
-			
-			int ca = (color >> 24) & 0xff;
-			int cb = (color >> 16) & 0xff;
-			int cg = (color >> 8) & 0xff;
-			int cr = color & 0xff;
-			
-			//magenta
-			if(cr == 255 && cg == 0 && cb == 255) {
-				double angleBetweenVectors = atan2(y - texCenter.y, x - texCenter.x);
-				vertices[angleBetweenVectors] = glm::vec2(x,y);
-			}
-		}
-	}
-	
-	SDL_FreeSurface(image);
-	
-	for(auto& v : vertices) {
-		orderedVertices.push_back(v.second);
-	}
-	
-	return orderedVertices;
 }

@@ -32,6 +32,7 @@ cpp := 	\
 		src/App.cpp										\
 		src/Asset.cpp									\
 		src/Object.cpp									\
+		src/SolidObject.cpp								\
 		src/Camera.cpp									\
 		src/Sprite.cpp									\
 		src/Ship.cpp									\

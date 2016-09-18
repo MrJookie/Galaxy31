@@ -65,6 +65,58 @@ Asset::Texture Asset::GetTexture(std::string fileName) {
 	return m_textures[fileName];
 }
 
+void Asset::LoadTextureHull(std::string fileName) {
+	if(!m_textures_hull[fileName].fileName.length() > 0) {
+		SDL_Surface* image = IMG_Load((TEXTURE_PATH + fileName).c_str());
+		if(!image) {
+			throw std::string("Error loading image: ") + IMG_GetError();
+		}
+
+		std::vector<glm::vec2> orderedVertices;
+		std::map<double, glm::vec2> vertices;
+		
+		glm::vec2 texCenter(image->h / 2, image->w / 2);
+		
+		Uint32 *pixels = (Uint32 *)image->pixels;
+		
+		for(int x = 0; x < image->w; ++x) {
+			for(int y = 0; y < image->h; ++y) {
+				Uint32 color = pixels[(y * image->w) + x];
+				
+				int ca = (color >> 24) & 0xff;
+				int cb = (color >> 16) & 0xff;
+				int cg = (color >> 8) & 0xff;
+				int cr = color & 0xff;
+				
+				//magenta
+				if(cr == 255 && cg == 0 && cb == 255) {
+					double angleBetweenVectors = atan2(y - texCenter.y, x - texCenter.x);
+					vertices[angleBetweenVectors] = glm::vec2(x,y);
+				}
+			}
+		}
+		
+		for(auto& v : vertices) {
+			orderedVertices.push_back(v.second);
+		}
+		
+		m_textures_hull[fileName].fileName = fileName;
+		m_textures_hull[fileName].size = glm::vec2(image->w, image->h);
+		m_textures_hull[fileName].vertices = orderedVertices;
+		
+		SDL_FreeSurface(image);
+	}
+}
+
+Asset::TextureHull Asset::GetTextureHull(std::string fileName) {
+	auto texture_it = m_textures_hull.find(fileName);
+	if(texture_it == m_textures_hull.end()) {
+		LoadTextureHull(fileName);
+	}
+	
+	return m_textures_hull[fileName];
+}
+
 void Asset::LoadShader(std::string vertexShaderFile, std::string fragmentShaderFile, std::string geometryShaderFile) {
 	std::string vertex = std::string(SHADER_PATH) + vertexShaderFile;
 	std::string fragment = std::string(SHADER_PATH) + fragmentShaderFile;
