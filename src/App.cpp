@@ -2,6 +2,7 @@
 #include "Network.hpp"
 #include "GameState.hpp"
 #include "Quadtree.hpp"
+#include "Commands.hpp"
 #include "server/network.hpp"
 
 #include <sstream>
@@ -97,8 +98,13 @@ void App::init() {
     printf("GLSL:  %s\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
 
     bool toggleMouseRelative = false;
-    bool toggleFullscreen = true;
-    bool toggleWireframe = true;
+    bool toggleFullscreen = false;
+    bool toggleWireframe = false;
+    
+    int skipMouseResolution = 0;
+	bool wait_for_packets = false;
+    bool running = true;
+	bool isFiring = false;
 
     SDL_SetHintWithPriority(SDL_HINT_MOUSE_RELATIVE_MODE_WARP, "1", SDL_HINT_OVERRIDE);
     //SDL_SetWindowGrab(window, SDL_TRUE);
@@ -197,7 +203,8 @@ void App::init() {
 	bt_pass_restore_login.SubscribeEvent(Button::event::click, [&](Control* c) {
 		GameState::activePage = "login";
 	});
-
+	
+	/*
 	Terminal &tm_game_chat = *((Terminal*)GameState::gui.GetControlById("game_terminal"));
 	tm_game_chat.SubscribeEvent(Terminal::event::command, [&](Control* c) {
 		Terminal* t = (Terminal*)c;
@@ -223,6 +230,64 @@ void App::init() {
 			NetworkChat::SendChatMessage("", t->GetText());
 		}
 	});
+	*/
+	
+	Terminal &tm_game_chat = *((Terminal*)GameState::gui.GetControlById("game_terminal"));
+	tm_game_chat.SubscribeEvent(Terminal::event::command, [&](Control* c) {
+		Terminal* t = (Terminal*)c;
+		    
+		// commands
+		Command::AddCommand("w", [&](std::string nick, std::string message) -> int {
+			t->WriteLog("^p[pm to " + nick + "]^w: " + message + "^w");
+			NetworkChat::SendChatMessage(nick, message);
+		});
+		
+		Command::AddCommand("fullscreen", [&](std::vector<Arg> args) -> int {
+			toggleFullscreen = !toggleFullscreen;
+			        
+			if(toggleFullscreen) {
+				SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+
+				int w, h;
+				SDL_GetWindowSize(window, &w, &h);
+				this->setWindowSize(glm::vec2(w, h));
+
+				skipMouseResolution = 4;
+			} else {
+				SDL_SetWindowFullscreen(window, 0);
+				this->setWindowSize(m_initialWindowSize);
+
+				skipMouseResolution = 4;
+			}
+		});
+		
+		Command::AddCommand("wireframe", [&](std::vector<Arg> args) -> int {
+			toggleWireframe = !toggleWireframe;
+					
+			if(toggleWireframe) {
+				glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+			} else {
+				glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+			}
+		});
+		
+		Command::AddCommand("quit", [&](std::vector<Arg> args) -> int {
+			running = false;
+		});
+		
+		Command::AddCommand("clear", [&](std::vector<Arg> args) -> int {
+			t->ClearLog();
+		});
+		
+		if(t->GetText()[0] == '/') {
+			try {
+				Command::Execute(t->GetText().substr(1));
+			} catch(...) { std::cout << "command not found" << std::endl; }
+		} else {
+			t->WriteLog(GameState::user_name + ": " + t->GetText() + "^w");
+			NetworkChat::SendChatMessage("", t->GetText());
+		}
+	});
 		
 	Ship::Chassis chassis("main_ship", "ship_01_skin.png", "ship_01_skin.png");
     Ship ship(glm::vec2(0, 0), 0.0, chassis);
@@ -239,10 +304,6 @@ void App::init() {
 		}
 	}
 
-    int skipMouseResolution = 0;
-	bool wait_for_packets = false;
-    bool running = true;
-	bool isFiring = false;
     while(running) {
         this->loop();
 
@@ -256,47 +317,47 @@ void App::init() {
             } else if(e.type == SDL_KEYDOWN) {
 				if(!GameState::gui.GetActiveControl()) {
 					switch(e.key.keysym.sym) {
-					case SDLK_f: {
-						if(toggleFullscreen) {
-							SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
-
-							int w, h;
-							SDL_GetWindowSize(window, &w, &h);
-							this->setWindowSize(glm::vec2(w, h));
-
-							toggleFullscreen = false;
-						} else {
-							SDL_SetWindowFullscreen(window, 0);
-							//SDL_SetWindowDisplayMode(window, 0);
-
-							/*
-							int w, h;
-							SDL_GetWindowSize(window, &w, &h); //?
-							*/
-
-							this->setWindowSize(m_initialWindowSize);
-
-							toggleFullscreen = true;
-						}
-						
-						skipMouseResolution = 4;
-					}
-					break;
-
-					case SDLK_ESCAPE:
-						running = false;
+						case SDLK_ESCAPE:
+							running = false;
 						break;
+						/*
+						case SDLK_f: {
+							if(toggleFullscreen) {
+								SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
 
-					case SDLK_e: {
-						if(toggleWireframe) {
-							glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-							toggleWireframe = false;
-						} else {
-							glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-							toggleWireframe = true;
+								int w, h;
+								SDL_GetWindowSize(window, &w, &h);
+								this->setWindowSize(glm::vec2(w, h));
+
+								toggleFullscreen = false;
+							} else {
+								SDL_SetWindowFullscreen(window, 0);
+								//SDL_SetWindowDisplayMode(window, 0);
+
+								
+								//int w, h;
+								//SDL_GetWindowSize(window, &w, &h); //?
+
+								this->setWindowSize(m_initialWindowSize);
+
+								toggleFullscreen = true;
+							}
+							
+							skipMouseResolution = 4;
 						}
-					}
-					break;
+						break;
+						
+						case SDLK_e: {
+							if(toggleWireframe) {
+								glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+								toggleWireframe = false;
+							} else {
+								glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+								toggleWireframe = true;
+							}
+						}
+						break;
+						*/
 					}
 				}
             } else if(e.type == SDL_MOUSEBUTTONDOWN && GameState::gui.GetSelectedControl() == nullptr) {

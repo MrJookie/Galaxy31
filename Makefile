@@ -28,8 +28,9 @@ hpp :=	\
 		
 cpp := 	\
 		src/Main.cpp									\
-		src/GameState.cpp								\
 		src/App.cpp										\
+		src/Commands.cpp								\
+		src/GameState.cpp								\
 		src/Asset.cpp									\
 		src/Object.cpp									\
 		src/SolidObject.cpp								\
