@@ -104,6 +104,7 @@ namespace Network {
 		
 		Object* obj = GameState::player;
 		obj->UpdateTicks();
+		
 		memcpy(p.allocate("objects",sizeof(Object)), obj, sizeof(Object));
 		p.send(host, Channel::data, 0);
 	}

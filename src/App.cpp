@@ -598,7 +598,7 @@ void App::init() {
 			std::unordered_map<Object*, Quadtree*> drawObjects;
 			quadtree.QueryRectangle(ship.GetPosition().x - GameState::windowSize.x/2*GameState::zoom, ship.GetPosition().y - GameState::windowSize.y/2*GameState::zoom, GameState::windowSize.x*GameState::zoom, GameState::windowSize.y*GameState::zoom, drawObjects);
 			for(auto& object : drawObjects) {
-				object.first->Draw();
+				((SolidObject*)object.first)->Draw();
 			}
 			
 			ship.CollisionHullColor = glm::vec4(1.0, 0.0, 1.0, 1.0);
@@ -609,7 +609,7 @@ void App::init() {
 				quadtree.DrawRect(object.first->GetPosition().x - object.first->GetSize().x/2, object.first->GetPosition().y - object.first->GetSize().y/2, object.first->GetSize().x, object.first->GetSize().y, glm::vec4(1, 1, 1, 1));
 									
 				// check whether object's AABB intersect
-				if(ship.DoObjectsIntersect(object.first)) {
+				if(ship.DoObjectsIntersect((SolidObject*)object.first)) {
 					std::vector<glm::vec2> hullVerticesA = ship.GetCollisionHull();
 					std::vector<glm::vec2> hullVerticesB = ((SolidObject*)object.first)->GetCollisionHull();
 					

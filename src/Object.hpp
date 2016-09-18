@@ -27,10 +27,9 @@ class Object {
 		
 		void Accelerate(glm::vec2 acceleration);
 		
-		bool DoObjectsIntersect(Object* obj);
-		bool DoLinesIntersect(glm::vec2 p1, glm::vec2 p2, glm::vec2 p3, glm::vec2 p4);
+		
 				
-		virtual void Draw() {};
+		void Draw() {};
 		
 		void Process(float dt = 0);
 		unsigned int GetId() { return id; }
@@ -41,14 +40,14 @@ class Object {
 		void UpdateTicks();
 
 	protected:
-		unsigned int id;
+		uint32_t id;
 		
 		glm::vec2 m_size;
 		glm::vec2 m_position;
 		float m_rotation;
 		float m_rotation_speed;
 		glm::vec2 m_speed;
-		unsigned int m_ticks;
+		uint32_t m_ticks;
 		
 		glm::vec2 m_acceleration;
 		

@@ -34,7 +34,7 @@ tmp_bin := $(tmp_binaries)/win32/dlls
 
 link32bit := \
 		-L$(tmp_link)/ -L$(tmp_bin)  \
-		-Llibs/GUI -lgui -lSDL2_ttf \
+		-Llibs/GUI -lgui_win$(cpu_arch) -lSDL2_ttf \
 		 -lSDL2 -lSDL2_image -lSDL2_mixer \
 		-lglew32 -lopengl32 -limm32   \
 		-static-libgcc -static-libstdc++ -Wl,-subsystem,windows -mwindows -lmingw32 -Wl,-Bstatic -lstdc++ -lpthread -Wl,-Bdynamic \
@@ -59,7 +59,7 @@ obj := $(addprefix $(build)/, $(patsubst %.cpp,%.o,$(cpp)))
 
 exe := $(program_name).exe
 
-all: make_dirs libs/GUI/libgui.a extract_tmp_files $(exe)
+all: make_dirs libs/GUI/libgui_win$(cpu_arch).a extract_tmp_files $(exe)
 
 
 extract_tmp_files:
@@ -79,8 +79,8 @@ make_dirs:
 	@mkdir -p $(build)/src/
 	@mkdir -p $(release)
 	
-libs/GUI/libgui.a:
-	+make -C libs/GUI/ sdl_lib CXX=i686-w64-mingw32- CFLAGS="-I../ -I../glew -DGLEW_STATIC"
+libs/GUI/libgui_win$(cpu_arch).a:
+	+make -C libs/GUI/ sdl_lib CXX=i686-w64-mingw32- libout=libgui_win$(cpu_arch).a build=build/win$(cpu_arch) CFLAGS="-I../ -I../glew -DGLEW_STATIC"
 	
 .ONESHELL:
 $(exe): $(obj)

@@ -14,7 +14,7 @@ link64bit :=    -lSDL2 \
 				-L$(tmp_link) -lenet
 
 
-link := $(link64bit) -Llibs/GUI -lgui -lcryptopp
+link := $(link64bit) -Llibs/GUI -lgui -lcryptopp -s
 
 
 

@@ -25,7 +25,7 @@ enum Channel {
 };
 
 enum PacketType {
-	new_client,
+	new_client = 0,
 	update_objects,
 	new_ship,
 	authenticate,

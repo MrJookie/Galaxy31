@@ -20,7 +20,39 @@ void SolidObject::UpdateHullVertices(std::vector<glm::vec2> hullVertices) {
 std::vector<glm::vec2> SolidObject::GetCollisionHull() {
 	return m_hullVertices;
 }
+bool SolidObject::DoObjectsIntersect(SolidObject* obj) {
+	return !(m_position.x > obj->m_position.x + obj->m_size.x
+        || m_position.x+m_size.x < obj->m_position.x
+        || m_position.y > obj->m_position.y + obj->m_size.y
+        || m_position.y + m_size.y < obj->m_position.y);
+}
 
+bool SolidObject::DoLinesIntersect(glm::vec2 p1, glm::vec2 p2, glm::vec2 p3, glm::vec2 p4) {
+	float x1 = p1.x, x2 = p2.x, x3 = p3.x, x4 = p4.x;
+	float y1 = p1.y, y2 = p2.y, y3 = p3.y, y4 = p4.y;
+	 
+	float d = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+	if(d == 0) {
+		return false;
+	}
+	 
+	float pre = (x1*y2 - y1*x2), post = (x3*y4 - y3*x4);
+	float x = (pre * (x3 - x4) - (x1 - x2) * post) / d;
+	float y = (pre * (y3 - y4) - (y1 - y2) * post) / d;
+	 
+	if(x < std::min(x1, x2) || x > std::max(x1, x2) || x < std::min(x3, x4) || x > std::max(x3, x4)) {
+		return false;
+	}
+	
+	if(y < std::min(y1, y2) || y > std::max(y1, y2) || y < std::min(y3, y4) || y > std::max(y3, y4)) {
+		return false;
+	}
+
+	// point of intersection
+	//return glm::vec2(x, y);
+
+	return true;
+}
 void SolidObject::RenderCollisionHull() {
 	GLuint vao, vbo[2];
 	glGenVertexArrays(1, &vao);
