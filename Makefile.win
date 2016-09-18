@@ -17,11 +17,13 @@ cpp := 	\
 		src/Sprite.cpp									\
 		src/Ship.cpp									\
 		src/Object.cpp									\
+		src/SolidObject.cpp								\
 		src/GameState.cpp								\
 		src/Asset.cpp									\
 		src/Projectile.cpp								\
 		src/Network.cpp									\
 		src/Quadtree.cpp								\
+		src/Commands.cpp								\
 
 program_name := Galaxy31
 
@@ -35,11 +37,11 @@ link32bit := \
 		-Llibs/GUI -lgui -lSDL2_ttf \
 		 -lSDL2 -lSDL2_image -lSDL2_mixer \
 		-lglew32 -lopengl32 -limm32   \
-		-static-libgcc -Wl,-subsystem,windows -mwindows -lmingw32 -Wl,-Bstatic -lstdc++ -lpthread -Wl,-Bdynamic \
+		-static-libgcc -static-libstdc++ -Wl,-subsystem,windows -mwindows -lmingw32 -Wl,-Bstatic -lstdc++ -lpthread -Wl,-Bdynamic \
 		-Llibs/enet-1.3.13 \
 		-lenet_w32 \
 		-lws2_32 \
-		-lwinmm
+		-lwinmm -lcryptopp
 
 link := $(link$(cpu_arch)bit)
 

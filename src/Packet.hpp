@@ -15,6 +15,10 @@ void packetFreeCallback(ENetPacket* pkt) {
 class Packet {
 	// num_keys, keys_offset, data..., keys
 	private:
+		static constexpr unsigned int hash(const char *s, int off = 0) {
+			return s[off] ? (hash(s, off+(s[off+1] == '_' ? 2 : 1))*33) ^ s[off] : 5381;
+		}
+		
 		using key_type = unsigned short;
 		using size_type = unsigned short;
 		size_type m_size;
@@ -145,7 +149,7 @@ class Packet {
 		size_t allocated_size() { return m_allocated_size; }
 		
 		std::pair<char*,int> get_pair(const std::string& key) {
-			auto it = m_offsets.find(std::hash<std::string>{}(key));
+			auto it = m_offsets.find(hash(key.c_str()));
 			if(it != m_offsets.end())
 				return std::make_pair((char*)&m_data[it->second.first], (int)it->second.second);
 			else
@@ -178,7 +182,7 @@ class Packet {
 		char* allocate(const std::string& key, size_type size) {
 			if(m_sent || m_readonly) return 0;
 			alloc(size);
-			m_offsets[std::hash<std::string>{}(key)] = std::make_pair(m_size, size);
+			m_offsets[hash(key.c_str())] = std::make_pair(m_size, size);
 			int ofs = m_size;
 			m_size += size;
 			m_keys_offset = 0;

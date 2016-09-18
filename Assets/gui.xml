@@ -69,7 +69,7 @@
 		</anchor>
 		
 		<anchor pos="L,B">
-			<terminal rect="0,0,400,150" id="game_terminal" textwrap="true" log_colors="true" placeholder="Type message" log_bordercolor="#00000000" log_backgroundcolor="#00000000" log_hoverbordercolor="#00000000" />
+			<terminal rect="0,0,400,150" id="game_terminal" textwrap="true" log_colors="true" placeholder="Type message" log_bordercolor="#00000000" log_backgroundcolor="#00000000" cursor_blinking_rate="30" log_hoverbordercolor="#00000000" />
 		</anchor>
 	</widget>
 </gui>
