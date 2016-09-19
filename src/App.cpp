@@ -117,6 +117,9 @@ void App::init() {
     GameState::asset.LoadTexture("ship_01_skin.png");
     GameState::asset.LoadTextureHull("ship_01_skin_collision.png");
     
+    //(projectile.png loads on GetTexture in Ship.cpp)
+    GameState::asset.LoadTextureHull("projectile_collision.png");
+    
     GameState::asset.LoadTexture("propulsion.png");
 
     GameState::asset.LoadShader("background.vs", "background.fs");
@@ -295,14 +298,15 @@ void App::init() {
     
     Quadtree quadtree( -GameState::worldSize.x, GameState::worldSize.x, -GameState::worldSize.y, GameState::worldSize.x, 6 ) ;
     
+    /*
     std::vector<Ship*> ships;
-
     for(int x = 0; x < 20; ++x) {
 		for(int y = 0; y < 20; y++) {
-			Ship* ship = new Ship({x*500, y*500}, 0.0, chassis);
-			//ships.push_back(ship);
+			Ship* ship = new Ship({x*1000, y*1000}, 0.0, chassis);
+			ships.push_back(ship);
 		}
 	}
+	*/
 
     while(running) {
         this->loop();
@@ -362,8 +366,8 @@ void App::init() {
 				}
             } else if(e.type == SDL_MOUSEBUTTONDOWN && GameState::gui.GetSelectedControl() == nullptr) {
 				if(e.button.button == SDL_BUTTON_LEFT) {
-					Ship* ship = new Ship(this->getWorldMousePosition(), 0.0, chassis);
-					ships.push_back(ship);
+					//Ship* ship = new Ship(this->getWorldMousePosition(), 0.0, chassis);
+					//ships.push_back(ship);
 					
 					isFiring = true;
 				} else {
@@ -566,14 +570,6 @@ void App::init() {
 			}
 			
 			if(isFiring) ship.Fire();
-			
-			for(auto it = GameState::projectiles.begin(); it != GameState::projectiles.end(); it++) {
-				it->Process();
-				if(it->IsDead()) {
-					it = GameState::projectiles.erase(it);
-					if(it == GameState::projectiles.end()) break;
-				}
-			}
 
 			GameState::camera.SetPosition( glm::vec3(ship.GetPosition().x, ship.GetPosition().y, 0) );
 			glm::mat4 projection = glm::ortho(-(float)this->getWindowSize().x*this->getZoom()*0.5, (float)this->getWindowSize().x*this->getZoom()*0.5, (float)this->getWindowSize().y*this->getZoom()*0.5, -(float)this->getWindowSize().y*this->getZoom()*0.5);
@@ -583,22 +579,74 @@ void App::init() {
 			
 			Network::SendOurState();
 			
+			for(auto& projectile : GameState::projectiles) {
+				quadtree.AddObject(&projectile);
+				
+				projectile.UpdateHullVertices(GameState::asset.GetTextureHull("projectile_collision.png").vertices);
+				projectile.RenderCollisionHull();
+			}
+			
+			for(auto& obj : GameState::ships) {
+				quadtree.AddObject(obj.second.first);
+			}
+			
+			for(auto& obj : GameState::ships) {
+				obj.second.first->CollisionHullColor = glm::vec4(1.0, 0.0, 1.0, 1.0);
+			
+				std::unordered_map<Object*, Quadtree*> nearObjects;
+				quadtree.QueryRectangle(obj.second.first->GetPosition().x - obj.second.first->GetSize().x/2, obj.second.first->GetPosition().y - obj.second.first->GetSize().y/2, obj.second.first->GetSize().x, obj.second.first->GetSize().y, nearObjects);
+				for(auto& object : nearObjects) {
+					if((SolidObject*)obj.second.first != (SolidObject*)object.first) {
+						//quadtree.DrawRect(object.first->GetPosition().x - object.first->GetSize().x/2, object.first->GetPosition().y - object.first->GetSize().y/2, object.first->GetSize().x, object.first->GetSize().y, glm::vec4(1, 1, 1, 1));
+						
+						if(obj.second.first->Collides((SolidObject*)object.first)) {
+							std::cout << "collides!" << std::endl;
+							obj.second.first->CollisionHullColor = glm::vec4(0.0, 1.0, 0.0, 1.0);
+						}
+					}
+				}
+			}
+			
 			for(auto& obj : GameState::ships) {
 				obj.second.first->Draw();
+				
+				obj.second.first->UpdateHullVertices(GameState::asset.GetTextureHull("ship_01_skin_collision.png").vertices);
+				obj.second.first->RenderCollisionHull();
+			}
+			
+			/*
+			for(auto& ship : ships) {
+				quadtree.AddObject(ship);
+			}
+			
+			for(const auto& ship : ships) {
+				ship->CollisionHullColor = glm::vec4(1.0, 0.0, 1.0, 1.0);
+			
+				std::unordered_map<Object*, Quadtree*> nearObjects;
+				quadtree.QueryRectangle(ship->GetPosition().x - ship->GetSize().x/2, ship->GetPosition().y - ship->GetSize().y/2, ship->GetSize().x, ship->GetSize().y, nearObjects);
+				for(auto& object : nearObjects) {
+					if((SolidObject*)ship != (SolidObject*)object.first) {
+						//quadtree.DrawRect(object.first->GetPosition().x - object.first->GetSize().x/2, object.first->GetPosition().y - object.first->GetSize().y/2, object.first->GetSize().x, object.first->GetSize().y, glm::vec4(1, 1, 1, 1));
+						
+						if(ship->Collides((SolidObject*)object.first)) {
+							//std::cout << "collides!" << std::endl;
+							ship->CollisionHullColor = glm::vec4(0.0, 1.0, 0.0, 1.0);
+						}
+					}
+				}
 			}
 			
 			for(auto& ship : ships) {
-				quadtree.AddObject(ship);
-				
 				ship->UpdateHullVertices(GameState::asset.GetTextureHull("ship_01_skin_collision.png").vertices);
 				ship->RenderCollisionHull();
 			}
+			*/
 			
 			// quadtree
 			std::unordered_map<Object*, Quadtree*> drawObjects;
 			quadtree.QueryRectangle(ship.GetPosition().x - GameState::windowSize.x/2*GameState::zoom, ship.GetPosition().y - GameState::windowSize.y/2*GameState::zoom, GameState::windowSize.x*GameState::zoom, GameState::windowSize.y*GameState::zoom, drawObjects);
 			for(auto& object : drawObjects) {
-				((SolidObject*)object.first)->Draw();
+				object.first->Draw();
 			}
 			
 			ship.CollisionHullColor = glm::vec4(1.0, 0.0, 1.0, 1.0);
@@ -606,20 +654,12 @@ void App::init() {
 			std::unordered_map<Object*, Quadtree*> nearObjects;
 			quadtree.QueryRectangle(ship.GetPosition().x - ship.GetSize().x/2, ship.GetPosition().y - ship.GetSize().y/2, ship.GetSize().x, ship.GetSize().y, nearObjects);
 			for(auto& object : nearObjects) {
-				quadtree.DrawRect(object.first->GetPosition().x - object.first->GetSize().x/2, object.first->GetPosition().y - object.first->GetSize().y/2, object.first->GetSize().x, object.first->GetSize().y, glm::vec4(1, 1, 1, 1));
-									
-				// check whether object's AABB intersect
-				if(ship.DoObjectsIntersect((SolidObject*)object.first)) {
-					std::vector<glm::vec2> hullVerticesA = ship.GetCollisionHull();
-					std::vector<glm::vec2> hullVerticesB = ((SolidObject*)object.first)->GetCollisionHull();
+				if((SolidObject*)&ship != (SolidObject*)object.first) {
+					//quadtree.DrawRect(object.first->GetPosition().x - object.first->GetSize().x/2, object.first->GetPosition().y - object.first->GetSize().y/2, object.first->GetSize().x, object.first->GetSize().y, glm::vec4(1, 1, 1, 1));
 					
-					for(int a = 0; a < hullVerticesA.size() - 1; ++a) {
-						for(int b = 0; b < hullVerticesB.size() - 1; ++b) {
-							if(ship.DoLinesIntersect(hullVerticesA[a], hullVerticesA[a+1], hullVerticesB[b], hullVerticesB[b+1])) {
-								//std::cout << "intersects!" << std::endl;
-								ship.CollisionHullColor = glm::vec4(0.0, 1.0, 0.0, 1.0);
-							}
-						}
+					if(ship.Collides((SolidObject*)object.first)) {
+						std::cout << "collides!" << std::endl;
+						ship.CollisionHullColor = glm::vec4(0.0, 1.0, 0.0, 1.0);
 					}
 				}
 			}
@@ -652,6 +692,14 @@ void App::init() {
 				"Quadtree::GetObjects: " + std::to_string((nearObjects.size()))
 			);
 			tb_debug->SetText(debugString);
+		}
+	
+		for(auto it = GameState::projectiles.begin(); it != GameState::projectiles.end(); it++) {
+			it->Process();
+			if(it->IsDead()) {
+				//it = GameState::projectiles.erase(it);
+				//if(it == GameState::projectiles.end()) break;
+			}
 		}
         
         GameState::gui.Render();

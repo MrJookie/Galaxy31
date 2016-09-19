@@ -25,8 +25,11 @@ class SolidObject : public Object {
 		void RenderCollisionHull();
 		std::vector<glm::vec2> GetCollisionHull();
 		glm::vec4 CollisionHullColor = glm::vec4(1.0, 0.0, 1.0, 1.0);
+		
 		bool DoObjectsIntersect(SolidObject* obj);
 		bool DoLinesIntersect(glm::vec2 p1, glm::vec2 p2, glm::vec2 p3, glm::vec2 p4);
+		bool Collides(SolidObject* obj);
+		
 		std::vector<glm::vec2> m_hullVertices;
 		
 	private:

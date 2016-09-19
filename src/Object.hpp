@@ -26,9 +26,7 @@ class Object {
 		void SetRotationSpeed( float rotation_speed );
 		
 		void Accelerate(glm::vec2 acceleration);
-		
-		
-				
+
 		void Draw() {};
 		
 		void Process(float dt = 0);

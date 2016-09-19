@@ -53,6 +53,7 @@ bool SolidObject::DoLinesIntersect(glm::vec2 p1, glm::vec2 p2, glm::vec2 p3, glm
 
 	return true;
 }
+
 void SolidObject::RenderCollisionHull() {
 	GLuint vao, vbo[2];
 	glGenVertexArrays(1, &vao);
@@ -91,4 +92,31 @@ void SolidObject::RenderCollisionHull() {
     glDeleteBuffers(2, vbo);
 
     glDeleteVertexArrays(1, &vao);
+}
+
+bool SolidObject::Collides(SolidObject* obj) {
+	// check whether object's AABB intersect
+	if(this->DoObjectsIntersect(obj)) {
+		std::vector<glm::vec2> hullVerticesA = this->GetCollisionHull();
+		std::vector<glm::vec2> hullVerticesB = obj->GetCollisionHull();
+		int vertsNumA = hullVerticesA.size();
+		int vertsNumB = hullVerticesB.size();
+		
+		if(vertsNumA > 0 && vertsNumB > 0) {
+			for(int a = 0; a < vertsNumA - 1; ++a) {
+				for(int b = 0; b < vertsNumB - 1; ++b) {
+					if(this->DoLinesIntersect(hullVerticesA[a], hullVerticesA[a+1], hullVerticesB[b], hullVerticesB[b+1])) {
+						return true;
+					}					
+				}
+			}
+			
+			//connect last vertex with first one
+			if(this->DoLinesIntersect(hullVerticesA[vertsNumA-1], hullVerticesA[0], hullVerticesB[vertsNumB-1], hullVerticesB[0])) {
+				return true;
+			}
+		}
+	}
+	
+	return false;
 }
