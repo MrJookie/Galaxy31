@@ -90,8 +90,13 @@ glm::vec2 Object::local_to_world_coord(const glm::vec2& local_coord) {
 	// A*cos(x + r) = (A*cos(x))cos(r) - (A*sin(x))sin(r)
 	// A*sin(x + r) = (A*sin(x))cos(r) + (A*cos(x))sin(r)
 	
-	global_coord.x = (local_coord.x * c - local_coord.y * s) + m_position.x + m_size.x*0.5;
-	global_coord.y = (local_coord.y * c + local_coord.x * s) + m_position.y + m_size.y*0.5;
+	/*
+	 cos  -sin
+	 sin  cos
+	*/
+	
+	global_coord.x = (local_coord.x * c - local_coord.y * s) + m_position.x + m_size.x*0.5f;
+	global_coord.y = (local_coord.y * c + local_coord.x * s) + m_position.y + m_size.y*0.5f;
 	return global_coord;
 }
 

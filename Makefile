@@ -27,9 +27,11 @@ includes := -Ilibs 				 \
 hpp :=	\
 		
 cpp := 	\
+		libs/commands/commands.cpp						\
+		libs/commands/bind.cpp							\
+		\
 		src/Main.cpp									\
 		src/App.cpp										\
-		src/Commands.cpp								\
 		src/GameState.cpp								\
 		src/Asset.cpp									\
 		src/Object.cpp									\
@@ -40,7 +42,7 @@ cpp := 	\
 		src/Projectile.cpp								\
 		src/Network.cpp									\
 		src/Quadtree.cpp								\
-
+		\
 
 release := release
 
@@ -81,6 +83,7 @@ clean:
 make_dirs:
 	@mkdir -p $(build)
 	@mkdir -p $(build)/src/
+	@mkdir -p $(build)/libs/commands
 
 clean_gui:
 	cd libs/GUI/ && make clean

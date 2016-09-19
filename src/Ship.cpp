@@ -55,9 +55,12 @@ void Ship::Process() {
 	while(angle_to < -180) angle_to += 360;
 
 	float angle_speed = 0;
-	const float angle_thresshold = 2.0f;
+	const float angle_thresshold = 10.0f;
 	if(angle_to > angle_thresshold) angle_speed = m_rotation_speed_coefficient;
 	else if(angle_to < -angle_thresshold) angle_speed = -m_rotation_speed_coefficient;
+	else {
+		this->SetRotation( angle+90.0f );
+	}
 	this->SetRotationSpeed( angle_speed );
 	
 	const Uint8* state = SDL_GetKeyboardState(NULL);
@@ -125,8 +128,12 @@ void Ship::ProcessOLD() {
 */
 
 void Ship::Fire() {
-	glm::vec2 world_coord = local_to_world_coord(glm::vec2(0, -m_size.y*0.5));
-	Projectile projectile(GameState::asset.GetTexture("projectile.png"), world_coord, glm::normalize(world_coord - GetPosition())*1000.0f + m_speed);
+	const Asset::Texture& texture = GameState::asset.GetTexture("projectile.png");
+	glm::vec2 world_coord = local_to_world_coord(glm::vec2(0-texture.size.x*0.5f+2, -m_size.y*0.5f-texture.size.y*0.5f-3));
+	world_coord.x -= texture.size.x*0.5f;
+	world_coord.y -= texture.size.y*0.5f;
+	Projectile projectile(texture, world_coord, glm::normalize(world_coord - GetPosition())*1000.0f + m_speed);
+	
 	projectile.SetAcceleration(m_acceleration);
 	projectile.SetRotation(GetRotation());
 	GameState::projectiles.push_back(projectile);

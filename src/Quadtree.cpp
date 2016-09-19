@@ -94,9 +94,10 @@ void Quadtree::Clear() {
 	m_objects.clear();
 
 	for(auto& child : m_children) {
-		//child->Clear();
 		child.reset();
 	}
+	
+	m_children.clear();
 	
 	m_isLeaf = true;
 }

@@ -2,10 +2,13 @@
 #include "Network.hpp"
 #include "GameState.hpp"
 #include "Quadtree.hpp"
-#include "Commands.hpp"
+#include "commands/commands.hpp"
+#include "commands/bind.hpp"
 #include "server/network.hpp"
 
 #include <sstream>
+
+
 
 App::App() {
 	m_initialWindowSize = glm::vec2(1024, 768);
@@ -39,6 +42,8 @@ App::~App() {
 }
 
 void App::init() {
+	Bind bind;
+	
     Network::initialize();
     NetworkChat::initialize();
     Network::connect("89.177.76.215", 1234);
@@ -236,59 +241,61 @@ void App::init() {
 	*/
 	
 	Terminal &tm_game_chat = *((Terminal*)GameState::gui.GetControlById("game_terminal"));
+	
+	// commands
+	Command::AddCommand("w", [&](std::string nick, std::string message) -> int {
+		tm_game_chat.WriteLog("^p[pm to " + nick + "]^w: " + message + "^w");
+		NetworkChat::SendChatMessage(nick, message);
+	});
+	
+	Command::AddCommand("fullscreen", [&](std::vector<Arg> args) -> int {
+		toggleFullscreen = !toggleFullscreen;
+				
+		if(toggleFullscreen) {
+			SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+
+			int w, h;
+			SDL_GetWindowSize(window, &w, &h);
+			this->setWindowSize(glm::vec2(w, h));
+
+			skipMouseResolution = 4;
+		} else {
+			SDL_SetWindowFullscreen(window, 0);
+			this->setWindowSize(m_initialWindowSize);
+
+			skipMouseResolution = 4;
+		}
+	});
+	
+	Command::AddCommand("wireframe", [&](std::vector<Arg> args) -> int {
+		toggleWireframe = !toggleWireframe;
+				
+		if(toggleWireframe) {
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		} else {
+			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		}
+	});
+	
+	Command::AddCommand("quit", [&](std::vector<Arg> args) -> int {
+		running = false;
+	});
+	
+	Command::AddCommand("clear", [&](std::vector<Arg> args) -> int {
+		tm_game_chat.ClearLog();
+	});
+	
 	tm_game_chat.SubscribeEvent(Terminal::event::command, [&](Control* c) {
 		Terminal* t = (Terminal*)c;
 		    
-		// commands
-		Command::AddCommand("w", [&](std::string nick, std::string message) -> int {
-			t->WriteLog("^p[pm to " + nick + "]^w: " + message + "^w");
-			NetworkChat::SendChatMessage(nick, message);
-		});
 		
-		Command::AddCommand("fullscreen", [&](std::vector<Arg> args) -> int {
-			toggleFullscreen = !toggleFullscreen;
-			        
-			if(toggleFullscreen) {
-				SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
-
-				int w, h;
-				SDL_GetWindowSize(window, &w, &h);
-				this->setWindowSize(glm::vec2(w, h));
-
-				skipMouseResolution = 4;
-			} else {
-				SDL_SetWindowFullscreen(window, 0);
-				this->setWindowSize(m_initialWindowSize);
-
-				skipMouseResolution = 4;
-			}
-		});
-		
-		Command::AddCommand("wireframe", [&](std::vector<Arg> args) -> int {
-			toggleWireframe = !toggleWireframe;
-					
-			if(toggleWireframe) {
-				glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-			} else {
-				glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-			}
-		});
-		
-		Command::AddCommand("quit", [&](std::vector<Arg> args) -> int {
-			running = false;
-		});
-		
-		Command::AddCommand("clear", [&](std::vector<Arg> args) -> int {
-			t->ClearLog();
-		});
-		
-		if(t->GetText()[0] == '/') {
+		if(t->GetLastCommand()[0] == '/') {
 			try {
-				Command::Execute(t->GetText().substr(1));
+				Command::Execute(t->GetLastCommand().substr(1));
 			} catch(...) { std::cout << "command not found" << std::endl; }
 		} else {
-			t->WriteLog(GameState::user_name + ": " + t->GetText() + "^w");
-			NetworkChat::SendChatMessage("", t->GetText());
+			t->WriteLog(GameState::user_name + ": " + t->GetLastCommand() + "^w");
+			NetworkChat::SendChatMessage("", t->GetLastCommand());
 		}
 	});
 		
@@ -307,23 +314,35 @@ void App::init() {
 		}
 	}
 	*/
-
+	Command::LoadFromFile("galaxy31.cfg");
     while(running) {
         this->loop();
 
         SDL_Event e;
 
         while(SDL_PollEvent(&e)) {
-            GameState::gui.OnEvent(e);
+			if(e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_TAB && GameState::gui.GetSelectedWidget() == &tm_game_chat) {
+				Terminal &tm_game_chat = *((Terminal*)GameState::gui.GetControlById("game_terminal"));
+				std::string text = tm_game_chat.GetText();
+				text += Command::Complete(text, text.size()-1);
+				if(!text.empty())
+				tm_game_chat.SetText(text);
+			} else {
+				GameState::gui.OnEvent(e);
+			}
 
             if(e.type == SDL_QUIT) {
                 running = false;
             } else if(e.type == SDL_KEYDOWN) {
 				if(!GameState::gui.GetActiveControl()) {
+					bind.OnEvent(e);
 					switch(e.key.keysym.sym) {
 						case SDLK_ESCAPE:
+							bind.SaveKeys("galaxy31.cfg");
+							Command::SaveVarariablesToFile("galaxy31.cfg");
 							running = false;
 						break;
+						
 						/*
 						case SDLK_f: {
 							if(toggleFullscreen) {
@@ -365,6 +384,7 @@ void App::init() {
 					}
 				}
             } else if(e.type == SDL_MOUSEBUTTONDOWN && GameState::gui.GetSelectedControl() == nullptr) {
+				
 				if(e.button.button == SDL_BUTTON_LEFT) {
 					//Ship* ship = new Ship(this->getWorldMousePosition(), 0.0, chassis);
 					//ships.push_back(ship);
@@ -646,7 +666,7 @@ void App::init() {
 			std::unordered_map<Object*, Quadtree*> drawObjects;
 			quadtree.QueryRectangle(ship.GetPosition().x - GameState::windowSize.x/2*GameState::zoom, ship.GetPosition().y - GameState::windowSize.y/2*GameState::zoom, GameState::windowSize.x*GameState::zoom, GameState::windowSize.y*GameState::zoom, drawObjects);
 			for(auto& object : drawObjects) {
-				object.first->Draw();
+				((SolidObject*)object.first)->Draw();
 			}
 			
 			ship.CollisionHullColor = glm::vec4(1.0, 0.0, 1.0, 1.0);
@@ -692,15 +712,16 @@ void App::init() {
 				"Quadtree::GetObjects: " + std::to_string((nearObjects.size()))
 			);
 			tb_debug->SetText(debugString);
-		}
-	
-		for(auto it = GameState::projectiles.begin(); it != GameState::projectiles.end(); it++) {
-			it->Process();
-			if(it->IsDead()) {
-				//it = GameState::projectiles.erase(it);
-				//if(it == GameState::projectiles.end()) break;
+			
+			for(auto it = GameState::projectiles.begin(); it != GameState::projectiles.end(); it++) {
+				it->Process();
+				if(it->IsDead()) {
+					it = GameState::projectiles.erase(it);
+					if(it == GameState::projectiles.end()) break;
+				}
 			}
 		}
+	
         
         GameState::gui.Render();
 

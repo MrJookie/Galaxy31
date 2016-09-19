@@ -34,3 +34,4 @@ release
 imgui.ini
 *.orig
 *.dia~
+*.cfg

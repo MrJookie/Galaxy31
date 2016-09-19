@@ -7,7 +7,7 @@
 class Object {
 	public:
 		Object(glm::vec2 size = {0,0}, glm::vec2 position = {0,0}, float rotation = 0, glm::vec2 speed = {0,0}) : 
-			m_size(size), m_position(position), m_rotation(rotation), m_speed(speed) {}
+			m_size(size), m_position(position), m_rotation(rotation), m_speed(speed), m_rotation_speed(0) {}
 		~Object() {}
 
 		void SetSize(glm::vec2 size);
