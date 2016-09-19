@@ -5,9 +5,6 @@
 [submodule "libs/EventSystem"]
 	path = libs/EventSystem
 	url = https://github.com/112212/event-system
-[submodule "libs/--force"]
-	path = libs/--force
-	url = https://github.com/112212/commands
 [submodule "libs/commands"]
 	path = libs/commands
 	url = https://github.com/112212/commands
