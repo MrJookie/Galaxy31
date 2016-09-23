@@ -8,6 +8,7 @@
 #include <vector>
 #include <glm/glm.hpp>
 #include <algorithm>
+#include "commands/bind.hpp"
 
 using namespace ng;
 
@@ -20,6 +21,7 @@ class App {
         void init();
         void loop(); 
         void showFPS();
+        
         
         bool TODOserver_doPassRestore(std::string user_email);
         
@@ -57,6 +59,7 @@ class App {
         std::chrono::high_resolution_clock::time_point m_chrono_start;
         double m_chrono_elapsed;
         
+        Bind m_bind;
         SDL_Window* window;
         SDL_GLContext glContext;
 };

@@ -20,6 +20,7 @@ namespace GameState {
 	
 	std::map< unsigned int, std::pair<Ship*, std::queue<Object>> > ships;
 	
+	bool input_taken;
 	//move to Ship
 	int account_challenge;
 	unsigned int user_id;

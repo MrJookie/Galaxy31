@@ -20,7 +20,7 @@ namespace GameState {
 	extern double timeElapsed;
 	extern float zoom;
 	extern std::string activePage;
-	
+	extern bool input_taken;
 	extern int objectsDrawn;
 	
 	extern std::vector<Projectile> projectiles;

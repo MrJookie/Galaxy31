@@ -1,9 +1,9 @@
 #include "database.hpp"
-
 //crypto
 #include <cryptopp/sha.h>
 #include <cryptopp/filters.h>
 #include <cryptopp/hex.h>
+
 
 mysqlpp::Connection mysql_connect(const char *mdb, const char *mserver, const char *muser, const char *mpassword, ushort mport) {
 	mysqlpp::Connection con;

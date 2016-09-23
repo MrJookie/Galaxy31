@@ -8,7 +8,7 @@
 
 #include <sstream>
 
-
+using Commands::Arg;
 
 App::App() {
 	m_initialWindowSize = glm::vec2(1024, 768);
@@ -30,6 +30,19 @@ App::App() {
     this->init();
 }
 
+COMMAND(std::string, concat, (std::vector<Arg> args)) {
+	// cout << "func: " << a << ", " << b << endl;
+	std::string str = "";
+	for(auto& a : args) {
+		if(a.type == Arg::t_int) 
+			str = str + std::to_string(a.i);
+		if(a.type == Arg::t_string) {
+			str += a.s;
+		} 
+	}
+	return str;
+}
+
 App::~App() {
 	GameState::asset.FreeAssets();
     Mix_CloseAudio();
@@ -42,11 +55,12 @@ App::~App() {
 }
 
 void App::init() {
-	Bind bind;
+	
 	
     Network::initialize();
     NetworkChat::initialize();
-    Network::connect("89.177.76.215", 1234);
+    // Network::connect("89.177.76.215", SERVER_PORT);
+    Network::connect("127.0.0.1", SERVER_PORT);
     
     if(SDL_Init(SDL_INIT_EVERYTHING) != 0) {
         throw std::string("Failed to initialize SDL: ") + SDL_GetError();
@@ -91,7 +105,7 @@ void App::init() {
         throw std::string("Failed to create GLContext: ") + SDL_GetError();
     }
 
-    SDL_GL_SetSwapInterval(0);
+    SDL_GL_SetSwapInterval(1);
     SDL_GL_MakeCurrent(window, glContext);
 
     glewExperimental = GL_TRUE;
@@ -243,12 +257,12 @@ void App::init() {
 	Terminal &tm_game_chat = *((Terminal*)GameState::gui.GetControlById("game_terminal"));
 	
 	// commands
-	Command::AddCommand("w", [&](std::string nick, std::string message) -> int {
+	Command::AddCommand("w", [&](std::string nick, std::string message) {
 		tm_game_chat.WriteLog("^p[pm to " + nick + "]^w: " + message + "^w");
 		NetworkChat::SendChatMessage(nick, message);
 	});
 	
-	Command::AddCommand("fullscreen", [&](std::vector<Arg> args) -> int {
+	Command::AddCommand("fullscreen", [&]() {
 		toggleFullscreen = !toggleFullscreen;
 				
 		if(toggleFullscreen) {
@@ -267,7 +281,7 @@ void App::init() {
 		}
 	});
 	
-	Command::AddCommand("wireframe", [&](std::vector<Arg> args) -> int {
+	Command::AddCommand("wireframe", [&]() {
 		toggleWireframe = !toggleWireframe;
 				
 		if(toggleWireframe) {
@@ -277,26 +291,48 @@ void App::init() {
 		}
 	});
 	
-	Command::AddCommand("quit", [&](std::vector<Arg> args) -> int {
+	Command::AddCommand("quit", [&]() {
 		running = false;
 	});
 	
-	Command::AddCommand("clear", [&](std::vector<Arg> args) -> int {
+	Command::AddCommand("clear", [&]() {
 		tm_game_chat.ClearLog();
+	});
+	
+	Command::AddCommand("talk", [&]() {
+		tm_game_chat.Focus();
+	});
+	
+	Command::AddCommand("say", [&](std::string msg) {
+		tm_game_chat.WriteLog("\n" + GameState::user_name + ": " + msg + "^w");
+		NetworkChat::SendChatMessage("", msg);
+		cout << "say: " << msg << endl;
+	});
+	
+	
+	
+	Command::AddCommand("loop", [&](int n, Arg e) {
+		std::vector<Arg> arg;
+		for(int i=0; i < n; i++)
+			Command::Execute(e, arg);
 	});
 	
 	tm_game_chat.SubscribeEvent(Terminal::event::command, [&](Control* c) {
 		Terminal* t = (Terminal*)c;
-		    
-		
-		if(t->GetLastCommand()[0] == '/') {
-			try {
-				Command::Execute(t->GetLastCommand().substr(1));
-			} catch(...) { std::cout << "command not found" << std::endl; }
-		} else {
-			t->WriteLog(GameState::user_name + ": " + t->GetLastCommand() + "^w");
-			NetworkChat::SendChatMessage("", t->GetLastCommand());
+		if(t->GetLastCommand().size() > 0) {
+			if(t->GetLastCommand()[0] == '/') {
+				try {
+					Commands::Arg a = Command::Execute(t->GetLastCommand().substr(1));
+					if(a.type != Commands::Arg::t_void)
+						t->WriteLog(a);
+				} catch(...) { std::cout << "command not found" << std::endl; }
+			} else {
+				t->WriteLog(GameState::user_name + ": " + t->GetLastCommand() + "^w");
+				NetworkChat::SendChatMessage("", t->GetLastCommand());
+			}
 		}
+		t->Unselect();
+		GameState::gui.Activate(0);
 	});
 		
 	Ship::Chassis chassis("main_ship", "ship_01_skin.png", "ship_01_skin.png");
@@ -320,28 +356,23 @@ void App::init() {
 
         SDL_Event e;
 
+		GameState::input_taken = GameState::gui.GetActiveControl() != nullptr;
         while(SDL_PollEvent(&e)) {
-			if(e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_TAB && GameState::gui.GetSelectedWidget() == &tm_game_chat) {
-				Terminal &tm_game_chat = *((Terminal*)GameState::gui.GetControlById("game_terminal"));
-				std::string text = tm_game_chat.GetText();
-				text += Command::Complete(text, text.size()-1);
-				if(!text.empty())
-				tm_game_chat.SetText(text);
-			} else {
-				GameState::gui.OnEvent(e);
-			}
+			
 
             if(e.type == SDL_QUIT) {
                 running = false;
             } else if(e.type == SDL_KEYDOWN) {
-				if(!GameState::gui.GetActiveControl()) {
-					bind.OnEvent(e);
+				if(!GameState::input_taken) {
+					if(m_bind.OnEvent(e))
+						continue;
 					switch(e.key.keysym.sym) {
 						case SDLK_ESCAPE:
-							bind.SaveKeys("galaxy31.cfg");
-							Command::SaveVarariablesToFile("galaxy31.cfg");
 							running = false;
 						break;
+						case SDLK_SLASH:
+							tm_game_chat.Focus();
+							break;
 						
 						/*
 						case SDLK_f: {
@@ -402,6 +433,23 @@ void App::init() {
             } else if(e.type == SDL_MOUSEWHEEL) {
 				this->setZoom((this->getZoom() - e.wheel.y) > 30 ? this->getZoom() : std::max(this->getZoom() - e.wheel.y, 1.0f));
             }
+            
+            
+            if(e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_TAB && tm_game_chat.IsSelected() && tm_game_chat.GetText()[0] == '/') {
+				std::string text = tm_game_chat.GetText();
+				std::vector<std::string> vec = Command::Search(text, text.size()-1, 5);
+				if(vec.size() > 1) {
+					for(auto& s : vec) {
+						tm_game_chat.AppendLog("^c" + text + "^w" + s);
+					}
+					tm_game_chat.AppendLog("-------");
+				}
+				text += Command::Complete(text, text.size()-1);
+				if(!text.empty())
+				tm_game_chat.SetText(text);
+			} else {
+				GameState::gui.OnEvent(e);
+			}
         }
 		
         glViewport(0, 0, this->getWindowSize().x, this->getWindowSize().y);
@@ -549,9 +597,12 @@ void App::init() {
 				ship.SetPosition(glm::vec2(ship.GetPosition().x, -GameState::worldSize.y));
 			}
 			//
-
+			
 			//Network::handle_events(5);
 			ship.Process();
+			for(auto it = GameState::projectiles.begin(); it != GameState::projectiles.end(); it++) {
+				it->Process();
+			}
 			
 			// handle multiplayer states interpolation (this code should be moved elsewhere later)
 			for(auto& obj : GameState::ships) {
@@ -603,6 +654,7 @@ void App::init() {
 				quadtree.AddObject(&projectile);
 				
 				projectile.UpdateHullVertices(GameState::asset.GetTextureHull("projectile_collision.png").vertices);
+				if(Command::Get("collisionhull"))
 				projectile.RenderCollisionHull();
 			}
 			
@@ -631,6 +683,7 @@ void App::init() {
 				obj.second.first->Draw();
 				
 				obj.second.first->UpdateHullVertices(GameState::asset.GetTextureHull("ship_01_skin_collision.png").vertices);
+				if(Command::Get("collisionhull"))
 				obj.second.first->RenderCollisionHull();
 			}
 			
@@ -684,13 +737,18 @@ void App::init() {
 				}
 			}
 			
-			quadtree.Draw();
+			if(Command::Get("quadtree")) {
+				quadtree.Draw();
+			}
 			quadtree.Clear();
+			if(Command::Get("aabb"))
 			quadtree.DrawRect(ship.GetPosition().x - ship.GetSize().x/2, ship.GetPosition().y - ship.GetSize().y/2, ship.GetSize().x, ship.GetSize().y, glm::vec4(0, 1, 0, 1));
 			//
 			
 			ship.Draw();
 			ship.UpdateHullVertices(GameState::asset.GetTextureHull("ship_01_skin_collision.png").vertices);
+			
+			if(Command::Get("collisionhull"))
 			ship.RenderCollisionHull();
 			
 			TextBox* tb_game_user_name = (TextBox*)GameState::gui.GetControlById("game_user_name");
@@ -700,21 +758,25 @@ void App::init() {
 			for(Projectile& projectile : GameState::projectiles) {
 				projectile.Draw();
 			}
-
+			
+			showFPS();
 			std::string debugString(
+				/*
 				"App:m_windowSize: " + std::to_string(this->getWindowSize().x) + "x" + std::to_string(this->getWindowSize().y)  + "\n" +
 				"App:m_screenMousePosition: " + std::to_string(this->getScreenMousePosition().x) + "," + std::to_string(this->getScreenMousePosition().y)  + "\n" +
+				*/
 				"App:m_worldMousePosition: " + std::to_string(this->getWorldMousePosition().x) + "," + std::to_string(this->getWorldMousePosition().y)  + "\n" +
 				"Ship:m_position (center): " + std::to_string(ship.GetPosition().x) + "," + std::to_string(ship.GetPosition().y)  + "\n" +
 				"Ship::m_speed: " + std::to_string(glm::length(ship.GetSpeed()))  + "\n" +
 				"GameState::objectsDrawn: " + std::to_string(GameState::objectsDrawn)  + "\n" +
 				"Quadtree::DrawnOnScreen: " + std::to_string((drawObjects.size())) + "\n" +
-				"Quadtree::GetObjects: " + std::to_string((nearObjects.size()))
+				"Quadtree::GetObjects: " + std::to_string((nearObjects.size())) + "\n" +
+				"FPS: " + std::to_string(m_frames_current)
 			);
 			tb_debug->SetText(debugString);
 			
 			for(auto it = GameState::projectiles.begin(); it != GameState::projectiles.end(); it++) {
-				it->Process();
+				// it->Process();
 				if(it->IsDead()) {
 					it = GameState::projectiles.erase(it);
 					if(it == GameState::projectiles.end()) break;
@@ -727,10 +789,14 @@ void App::init() {
 
         SDL_GL_SwapWindow(window);
 
-        this->showFPS();
+        // this->showFPS();
+        
 
-        SDL_Delay(16);
+        // SDL_Delay(16);
     }
+    
+    m_bind.SaveKeys("galaxy31.cfg");
+	Command::SaveVarariablesToFile("galaxy31.cfg");
 }
 
 void App::loop() {
@@ -757,7 +823,7 @@ void App::showFPS() {
             m_frames_current = 1;
         }
 
-        std::cout << "FPS: " << m_frames_current << std::endl;
+        // std::cout << "FPS: " << m_frames_current << std::endl;
     }
 }
 
@@ -818,4 +884,9 @@ void App::generate_RSA_keypair() {
 
 	publicKey.Save(CryptoPP::HexEncoder(new CryptoPP::StringSink(GameState::clientPublicKeyStr)).Ref());
 	privateKey.Save(CryptoPP::HexEncoder(new CryptoPP::StringSink(GameState::clientPrivateKeyStr)).Ref());
+}
+
+
+COMMAND(void, setspeed, (float speed)) {
+	cout << "speed: " << speed << endl;
 }

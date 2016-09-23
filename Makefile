@@ -14,7 +14,7 @@ link64bit :=    -lSDL2 \
 				-L$(tmp_link) -lenet
 
 
-link := $(link64bit) -Llibs/GUI -lgui -lcryptopp -s
+link := $(link64bit) -Llibs/GUI -lgui -lcryptopp 
 
 
 
@@ -55,7 +55,7 @@ obj := $(addprefix $(build)/, $(patsubst %.cpp,%.o,$(cpp)))
 	
 .PHONY: all make_dirs extract_tmp_files
 
-all: make_dirs libs/GUI/libgui.a $(exe) extract_tmp_files 
+all: make_dirs $(exe) extract_tmp_files 
 
 .ONESHELL:
 extract_tmp_files:
@@ -88,10 +88,10 @@ make_dirs:
 clean_gui:
 	cd libs/GUI/ && make clean
 	
-libs/GUI/libgui.a:
-	+make -C libs/GUI/ sdl_lib
 	
 $(exe): $(obj)
+	rm -rf libs/GUI/libgui.a
+	+make -C libs/GUI/ sdl_lib
 	$(CXX) $^ -o $(exe) $(link) $(arch) -pthread
 	
 $(build)/%.o: %.cpp
@@ -102,9 +102,10 @@ $(build)/%.o: %.cpp
 
 make_dirs_server:
 	@mkdir -p $(build)/server/src/server
+	@mkdir -p $(build)/server/libs/commands
 server_cpp := \
+		libs/commands/commands.cpp \
 		src/server/server.cpp \
-		src/server/main.cpp \
 		src/server/database.cpp \
 		src/Object.cpp \
 		
@@ -112,7 +113,7 @@ server_exe := Galaxy31_server
 server_build := $(build)/server/
 server_obj := $(addprefix $(server_build)/, $(patsubst %.cpp, %.o, $(server_cpp)))
 server_link := -Llibs/enet-1.3.13 -lenet -lmysqlclient_r -lmysqlpp -lcryptopp
-server_includes := -Ilibs/enet-1.3.13/ -I/usr/include/mysql/ -I/usr/include/mysql++/
+server_includes := -Ilibs/enet-1.3.13/ -I/usr/include/mysql/ -I/usr/include/mysql++/ -Ilibs
 server_flags := -Wno-deprecated-declarations -g -DSERVER
 
 server: make_dirs_server extract_tmp_files $(server_exe)

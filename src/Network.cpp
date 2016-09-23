@@ -206,17 +206,19 @@ namespace Network {
 				GameState::user_id = p.get_int("user_id");
 				GameState::user_name = p.get_string("user_name");
 				
-				if(p.get_int("status_code") == 0) { //login ok after registration login
-					NetworkChat::connect("89.177.76.215", 54301); //connect to chat server
+				
+				
+				if(p.get_int("status_code") == status_code::login_ok) { //login ok after registration login
+					NetworkChat::connect(p.get_string("chat_ip").c_str(), p.get_int("chat_port")); //connect to chat server
 					NetworkChat::SendChatLogin(GameState::user_id, GameState::user_name);
 
 					GameState::activePage = "game";
-				} else if(p.get_int("status_code") == 1) {
+				} else if(p.get_int("status_code") == status_code::email_exist) {
 					TextBox* tb_register_status = (TextBox*)GameState::gui.GetControlById("register_status"); //move this?
 					tb_register_status->SetText("Error email exists!");
 					
 					GameState::activePage = "register";
-				} else if(p.get_int("status_code") == 2) {
+				} else if(p.get_int("status_code") == status_code::username_taken) {
 					TextBox* tb_register_status = (TextBox*)GameState::gui.GetControlById("register_status"); //move this?
 					tb_register_status->SetText("Username taken!");
 					
@@ -224,7 +226,7 @@ namespace Network {
 				} else if(p.get_int("status_code") == 3) { //login ok after just login ////REMOVE?
 	
 					GameState::activePage = "game";
-				} else if(p.get_int("status_code") == 4) {
+				} else if(p.get_int("status_code") == status_code::error_logging_in) {
 					TextBox* tb_login_status = (TextBox*)GameState::gui.GetControlById("login_status"); //move this?
 					tb_login_status->SetText("Error logging in!");
 					

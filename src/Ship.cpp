@@ -2,10 +2,10 @@
 #include "GameState.hpp"
 #include <glm/gtx/vector_angle.hpp>
 
-Ship::Ship(glm::vec2 position, float rotation, const Chassis& chassis) {
+Ship::Ship(glm::dvec2 position, double rotation, const Chassis& chassis) {
 	m_position = position;
 	m_rotation = rotation;
-	m_speed = glm::vec2(0);
+	m_speed = glm::dvec2(0);
 	m_acceleration = {0,0};
 	m_chassis = chassis;
 	m_chassis.sprite = std::move(chassis.sprite);
@@ -16,11 +16,11 @@ Ship::Ship(glm::vec2 position, float rotation, const Chassis& chassis) {
 	m_stabilizers_on = false;
 	m_rotation_speed_coefficient = 180;
 	m_max_distance_acceleration = 768;
-	m_downshift_coefficient = 0.8f;
-	m_max_speed_coefficient = 6000.0f;
-	m_acceleration_speed_coefficient = 3.0f;
-	m_brake_coefficient = 4.0f;
-	m_engine_propulsion_coefficient = 6.2f;
+	m_downshift_coefficient = 0.8;
+	m_max_speed_coefficient = 6000.0;
+	m_acceleration_speed_coefficient = 3.0;
+	m_brake_coefficient = 4.0;
+	m_engine_propulsion_coefficient = 6.2;
 	m_engine_propulsion.SetTexture(GameState::asset.GetTexture("propulsion.png"));
 }
 
@@ -29,13 +29,13 @@ Ship::~Ship() {}
 void Ship::Draw() {
 	m_chassis.sprite.DrawSprite(m_size, m_position, m_rotation); //chassi only
 	//draw loaded mountables within propulsion on engine mountable
-	float acceleration = glm::length(this->GetAcceleration()) * 0.5f;
+	double acceleration = glm::length(this->GetAcceleration()) * 0.5;
 	if(acceleration > 0.01) {
-        m_engine_propulsion.SetSize(glm::vec2(this->GetSize().x * 0.5, this->GetSize().y * 0.5 * std::max(0.01f,  acceleration * 0.0003f * m_engine_propulsion_coefficient)) );
-        float theta = (this->GetRotation() + 90) * 3.141592 / 180.0;
+        m_engine_propulsion.SetSize(glm::dvec2(this->GetSize().x * 0.5, this->GetSize().y * 0.5 * std::max(0.01,  acceleration * 0.0003 * m_engine_propulsion_coefficient)) );
+        double theta = (this->GetRotation() + 90) * 3.141592 / 180.0;
         const glm::vec2 &psize = m_engine_propulsion.GetSize();
-        const float A = this->GetSize().y * 0.5 + psize.y*0.5;
-        m_engine_propulsion.SetPosition(glm::vec2(
+        const double A = this->GetSize().y * 0.5 + psize.y*0.5;
+        m_engine_propulsion.SetPosition(glm::dvec2(
             m_position.x + A*cos(theta) + psize.x*0.5,
             m_position.y + this->GetSize().y * 0.5 + A*sin(theta) - psize.y*0.5
         ));
@@ -45,21 +45,21 @@ void Ship::Draw() {
 }
 
 void Ship::Process() {
-	glm::vec2 pos_to_mouse_vector = glm::vec2( GameState::worldMousePosition.x - this->GetPosition().x, GameState::worldMousePosition.y - this->GetPosition().y );
-	glm::vec2 direction = glm::normalize(pos_to_mouse_vector);
-	float distance = glm::length(pos_to_mouse_vector);
-	float angle = glm::degrees( glm::orientedAngle( glm::vec2(1.0f,0.0f), direction ) );
+	glm::dvec2 pos_to_mouse_vector = glm::dvec2( GameState::worldMousePosition.x - this->GetPosition().x, GameState::worldMousePosition.y - this->GetPosition().y );
+	glm::dvec2 direction = glm::normalize(pos_to_mouse_vector);
+	double distance = glm::length(pos_to_mouse_vector);
+	double angle = glm::degrees( glm::orientedAngle( glm::dvec2(1.0f,0.0f), direction ) );
 
-	float angle_to = (angle+90.0f) - this->GetRotation();
+	double angle_to = (angle+90.0) - this->GetRotation();
 	while(angle_to > 180) angle_to -= 360;
 	while(angle_to < -180) angle_to += 360;
 
-	float angle_speed = 0;
-	const float angle_thresshold = 10.0f;
+	double angle_speed = 0;
+	const double angle_thresshold = 3.0;
 	if(angle_to > angle_thresshold) angle_speed = m_rotation_speed_coefficient;
 	else if(angle_to < -angle_thresshold) angle_speed = -m_rotation_speed_coefficient;
 	else {
-		this->SetRotation( angle+90.0f );
+		this->SetRotation( angle+90.0 );
 	}
 	this->SetRotationSpeed( angle_speed );
 	
@@ -69,20 +69,21 @@ void Ship::Process() {
 		distance = m_max_distance_acceleration;
 	}
 	
-	// this->Accelerate( -this->GetSpeed() * m_downshift_coefficient * float(GameState::deltaTime) );
+	// this->Accelerate( -this->GetSpeed() * m_downshift_coefficient * double(GameState::deltaTime) );
+	
+	
+	if(!GameState::input_taken && state[SDL_SCANCODE_W]) {
 		
-	if(state[SDL_SCANCODE_W]) {
-		
-		// this->Accelerate(direction * distance * m_acceleration_speed_coefficient * float(GameState::deltaTime));
+		// this->Accelerate(direction * distance * m_acceleration_speed_coefficient * double(GameState::deltaTime));
 		this->SetAcceleration(direction * distance * m_acceleration_speed_coefficient);
 	} else {
 		// dampening
-		this->SetAcceleration(this->GetAcceleration() *  0.95f);
+		this->SetAcceleration(this->GetAcceleration() *  0.95);
 	}
 	
-	if(state[SDL_SCANCODE_S]) {
+	if(!GameState::input_taken && state[SDL_SCANCODE_S]) {
 		this->SetAcceleration({0,0});
-		this->Accelerate( -this->GetSpeed() * m_brake_coefficient * float(GameState::deltaTime) );
+		this->Accelerate( -this->GetSpeed() * m_brake_coefficient * double(GameState::deltaTime) );
 	}
 
     Object::Process();
@@ -94,29 +95,29 @@ void Ship::Process() {
 
 /*
 void Ship::ProcessOLD() {
-	glm::vec2 pos_to_mouse_vector = glm::vec2( GameState::worldMousePosition.x - this->GetPosition().x, GameState::worldMousePosition.y - this->GetPosition().y );
-	glm::vec2 direction = glm::normalize(pos_to_mouse_vector);
-	float distance = glm::length(pos_to_mouse_vector);
-	float angle;
+	glm::dvec2 pos_to_mouse_vector = glm::dvec2( GameState::worldMousePosition.x - this->GetPosition().x, GameState::worldMousePosition.y - this->GetPosition().y );
+	glm::dvec2 direction = glm::normalize(pos_to_mouse_vector);
+	double distance = glm::length(pos_to_mouse_vector);
+	double angle;
 	
 	if(m_stabilizers_on) {
-		angle = glm::degrees( glm::orientedAngle( glm::vec2(1.0f,0.0f), glm::normalize(-m_speed) ) );
+		angle = glm::degrees( glm::orientedAngle( glm::dvec2(1.0f,0.0f), glm::normalize(-m_speed) ) );
 	} else {
-		angle = glm::degrees( glm::orientedAngle( glm::vec2(1.0f,0.0f), direction ) );
+		angle = glm::degrees( glm::orientedAngle( glm::dvec2(1.0f,0.0f), direction ) );
 	}
 	
-	float angle_to = (angle+90.0f) - this->GetRotation();
+	double angle_to = (angle+90.0f) - this->GetRotation();
 	while(angle_to > 180) angle_to -= 360;
 	while(angle_to < -180) angle_to += 360;
 
-	float angle_speed = 0;
-	const float angle_thresshold = 1.0f;
+	double angle_speed = 0;
+	const double angle_thresshold = 1.0f;
 	if(angle_to > angle_thresshold) angle_speed = m_rotation_speed_coefficient;
 	else if(angle_to < -angle_thresshold) angle_speed = -m_rotation_speed_coefficient;
 	this->SetRotationSpeed( angle_speed );
 	
 	if(m_stabilizers_on) {
-		this->Accelerate( -m_speed * 0.2f * float(GameState::deltaTime) );
+		this->Accelerate( -m_speed * 0.2f * double(GameState::deltaTime) );
 	} else {
 		if(distance > (this->GetSize().y * 0.5)) {
 			this->Accelerate(direction * distance * m_acceleration_speed_coefficient*0.001f);
@@ -129,12 +130,16 @@ void Ship::ProcessOLD() {
 
 void Ship::Fire() {
 	const Asset::Texture& texture = GameState::asset.GetTexture("projectile.png");
-	glm::vec2 world_coord = local_to_world_coord(glm::vec2(0-texture.size.x*0.5f+2, -m_size.y*0.5f-texture.size.y*0.5f-3));
-	world_coord.x -= texture.size.x*0.5f;
-	world_coord.y -= texture.size.y*0.5f;
-	Projectile projectile(texture, world_coord, glm::normalize(world_coord - GetPosition())*1000.0f + m_speed);
+	glm::dvec2 world_coord = local_to_world_coord(glm::dvec2(0-texture.size.x*0.5+2.0, -m_size.y*0.5-texture.size.y*0.5-3.0));
+	world_coord.x -= texture.size.x*0.5;
+	world_coord.y -= texture.size.y*0.5;
+	glm::dvec2 dir = glm::normalize(world_coord - GetPosition());
+	Projectile projectile(texture, world_coord, glm::dvec2(0));
 	
-	projectile.SetAcceleration(m_acceleration);
+	const double acceleration_constant = 300.0;
+	const double speed_constant = 1500.0;
+	projectile.SetAcceleration(dir * acceleration_constant);
+	projectile.SetSpeed(dir * speed_constant + m_speed);
 	projectile.SetRotation(GetRotation());
 	GameState::projectiles.push_back(projectile);
 }

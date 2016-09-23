@@ -8,6 +8,11 @@
 
 using namespace std;
 
+#define MYSQL_DB "test"
+#define MYSQL_USER "root"
+#define MYSQL_PASSWORD "Galaxy31"
+#define MYSQL_PORT 3306
+
 mysqlpp::Connection mysql_connect(const char *mdb, const char *mserver=0, const char *muser=0, const char *mpassword=0, ushort mport=3306);
 
 int createAccount(mysqlpp::Connection &con, std::string email, std::string userName, std::string password, std::string ipAddr); //returns user_id ( > 0 ) = ok, 0 = email/username exists, -1 = unspecified error

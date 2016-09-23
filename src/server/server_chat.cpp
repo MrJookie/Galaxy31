@@ -23,6 +23,8 @@ using std::endl;
 const int timeout = 1000;
 int nthread = 0;
 
+
+
 // local forwards
 static void parse_packet(ENetPeer* peer, ENetPacket* pkt);
 static void handle_new_client(ENetPeer* peer);
@@ -209,7 +211,7 @@ int main(int argc, char* argv[]) {
 	}
 	atexit (enet_deinitialize);
 	
-	server_start(54301);
+	server_start(CHAT_SERVER_PORT);
 	
 	while(1) {
 		server_wait_for_packet();

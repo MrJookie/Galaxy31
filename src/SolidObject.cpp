@@ -6,7 +6,7 @@ void SolidObject::UpdateHullVertices(std::vector<glm::vec2> hullVertices) {
     modelMat = glm::translate(modelMat, glm::vec3(m_position, 0.0f));
 
     modelMat = glm::translate(modelMat, glm::vec3(0.5f * m_size.x, 0.5f * m_size.y, 0.0f));
-    modelMat = glm::rotate(modelMat, glm::radians(m_rotation), glm::vec3(0.0f, 0.0f, 1.0f));
+    modelMat = glm::rotate(modelMat, glm::radians((float)m_rotation), glm::vec3(0.0f, 0.0f, 1.0f));
     modelMat = glm::translate(modelMat, glm::vec3(-0.5f * m_size.x, -0.5f * m_size.y, 0.0f));
     
     std::vector<glm::vec2> transformedVerts;

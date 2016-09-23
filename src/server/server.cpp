@@ -1,5 +1,6 @@
 #include <iostream>
 
+#include <enet/enet.h>
 #include <queue>
 #include <utility>
 #include <glm/glm.hpp>
@@ -8,16 +9,24 @@
 #include <mutex>
 #include <thread>
 #include <chrono>
+
 #include <vector>
 #include <algorithm>
 #include <map>
 
-#include "server.hpp"
 #include "network.hpp"
 #include "../Object.hpp"
 #include "database.hpp"
 #include "RelocatedWork.hpp"
 #include "../Packet.hpp"
+
+#include <tclap/CmdLine.h>
+#include "commands/commands.hpp"
+#include "commands/tclap_loader.hpp"
+
+#include <sstream>
+
+using Commands::Arg;
 
 using std::cout;
 using std::endl;
@@ -29,12 +38,15 @@ std::string serverPublicKeyStr;
 std::string serverPrivateKeyStr;
 const int timeout = 1;
 int nthread = 0;
+bool running = true;
 
 // local forwards
 static void parse_packet(ENetPeer* peer, ENetPacket* pkt);
 static void handle_new_client(ENetPeer* peer);
 static void remove_client(ENetPeer* peer);
 static void send_states();
+static void server_wait_for_packet();
+static void server_start();
 
 static std::queue<std::pair<ENetPacket*, ENetPeer*>> packets;
 
@@ -42,6 +54,7 @@ struct Player {
 	uint32_t id;
 	unsigned int user_id;
 	int challenge;
+	std::string ip_address;
 	std::vector<Object> obj;
 };
 
@@ -50,32 +63,108 @@ static ENetHost* host;
 static uint32_t last_id = 0;
 static std::map<ENetPeer*, Player*> players;
 
+#define IP_ANY "0.0.0.0"
+
+// --- command line arguments ---
+static TCLAP::CmdLine cmd("", ' ', "1.0");
+static TCLAP::ValueArg<std::string> server_ip("", "server_ip", "", false, IP_ANY, "server port");
+static TCLAP::ValueArg<std::string> server_port("", "server_port", "", false, std::to_string(SERVER_PORT), "server port");
+
+static TCLAP::ValueArg<std::string> chat_ip("", "chat_ip", "", false, IP_ANY, "ip address");
+static TCLAP::ValueArg<std::string> chat_port("", "chat_port", "", false, std::to_string(CHAT_SERVER_PORT), "chat port");
+
+static TCLAP::ValueArg<std::string> sql_ip("", "sql_ip", "", false, SERVER_IP, "mysql ip");
+static TCLAP::ValueArg<std::string> sql_db("", "sql_db", "", false, MYSQL_DB, "database");
+static TCLAP::ValueArg<std::string> sql_user("", "sql_user", "", false, MYSQL_USER, "username");
+static TCLAP::ValueArg<std::string> sql_pw("", "sql_pw", "", false, MYSQL_PASSWORD, "password");
+static TCLAP::ValueArg<std::string> sql_port("", "sql_port", "", false, std::to_string(MYSQL_PORT), "port");
+
+TCLAP::ValueArg<std::string> config("c", "cfg", "configuration file", false, "server.cfg", "config filename");
+//
+
+int main(int argc, char* argv[]) {
+	if (enet_initialize () != 0) {
+		std::cout << "An error occurred while initializing ENet." << std::endl;
+		return -1;
+	}
+	atexit (enet_deinitialize);
+	
+	// command line
+	cmd.add( chat_ip );
+	cmd.add( chat_port );
+	
+	cmd.add( server_ip );
+	cmd.add( server_port );
+	
+	cmd.add( sql_ip );
+	cmd.add( sql_db );
+	cmd.add( sql_user );
+	cmd.add( sql_pw );
+	cmd.add( sql_port );
+	
+	cmd.add( config );
+	try {
+		cmd.parse( argc, argv );
+		
+		
+	} catch (TCLAP::ArgException &e) {
+		std::cerr << "error: " << e.error() << " for arg " << e.argId() << std::endl;
+		return -1;
+	}
+	
+	std::cout << "-----------------" << std::endl;
+	/////////////////
+	
+	Commands::LoadVariables(cmd);
+	
+	Command::LoadFromFile(config.getValue());
+	
+	server_start();
+	
+	std::this_thread::sleep_for(std::chrono::milliseconds(10));
+	
+	while(running) {
+		std::string cmd;
+		cout << "> ";
+		std::getline(std::cin, cmd);
+		cout << (std::string)Command::Execute(cmd) << endl;
+		// Command::Execute(cmd);
+	}
+	
+	if(!config.getValue().empty()) {
+		Command::SaveVarariablesToFile(config.getValue(), true);
+	}
+	
+	return 0;
+}
+
 void server_wait_for_packet() {
     ENetEvent event;
-
-    std::unique_lock<std::mutex> l(host_mutex);
-    while(enet_host_service(host, &event, timeout) > 0) {
-        switch(event.type) {
-			case ENET_EVENT_TYPE_CONNECT:
-					handle_new_client(event.peer);
-				break;
-			case ENET_EVENT_TYPE_RECEIVE:
-					packets.emplace(event.packet, event.peer);
-				break;
-			case ENET_EVENT_TYPE_DISCONNECT: 
-					remove_client(event.peer);
-					enet_peer_reset(event.peer);
-				break;
-			default:
-				cout << "event: " << event.type << endl;
-        }
-    }
-    
-    l.unlock();
-    
-    //enet_host_flush(host);
-    
-    std::this_thread::sleep_for(std::chrono::milliseconds(5));
+	while(1) {
+		std::unique_lock<std::mutex> l(host_mutex);
+		while(enet_host_service(host, &event, timeout) > 0) {
+			switch(event.type) {
+				case ENET_EVENT_TYPE_CONNECT:
+						handle_new_client(event.peer);
+					break;
+				case ENET_EVENT_TYPE_RECEIVE:
+						packets.emplace(event.packet, event.peer);
+					break;
+				case ENET_EVENT_TYPE_DISCONNECT: 
+						remove_client(event.peer);
+						enet_peer_reset(event.peer);
+					break;
+				default:
+					cout << "event: " << event.type << endl;
+			}
+		}
+		
+		l.unlock();
+		
+		//enet_host_flush(host);
+		
+		std::this_thread::sleep_for(std::chrono::milliseconds(5));
+	}
 }
 
 RelocatedWork w;
@@ -116,12 +205,15 @@ void server_work() {
 		}
 		
 		std::this_thread::sleep_for(std::chrono::milliseconds(5));
-	}
+	} 
 }
 
 std::chrono::high_resolution_clock::time_point last_time_mysql_pinged = std::chrono::high_resolution_clock::now();
-void mysql_work(const char *mdb, const char *mserver, const char *muser, const char *mpassword, ushort mport) {
-	mysqlpp::Connection con = mysql_connect(mdb, mserver, muser, mpassword, mport);
+void mysql_work() {
+	// cout << Command::GetString("sql_db").c_str() << endl;
+	// cout << Command::GetString("sql_ip").c_str() << endl;
+	mysqlpp::Connection con = mysql_connect(Command::GetString("sql_db").c_str(), Command::GetString("sql_ip").c_str(), 
+											Command::GetString("sql_user").c_str(), Command::GetString("sql_pw").c_str(), Command::Get("sql_port"));
 	
 	while(1) {
 		std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
@@ -153,13 +245,15 @@ void generate_RSA_keypair() {
 	} catch(...) {}
 }
 
-void server_start(ushort port, const char *mdb, const char *mserver, const char *muser, const char *mpassword, ushort mport) {
-	generate_RSA_keypair();
+
 	
+void server_start() {
+	generate_RSA_keypair();
+	// cout << Command::GetString("server_ip") << " : " << Command::Get("server_port") << endl;
     ENetAddress address;
-    address.host = ENET_HOST_ANY;
-    address.port = port;
-    host = enet_host_create(&address,32,Channel::num_channels,0,0);
+    enet_address_set_host (&address, Command::GetString("server_ip").c_str());
+    address.port = (int)Command::Get("server_port");
+    host = enet_host_create(&address, 32, Channel::num_channels,0,0);
     if(host == nullptr) {
         cout << "An error occurred while trying to create an ENet server host." << endl;
         exit(EXIT_FAILURE);
@@ -179,8 +273,11 @@ void server_start(ushort port, const char *mdb, const char *mserver, const char 
 
     // delete[] t;
     
-    std::thread mysql_thread(mysql_work, mdb, mserver, muser, mpassword, mport);
+    std::thread mysql_thread(mysql_work);
 	mysql_thread.detach();
+	
+	std::thread *wait_packets_thread = new std::thread(server_wait_for_packet);
+	wait_packets_thread->detach();
 }
 
 void handle_new_client(ENetPeer* peer) {
@@ -198,12 +295,16 @@ void handle_new_client(ENetPeer* peer) {
 	s.put("public_key", serverPublicKeyStr);
 	s.send(peer, Channel::control, ENET_PACKET_FLAG_RELIABLE);
 	
+	char ipAddr[16];
+	enet_address_get_host_ip(&peer->address, ipAddr, sizeof(ipAddr));
+	std::string ipAddress(ipAddr);
+	
 	Player* player = new Player;
 	player->id = last_id;
 	player->user_id = 0;
 	player->challenge = challenge;
+	player->ip_address = ipAddress;
 	players[peer] = player;
-	
 	//cout << "challenge: " << challenge << endl;
 }
 
@@ -237,12 +338,16 @@ void send_states() {
 	s.broadcast(host, Channel::data, 0);
 }
 
-void send_authorize(ENetPeer* peer, int status_code = -1, unsigned int id = 0, std::string user_name = "") {
+void send_authorize(ENetPeer* peer, status_code status = status_code::unknown, unsigned int id = 0, std::string user_name = "") {
 	Packet s;
 	s.put("type", PacketType::authorize);
 	s.put("user_id", id);
-	s.put("status_code", status_code);
+	s.put("status_code", status);
 	s.put("user_name", user_name);
+	if(status == status_code::login_ok) {
+		s.put("chat_ip", Command::GetString("chat_ip"));
+		s.put("chat_port", (int)Command::Get("chat_port"));
+	}
 	s.send(peer, Channel::control, ENET_PACKET_FLAG_RELIABLE);
 }
 
@@ -250,16 +355,14 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 	if(pkt == nullptr) { cout << "null pkt!!" << endl; return; }
 	if(players.find(peer) == players.end()) return;
 	
-	char ipAddr[256];
-	enet_address_get_host_ip(&peer->address, ipAddr, sizeof(ipAddr));
-	std::string ipAddress(ipAddr);
-            
+	Player& player = *players[peer];
+	
 	// cout << "rcv packet: " << pkt->data << endl;
+	
 	
 	Packet p(pkt);
 	switch(p.get_int("type")) {
 		case PacketType::update_objects: {
-			Player& player = *players[peer];
 			
 			int num_objects = p.get_int("num_objects");
 			if(num_objects != 1) return;
@@ -275,7 +378,7 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 				loginAccount,
 				p.get_string("user_email"),
 				p.get_string("user_password"),
-				ipAddress,
+				player.ip_address,
 				players[peer]->challenge
 			)
 			.then(
@@ -289,12 +392,12 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 								
 								players[peer]->user_id = user_id;
 
-								send_authorize(peer, 0, user_id, user_name);
+								send_authorize(peer, status_code::login_ok, user_id, user_name);
 							}
 						);
 					//send account banned status if login_account_id = 0?
 					} else {
-						send_authorize(peer, 4);
+						send_authorize(peer, status_code::error_logging_in);
 					}
 				}
 			);
@@ -325,7 +428,7 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 				p.get_string("user_email"),
 				p.get_string("user_name"),
 				decrypted,
-				ipAddress
+				player.ip_address
 			)
 			.then(
 				[=](int login_account_id) {
@@ -337,12 +440,12 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 								std::string user_name(loggedUser["username"]);
 								
 								players[peer]->user_id = user_id;
-
-								send_authorize(peer, 0, user_id, user_name);
+								
+								send_authorize(peer, status_code::login_ok, user_id, user_name);
 							}
 						);
 					} else {
-						send_authorize(peer, 1);
+						send_authorize(peer, status_code::email_exist);
 					}
 				}
 			);
@@ -353,4 +456,13 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 			cout << "received unknown packet! " << p.get_int("type") << endl;
 			break;
 	}
+}
+
+
+
+// commands
+
+COMMAND(int, quit, ()) {
+	running = false;
+	return 0;
 }
