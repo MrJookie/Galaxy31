@@ -11,19 +11,22 @@ includes := -Ilibs 				 \
 hpp :=	\
 		
 cpp := 	\
+		libs/commands/commands.cpp						\
+		libs/commands/bind.cpp							\
+		\
 		src/Main.cpp									\
 		src/App.cpp										\
+		src/GameState.cpp								\
+		src/Asset.cpp									\
+		src/Object.cpp									\
+		src/SolidObject.cpp								\
 		src/Camera.cpp									\
 		src/Sprite.cpp									\
 		src/Ship.cpp									\
-		src/Object.cpp									\
-		src/SolidObject.cpp								\
-		src/GameState.cpp								\
-		src/Asset.cpp									\
 		src/Projectile.cpp								\
 		src/Network.cpp									\
 		src/Quadtree.cpp								\
-		src/Commands.cpp								\
+		\
 
 program_name := Galaxy31
 
@@ -77,6 +80,7 @@ clean:
 make_dirs:
 	@mkdir -p $(build)
 	@mkdir -p $(build)/src/
+	@mkdir -p $(build)/libs/commands
 	@mkdir -p $(release)
 	
 libs/GUI/libgui_win$(cpu_arch).a:

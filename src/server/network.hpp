@@ -19,7 +19,7 @@
 #define SERVER_PORT 17694
 
 #define CHAT_SERVER_IP "89.177.76.215"
-#define CHAT_SERVER_PORT 54301
+#define CHAT_SERVER_PORT 17792
 
 enum Channel {
 	control = 0,
