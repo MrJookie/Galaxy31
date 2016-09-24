@@ -73,6 +73,7 @@ void Quadtree::Draw() {
 
 void Quadtree::AddObject(Object* object) {
 	if(m_isLeaf) {
+		//object->InNode = this;
 		m_objects.push_back(object);
 
 		if(m_objects.size() == m_maxObjects + 1) {
@@ -105,9 +106,8 @@ void Quadtree::Clear() {
 void Quadtree::QueryRectangle(int x, int y, int w, int h, std::unordered_map<Object*, Quadtree*>& returnObjects) {
 	if(intersects(x, y, w, h) ) {	
 		for(auto& object : m_objects) {
-				if(intersects(x, y, w, h)) {
-					returnObjects[object] = m_parent;
-				}
+			//returnObjects[object] = m_parent;
+			returnObjects[object] = this;
 		}
 		
 		for(auto& child : m_children) {
@@ -127,9 +127,9 @@ std::vector<Object*> Quadtree::GetObjectsInNode() {
 		}
 		
 		return objects;
-	} else {
-		return m_objects;
 	}
+	
+	return m_objects;
 }
 
 bool Quadtree::contains(Object* object) {

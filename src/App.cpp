@@ -704,7 +704,7 @@ void App::init() {
 			quadtree->QueryRectangle(ship.GetPosition().x - ship.GetSize().x/2, ship.GetPosition().y - ship.GetSize().y/2, ship.GetSize().x, ship.GetSize().y, nearObjects);
 			for(auto& object : nearObjects) {
 				if((SolidObject*)&ship != (SolidObject*)object.first) {
-					//quadtree.DrawRect(object.first->GetPosition().x - object.first->GetSize().x/2, object.first->GetPosition().y - object.first->GetSize().y/2, object.first->GetSize().x, object.first->GetSize().y, glm::vec4(1, 1, 1, 1));
+					//quadtree->DrawRect(object.first->GetPosition().x - object.first->GetSize().x/2, object.first->GetPosition().y - object.first->GetSize().y/2, object.first->GetSize().x, object.first->GetSize().y, glm::vec4(1, 1, 1, 1));
 					
 					if(ship.Collides((SolidObject*)object.first)) {
 						std::cout << "collides!" << std::endl;
@@ -716,7 +716,7 @@ void App::init() {
 				
 				std::vector<Object*> objcts = object.second->GetObjectsInNode();
 				for(auto& object2 : objcts) {
-					quadtree->DrawRect(object2->GetPosition().x - object2->GetSize().x/2, object2->GetPosition().y - object2->GetSize().y/2, object2->GetSize().x, object2->GetSize().y, glm::vec4(1, 1, 1, 1));
+					quadtree->DrawRect(object2->GetPosition().x - object2->GetSize().x/2, object2->GetPosition().y - object2->GetSize().y/2, object2->GetSize().x, object2->GetSize().y, glm::vec4(0, 0, 1, 1));
 				}
 			}
 			

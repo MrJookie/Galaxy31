@@ -18,7 +18,7 @@ class Quadtree {
 		void Draw();
 		void DrawRect(int x, int y, int w, int h, glm::vec4 color);
 		void Clear();
-std::vector<Object*> m_objects;
+
 	private:
 		int m_left;
 		int m_right;
@@ -26,7 +26,7 @@ std::vector<Object*> m_objects;
 		int m_down;
 		bool m_isLeaf;
 		unsigned int m_maxObjects;
-		
+		std::vector<Object*> m_objects;
 		
 		std::vector<std::unique_ptr<Quadtree>> m_children;
 		Quadtree* m_parent;

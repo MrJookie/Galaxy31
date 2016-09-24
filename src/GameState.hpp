@@ -3,7 +3,9 @@
 
 #include "Asset.hpp"
 #include "Camera.hpp"
+//#include "Quadtree.hpp"
 #include "Object.hpp"
+//#include "SolidObject.hpp"
 #include "Projectile.hpp"
 #include "Ship.hpp"
 #include <vector>
