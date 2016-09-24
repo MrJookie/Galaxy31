@@ -116,6 +116,22 @@ void Quadtree::QueryRectangle(int x, int y, int w, int h, std::unordered_map<Obj
 	}
 }
 
+std::vector<Object*> Quadtree::GetObjectsInNode() {
+	if(!m_isLeaf) {
+		std::vector<Object*> objects;
+		
+		for(auto& child : m_children) {
+			for(auto& object : child->m_objects) {
+				objects.push_back(object);
+			}
+		}
+		
+		return objects;
+	} else {
+		return m_objects;
+	}
+}
+
 bool Quadtree::contains(Object* object) {
 	int x = object->GetPosition().x - object->GetSize().x/2;
 	int y = object->GetPosition().y - object->GetSize().y/2;
