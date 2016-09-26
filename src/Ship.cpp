@@ -1,6 +1,8 @@
 #include "Ship.hpp"
 #include "GameState.hpp"
 #include <glm/gtx/vector_angle.hpp>
+#include <random>
+#include "Network.hpp"
 
 Ship::Ship(glm::dvec2 position, double rotation, const Chassis& chassis) {
 	m_position = position;
@@ -18,48 +20,69 @@ Ship::Ship(glm::dvec2 position, double rotation, const Chassis& chassis) {
 	m_max_distance_acceleration = 768;
 	m_downshift_coefficient = 0.8;
 	m_max_speed_coefficient = 6000.0;
-	m_acceleration_speed_coefficient = 3.0;
+	m_acceleration_speed_coefficient = 2.0;
 	m_brake_coefficient = 4.0;
 	m_engine_propulsion_coefficient = 6.2;
-	m_engine_propulsion.SetTexture(GameState::asset.GetTexture("propulsion.png"));
+	m_engine_propulsion.SetTexture(GameState::asset.GetTexture("propulsion2.png"));
 }
 
-Ship::~Ship() {}
+std::default_random_engine re;
 
+Ship::~Ship() {}
 void Ship::Draw() {
+	std::uniform_real_distribution<double> unif(0.8,1.0);
+   
 	m_chassis.sprite.DrawSprite(m_size, m_position, m_rotation); //chassi only
 	//draw loaded mountables within propulsion on engine mountable
 	double acceleration = glm::length(this->GetAcceleration()) * 0.5;
 	if(acceleration > 0.01) {
-        m_engine_propulsion.SetSize(glm::dvec2(this->GetSize().x * 0.5, this->GetSize().y * 0.5 * std::max(0.01,  acceleration * 0.0003 * m_engine_propulsion_coefficient)) );
-        double theta = (this->GetRotation() + 90) * 3.141592 / 180.0;
-        const glm::vec2 &psize = m_engine_propulsion.GetSize();
-        const double A = this->GetSize().y * 0.5 + psize.y*0.5;
-        m_engine_propulsion.SetPosition(glm::dvec2(
-            m_position.x + A*cos(theta) + psize.x*0.5,
-            m_position.y + this->GetSize().y * 0.5 + A*sin(theta) - psize.y*0.5
-        ));
-        m_engine_propulsion.SetRotation( this->GetRotation() );
-        m_engine_propulsion.DrawSprite(m_engine_propulsion.GetSize(), m_engine_propulsion.GetPosition(), this->GetRotation());
-    }
+		double y = m_engine_propulsion_coefficient * unif(re) * std::max(0.01,  acceleration * 0.03);
+		// m_engine_propulsion.SetSize(glm::dvec2(this->GetSize().x * 0.1, this->GetSize().y * 0.5 * std::max(0.01,  acceleration * 0.0003 * m_engine_propulsion_coefficient)) );
+		m_engine_propulsion.SetSize(glm::dvec2(this->GetSize().x * 0.2, y) );
+		// double theta = glm::radians(this->GetRotation()+90.0);
+		const glm::vec2 &psize = m_engine_propulsion.GetSize();
+		// const double A = this->GetSize().y * 0.5 + psize.y*0.5;
+		
+		// m_engine_propulsion.SetPosition(glm::dvec2(
+			// m_position.x + A*cos(theta) + psize.x*0.5,
+			// m_position.y + this->GetSize().y * 0.5 + A*sin(theta) - psize.y*0.5
+		// ));
+		
+		glm::dvec2 world = local_to_world_coord( glm::dvec2((this->GetSize().x-psize.x)/2.0+(psize.x-this->GetSize().x)*0.5, (this->GetSize().y+y)*0.5) );
+		// glm::dvec2 world = glm::dvec2((this->GetSize().x-psize.x)/2.0-this->GetSize().x*0.5, this->GetSize().y*0.5) + m_position;
+		
+		world.x -= psize.x*0.5;
+		world.y -= y*0.5;
+		m_engine_propulsion.SetPosition( world );
+		
+		// m_engine_propulsion.SetRotation( this->GetRotation() );
+		m_engine_propulsion.DrawSprite(m_engine_propulsion.GetSize(), m_engine_propulsion.GetPosition(), this->GetRotation());
+	}
 }
 
 void Ship::Process() {
 	glm::dvec2 pos_to_mouse_vector = glm::dvec2( GameState::worldMousePosition.x - this->GetPosition().x, GameState::worldMousePosition.y - this->GetPosition().y );
 	glm::dvec2 direction = glm::normalize(pos_to_mouse_vector);
 	double distance = glm::length(pos_to_mouse_vector);
-	double angle = glm::degrees( glm::orientedAngle( glm::dvec2(1.0f,0.0f), direction ) );
-
-	double angle_to = (angle+90.0) - this->GetRotation();
-	while(angle_to > 180) angle_to -= 360;
-	while(angle_to < -180) angle_to += 360;
+	
+	/*
+		+--> x
+		|
+		v y
+	 */
+	 
+	double angle = glm::degrees( glm::orientedAngle( glm::dvec2(0.0f, -1.0f), direction ) );
+	// cout << this->GetRotation() << endl;
+	double angle_to = (angle) - this->GetRotation();
+	while(angle_to > 180.0) angle_to -= 360.0;
+	while(angle_to < -180.0) angle_to += 360.0;
 
 	double angle_speed = 0;
 	const double angle_thresshold = 3.0;
 	if(angle_to > angle_thresshold) angle_speed = m_rotation_speed_coefficient;
 	else if(angle_to < -angle_thresshold) angle_speed = -m_rotation_speed_coefficient;
 	else {
-		this->SetRotation( angle+90.0 );
+		this->SetRotation( angle );
 	}
 	this->SetRotationSpeed( angle_speed );
 	
@@ -86,9 +109,10 @@ void Ship::Process() {
 		this->Accelerate( -this->GetSpeed() * m_brake_coefficient * double(GameState::deltaTime) );
 	}
 
-    Object::Process();
-    
-    if(glm::length(this->GetSpeed()) > m_max_speed_coefficient) {
+	Object::Process();
+	
+	// clip speed to m_max_speed_coefficient
+	if(glm::length(this->GetSpeed()) > m_max_speed_coefficient) {
 		this->SetSpeed(glm::normalize(this->GetSpeed()) * m_max_speed_coefficient);
 	}
 }
@@ -124,7 +148,7 @@ void Ship::ProcessOLD() {
 		}
 	}
 	
-    Object::Process();
+	Object::Process();
 }
 */
 
@@ -141,6 +165,7 @@ void Ship::Fire() {
 	projectile.SetAcceleration(dir * acceleration_constant);
 	projectile.SetSpeed(dir * speed_constant + m_speed);
 	projectile.SetRotation(GetRotation());
+	Network::QueueObject(&projectile);
 	GameState::projectiles.push_back(projectile);
 }
 

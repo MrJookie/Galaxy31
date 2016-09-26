@@ -11,22 +11,20 @@ includes := -Ilibs 				 \
 hpp :=	\
 		
 cpp := 	\
-		libs/commands/commands.cpp						\
-		libs/commands/bind.cpp							\
-		\
+		libs/commands/commands.cpp \
+		libs/commands/bind.cpp \
 		src/Main.cpp									\
 		src/App.cpp										\
-		src/GameState.cpp								\
-		src/Asset.cpp									\
-		src/Object.cpp									\
-		src/SolidObject.cpp								\
 		src/Camera.cpp									\
 		src/Sprite.cpp									\
 		src/Ship.cpp									\
+		src/Object.cpp									\
+		src/SolidObject.cpp								\
+		src/GameState.cpp								\
+		src/Asset.cpp									\
 		src/Projectile.cpp								\
 		src/Network.cpp									\
 		src/Quadtree.cpp								\
-		\
 
 program_name := Galaxy31
 
@@ -46,7 +44,7 @@ link32bit := \
 		-lws2_32 \
 		-lwinmm -lcryptopp
 
-link := $(link$(cpu_arch)bit)
+link := $(link$(cpu_arch)bit) -s
 
 build := build/win$(cpu_arch)
 release := release

@@ -50,6 +50,10 @@ static void server_start();
 
 static std::queue<std::pair<ENetPacket*, ENetPeer*>> packets;
 
+static std::vector<Object> static_objects;
+
+static unsigned int unique_id = 0;
+
 struct Player {
 	uint32_t id;
 	unsigned int user_id;
@@ -217,7 +221,7 @@ void mysql_work() {
 	
 	while(1) {
 		std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
-		if(now - last_time_mysql_pinged > std::chrono::milliseconds(1000)) {
+		if(now - last_time_mysql_pinged > std::chrono::milliseconds(3000)) {
 			if(!con.ping()) {
 				cout << "(MySQL has gone away): reconnecting" << endl;
 			}
@@ -324,7 +328,7 @@ void send_states() {
 	Packet s;
 	s.put("type", PacketType::update_objects);
 	s.put("num_objects", num_objects);
-
+	
 	Object* obj = new (s.allocate("objects", num_objects*sizeof(Object))) Object[num_objects];
 	for(auto& p : players) {
 		for(auto& o : p.second->obj) {
@@ -334,6 +338,13 @@ void send_states() {
 		}
 		p.second->obj.clear();
 	}
+	
+	// static objects
+	int num_static_objects = static_objects.size();
+	s.put("num_static_objects", num_static_objects);
+	Object* st_obj = new (s.allocate("static_objects", num_static_objects*sizeof(Object))) Object[num_static_objects];
+	memcpy(st_obj, &static_objects[0], num_static_objects*sizeof(Object));
+	static_objects.clear();
 	
 	s.broadcast(host, Channel::data, 0);
 }
@@ -367,10 +378,18 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 			int num_objects = p.get_int("num_objects");
 			if(num_objects != 1) return;
 			
+			int num_static_objects = p.get_int("num_static_objects");
+			if(num_static_objects > 0) {
+				Object* o = (Object*)p.get_pair("static_objects").first;
+				
+				for(int i=0; i < num_static_objects; i++) {
+					static_objects.push_back(o[i]);
+				}
+			}
 			std::unique_lock<std::mutex> l(host_mutex);
 			player.obj.push_back( *((Object*)p.get_pair("objects").first) );
 			// cout << "receiving states from " << player.id << "\n";
-				
+			
 			break;
 		}
 		case PacketType::authenticate: {

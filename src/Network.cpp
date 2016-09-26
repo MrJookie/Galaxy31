@@ -10,7 +10,7 @@
 
 #include "server/network.hpp"
 #include "Packet.hpp"
-
+#include "Object.hpp"
 using namespace ng;
 
 using std::cout;
@@ -19,6 +19,8 @@ using std::endl;
 namespace Network {
 	ENetHost *client;
 	ENetPeer *host;
+	
+	std::vector<Object> objects_to_send;
 	
 	// private forwards
 	void parse_packet(ENetPeer* peer, ENetPacket* pkt);
@@ -105,6 +107,17 @@ namespace Network {
 		Object* obj = GameState::player;
 		obj->UpdateTicks();
 		
+		uint32_t owner = GameState::player->GetId();
+		p.put("num_static_objects", objects_to_send.size());
+		if(objects_to_send.size() > 0) {
+			Object* objects = (Object*)p.allocate("static_objects", sizeof(Object)*objects_to_send.size());
+			for(auto& o : objects_to_send) {
+				o.SetOwner(owner);
+				*objects++ = o;
+			}
+			objects_to_send.clear();
+		}
+		
 		memcpy(p.allocate("objects",sizeof(Object)), obj, sizeof(Object));
 		p.send(host, Channel::data, 0);
 	}
@@ -157,6 +170,54 @@ namespace Network {
 		enet_host_destroy(client);
 	}
 	
+	
+	void QueueObject(Object* o) {
+		o->UpdateTicks();
+		objects_to_send.push_back(*o);
+	}
+	
+	void Process() {
+			// handle multiplayer states interpolation (this code should be moved elsewhere later)
+			// extern std::map< unsigned int, std::pair<Ship*, std::queue<Object>> > ships;
+			// (id, (current, next states queue))
+			for(auto& obj : GameState::ships) {
+				auto& p = obj.second;
+				// if(wait_for_packets) {
+					// if(p.second.size() > 5)
+						// wait_for_packets = false;
+					// break;
+				// }
+				// else if(p.second.size() < 2)
+					// wait_for_packets = true;
+				
+				while(p.second.size() > 1 && p.second.front().GetTicks() <= p.first->GetTicks()) {
+					// std::cout << "poping : " << p.second.size() << std::endl;
+					p.second.pop();
+				}
+				
+				if(!p.second.empty() && p.second.front().GetTicks() <= p.first->GetTicks()) {
+					// std::cout << "copy state\n";
+					// p.first->CopyObjectState(p.second.front());
+					p.second.pop();
+				}
+				
+				
+				double dtime = GameState::deltaTime*1000000.0;
+				if(p.second.empty()) {
+					// cout << "processing\n";
+					((Object*)p.first)->Process();
+				} else {
+					double diff = p.second.front().GetTicks()+dtime - p.first->GetTicks();
+					// std::cout << "interpolating [" << p.second.size() << "] : " << (dtime) << "  (" << p.second.front().GetTicks() << ", " << p.first->GetTicks() << ") " << "diff: " << diff << "\n";
+					// cout << "from: " << p.first->GetRotation() << " interpolate to: " << p.second.front().GetRotation() << endl;
+					if(diff > dtime)
+						p.first->InterpolateToState(p.second.front(), dtime / diff );
+				}
+				p.first->AddTicks( dtime );
+				
+			}
+	}
+	
 	int max_queue = 10000;
 	Ship::Chassis *chassis = nullptr;
 	void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
@@ -199,6 +260,21 @@ namespace Network {
 						q.push(o);
 					}
 				}
+				
+				int num_static_objects = p.get_int("num_static_objects");
+				if(num_static_objects > 0) {
+					Object* obj = (Object*)p.get_pair("static_objects").first;
+					for(int i=0; i < num_static_objects; i++) {
+						Object& o = obj[i];
+						if(o.GetOwner() != GameState::player->GetId()) {
+							const Asset::Texture& texture = GameState::asset.GetTexture("projectile.png");
+							Projectile proj(texture, o.GetPosition(), o.GetSpeed());
+							proj.SetAcceleration(o.GetAcceleration());
+							proj.SetRotation(o.GetRotation());
+							GameState::projectiles.push_back(proj);
+						}
+					}
+				}
 				// cout << "ping: " << peer->roundTripTime << endl;
 				break;
 			}
@@ -211,7 +287,6 @@ namespace Network {
 				if(p.get_int("status_code") == status_code::login_ok) { //login ok after registration login
 					NetworkChat::connect(p.get_string("chat_ip").c_str(), p.get_int("chat_port")); //connect to chat server
 					NetworkChat::SendChatLogin(GameState::user_id, GameState::user_name);
-
 					GameState::activePage = "game";
 				} else if(p.get_int("status_code") == status_code::email_exist) {
 					TextBox* tb_register_status = (TextBox*)GameState::gui.GetControlById("register_status"); //move this?

@@ -3,7 +3,9 @@
 #ifndef SERVER
 #include "GameState.hpp"
 #endif
-
+#include <iostream>
+using std::cout;
+using std::endl;
 #include <chrono>
 
 void Object::SetSize(glm::dvec2 size) {
@@ -66,10 +68,36 @@ void Object::SetRotationSpeed( double rotation_speed ) {
 	m_rotation_speed = rotation_speed;
 }
 
+static double lerp(double start, double end, double interpolate) {
+	double difference = abs(end - start);
+	if (difference > 180.0) {
+		if (end > start) {
+			start += 360.0;
+		} else {
+			end += 360.0;
+		}
+	}
+
+	double value = (start + ((end - start) * interpolate));
+
+	if (value >= -180.0 && value <= 180.0)
+		return value;
+	else {
+		while(value > 180.0) value -= 360.0;
+		while(value < -180.0) value += 360.0;
+		return value;
+	}
+}
+
+
 void Object::InterpolateToState(Object &obj, double interpolation) {
-	m_speed += (obj.m_speed - m_speed) * interpolation;
+	// m_speed += (obj.m_speed - m_speed) * interpolation;
 	m_position += (obj.m_position - m_position) * interpolation;
-	m_rotation += (obj.m_rotation - m_rotation) * interpolation;
+	
+		
+	// m_rotation += (obj.m_rotation - m_rotation) * interpolation;
+	m_rotation = lerp(m_rotation, obj.m_rotation, interpolation);
+	// cout << "m_rotation: " << m_rotation << endl;
 	m_rotation_speed = obj.m_rotation_speed;
 	m_acceleration += (obj.m_acceleration - m_acceleration) * interpolation;
 }
@@ -85,7 +113,7 @@ void Object::UpdateTicks() {
 
 glm::dvec2 Object::local_to_world_coord(const glm::dvec2& local_coord) {
 	glm::dvec2 global_coord;
-	double angle = m_rotation * 3.141592 / 180.0;
+	double angle = glm::radians(m_rotation);
 	double s = sin(angle), c = cos(angle);
 	// A*cos(x + r) = (A*cos(x))cos(r) - (A*sin(x))sin(r)
 	// A*sin(x + r) = (A*sin(x))cos(r) + (A*cos(x))sin(r)

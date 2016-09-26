@@ -134,7 +134,7 @@ server_chat_exe := Galaxy31_server_chat
 server_chat_build := $(build)/server_chat/
 server_chat_obj := $(addprefix $(server_chat_build)/, $(patsubst %.cpp, %.o, $(server_chat_cpp)))
 server_chat_link := -Llibs/enet-1.3.13 -lenet -lcryptopp
-server_chat_includes := -Ilibs/enet-1.3.13/
+server_chat_includes := -Ilibs/enet-1.3.13/ -Ilibs
 server_chat_flags := -Wno-deprecated-declarations -g -DSERVER_CHAT
 
 server_chat: make_dirs_server_chat $(server_chat_exe)

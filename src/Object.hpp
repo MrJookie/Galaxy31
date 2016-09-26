@@ -30,8 +30,13 @@ class Object {
 		void Draw() {};
 		
 		void Process(double dt = 0);
+		
 		unsigned int GetId() { return id; }
 		void SetId(unsigned int id) { this->id = id; }
+		
+		unsigned int GetOwner() { return owner; }
+		void SetOwner(unsigned int owner) { this->owner = owner; }
+		
 		unsigned int GetTicks() { return m_ticks; }
 		unsigned int SetTicks(unsigned int tick) { m_ticks = tick; }
 		unsigned int AddTicks(unsigned int tick) { m_ticks += tick; }
@@ -39,6 +44,7 @@ class Object {
 
 	protected:
 		uint32_t id;
+		uint32_t owner;
 		
 		glm::dvec2 m_size;
 		glm::dvec2 m_position;

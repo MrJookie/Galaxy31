@@ -25,10 +25,11 @@ App::App() {
     m_chrono_start = std::chrono::high_resolution_clock::now();
     m_chrono_elapsed = 0;
     
+   
     this->generate_RSA_keypair();
-    
     this->init();
 }
+
 
 COMMAND(std::string, concat, (std::vector<Arg> args)) {
 	// cout << "func: " << a << ", " << b << endl;
@@ -60,7 +61,7 @@ void App::init() {
     Network::initialize();
     NetworkChat::initialize();
     // Network::connect("89.177.76.215", SERVER_PORT);
-    Network::connect("127.0.0.1", SERVER_PORT);
+    
     
     if(SDL_Init(SDL_INIT_EVERYTHING) != 0) {
         throw std::string("Failed to initialize SDL: ") + SDL_GetError();
@@ -304,7 +305,7 @@ void App::init() {
 	});
 	
 	Command::AddCommand("say", [&](std::string msg) {
-		tm_game_chat.WriteLog("\n" + GameState::user_name + ": " + msg + "^w");
+		tm_game_chat.WriteLog(GameState::user_name + ": " + msg + "^w");
 		NetworkChat::SendChatMessage("", msg);
 		cout << "say: " << msg << endl;
 	});
@@ -351,6 +352,9 @@ void App::init() {
 	}
 	*/
 	Command::LoadFromFile("galaxy31.cfg");
+	Network::connect(Command::GetString("server_ip").c_str(), SERVER_PORT);
+	
+	auto firing_tp = std::chrono::steady_clock::now();
     while(running) {
         this->loop();
 
@@ -435,7 +439,9 @@ void App::init() {
             }
             
             
+            // code completion
             if(e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_TAB && tm_game_chat.IsSelected() && tm_game_chat.GetText()[0] == '/') {
+				
 				std::string text = tm_game_chat.GetText();
 				std::vector<std::string> vec = Command::Search(text, text.size()-1, 5);
 				if(vec.size() > 1) {
@@ -447,7 +453,9 @@ void App::init() {
 				text += Command::Complete(text, text.size()-1);
 				if(!text.empty())
 				tm_game_chat.SetText(text);
+				
 			} else {
+				
 				GameState::gui.OnEvent(e);
 			}
         }
@@ -604,43 +612,16 @@ void App::init() {
 				it->Process();
 			}
 			
-			// handle multiplayer states interpolation (this code should be moved elsewhere later)
-			for(auto& obj : GameState::ships) {
-				auto& p = obj.second;
-				// if(wait_for_packets) {
-					// if(p.second.size() > 5)
-						// wait_for_packets = false;
-					// break;
-				// }
-				// else if(p.second.size() < 2)
-					// wait_for_packets = true;
-				
-				while(p.second.size() > 1 && p.second.front().GetTicks() <= p.first->GetTicks()) {
-					// std::cout << "poping : " << p.second.size() << std::endl;
-					p.second.pop();
-				}
-				
-				if(!p.second.empty() && p.second.front().GetTicks() <= p.first->GetTicks()) {
-					// std::cout << "copy state\n";
-					p.first->CopyObjectState(p.second.front());
-					p.second.pop();
-				}
-				
-				double dtime = GameState::deltaTime*1000000.0;
-				if(p.second.empty()) {
-					// cout << "processing\n";
-					((Object*)p.first)->Process();
-				} else {
-					double diff = p.second.front().GetTicks()+dtime - p.first->GetTicks();
-					// std::cout << "interpolating [" << p.second.size() << "] : " << (dtime) << "  (" << p.second.front().GetTicks() << ", " << p.first->GetTicks() << ") " << "diff: " << diff << "\n";
-					if(diff > dtime)
-						p.first->InterpolateToState(p.second.front(), dtime / diff );
-				}
-				p.first->AddTicks( dtime );
-				
-			}
+			Network::Process();
 			
-			if(isFiring) ship.Fire();
+			if(isFiring) {
+				
+				auto delta = std::chrono::steady_clock::now() - firing_tp;
+				if(std::chrono::duration_cast<std::chrono::milliseconds>(delta).count() > Command::Get("rocket_milliseconds")) {
+					ship.Fire();
+					firing_tp = std::chrono::steady_clock::now();
+				}
+			}
 
 			GameState::camera.SetPosition( glm::vec3(ship.GetPosition().x, ship.GetPosition().y, 0) );
 			glm::mat4 projection = glm::ortho(-(float)this->getWindowSize().x*this->getZoom()*0.5, (float)this->getWindowSize().x*this->getZoom()*0.5, (float)this->getWindowSize().y*this->getZoom()*0.5, -(float)this->getWindowSize().y*this->getZoom()*0.5);
@@ -796,7 +777,7 @@ void App::init() {
     }
     
     m_bind.SaveKeys("galaxy31.cfg");
-	Command::SaveVarariablesToFile("galaxy31.cfg");
+	Command::SaveVarariablesToFile("galaxy31.cfg",false);
 }
 
 void App::loop() {
