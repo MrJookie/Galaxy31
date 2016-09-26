@@ -13,8 +13,8 @@ class Quadtree {
 		~Quadtree();
 				
 		void AddObject(Object* object);
-		void QueryRectangle(int x, int y, int w, int h, std::unordered_map<Object*, Quadtree*>& returnObjects);
-		std::vector<Object*> GetObjectsInNode();
+		void QueryRectangle(int x, int y, int w, int h, std::vector<Object*>& returnObjects);
+		void GetObjectsInNode(std::vector<Object*>& returnObjects);
 		void Draw();
 		void DrawRect(int x, int y, int w, int h, glm::vec4 color);
 		void Clear();

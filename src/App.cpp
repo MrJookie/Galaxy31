@@ -648,34 +648,42 @@ void App::init() {
 			// add clicked ships to quadtree
 			for(auto& ship : ships) {
 				quadtree->AddObject(ship);
+				
+				ship->UpdateHullVertices(GameState::asset.GetTextureHull("ship_01_skin_collision.png").vertices);
+				
+				if(Command::Get("collisionhull"))
+				ship->RenderCollisionHull();
 			}
 			
 			// add my ship to quadtree
 			quadtree->AddObject(&ship);
 			
 			// quadtree
-			std::unordered_map<Object*, Quadtree*> drawObjects;
+			std::vector<Object*> drawObjects;
 			quadtree->QueryRectangle(ship.GetPosition().x - GameState::windowSize.x/2*GameState::zoom, ship.GetPosition().y - GameState::windowSize.y/2*GameState::zoom, GameState::windowSize.x*GameState::zoom, GameState::windowSize.y*GameState::zoom, drawObjects);
 			for(auto& object : drawObjects) {
-				((SolidObject*)object.first)->Draw();
+				((SolidObject*)object)->Draw();
 			}
 			
 			ship.CollisionHullColor = glm::vec4(1.0, 0.0, 1.0, 1.0);
 			
-			std::unordered_map<Object*, Quadtree*> nearObjects;
+			std::vector<Object*> nearObjects;
 			quadtree->QueryRectangle(ship.GetPosition().x - ship.GetSize().x/2, ship.GetPosition().y - ship.GetSize().y/2, ship.GetSize().x, ship.GetSize().y, nearObjects);
 			for(auto& object : nearObjects) {
-				if((SolidObject*)&ship != (SolidObject*)object.first) {
-					//quadtree->DrawRect(object.first->GetPosition().x - object.first->GetSize().x/2, object.first->GetPosition().y - object.first->GetSize().y/2, object.first->GetSize().x, object.first->GetSize().y, glm::vec4(1, 1, 1, 1));
-					
-					if(ship.Collides((SolidObject*)object.first)) {
-						//std::cout << "collides!" << std::endl;
-						ship.CollisionHullColor = glm::vec4(0.0, 1.0, 0.0, 1.0);
-					}
-				}
-				if(object.second == nullptr) continue;
+				if((SolidObject*)&ship == (SolidObject*)object) continue;
 				
-				std::vector<Object*> objcts = object.second->GetObjectsInNode();
+				quadtree->DrawRect(object->GetPosition().x - object->GetSize().x/2, object->GetPosition().y - object->GetSize().y/2, object->GetSize().x, object->GetSize().y, glm::vec4(1, 1, 1, 1));
+				
+				if(ship.Collides((SolidObject*)object)) {
+					//std::cout << "collides!" << std::endl;
+					ship.CollisionHullColor = glm::vec4(0.0, 1.0, 0.0, 1.0);
+				}
+				
+				if(((SolidObject*)object)->NodePtr == nullptr) continue;
+				
+				std::vector<Object*> objcts;
+				//((SolidObject*)object)->NodePtr->GetObjectsInNode(objcts);
+				quadtree->QueryRectangle(object->GetPosition().x - object->GetSize().x/2, object->GetPosition().y - object->GetSize().y/2, object->GetSize().x, object->GetSize().y, objcts);
 				for(auto& object2 : objcts) {
 					if(Command::Get("aabb"))
 					quadtree->DrawRect(object2->GetPosition().x - object2->GetSize().x/2, object2->GetPosition().y - object2->GetSize().y/2, object2->GetSize().x, object2->GetSize().y, glm::vec4(0, 0, 1, 1));
