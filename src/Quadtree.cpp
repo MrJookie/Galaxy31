@@ -83,7 +83,8 @@ void Quadtree::AddObject(Object* object) {
 	//if(m_level == m_maxLevel) {
 	if(m_isLeaf) {
 		m_objects.push_back(object);
-		((SolidObject*)object)->NodePtr = this;
+		((SolidObject*)object)->NodePtr = m_parent;
+		//((SolidObject*)object)->NodePtr = this;
 		
 		return;
 	}
@@ -111,10 +112,10 @@ void Quadtree::Clear() {
 	}
 }
 
-void Quadtree::QueryRectangle(int x, int y, int w, int h, std::unordered_map<Object*, Quadtree*>& returnObjects) {
+void Quadtree::QueryRectangle(int x, int y, int w, int h, std::vector<Object*>& returnObjects) {
 	if(intersects(x, y, w, h) ) {	
 		for(auto& object : m_objects) {
-			returnObjects[object] = this;
+			returnObjects.push_back(object);
 		}
 		
 		for(auto& child : m_children) {
@@ -123,20 +124,22 @@ void Quadtree::QueryRectangle(int x, int y, int w, int h, std::unordered_map<Obj
 	}
 }
 
-std::vector<Object*> Quadtree::GetObjectsInNode() {
+void Quadtree::GetObjectsInNode(std::vector<Object*>& returnObjects) {
 	if(!m_isLeaf) {
-		std::vector<Object*> objects;
+		//std::vector<Object*> objects;
 		
-		for(auto& child : m_parent->m_children) {
+		for(auto& child : m_children) {
+			//if(intersects->contains(x, y, w, h) //todo
 			for(auto& object : child->m_objects) {
-				objects.push_back(object);
+				returnObjects.push_back(object);
+				//objects.push_back(object);
 			}
 		}
 		
-		return objects;
+		//return;
 	}
 	
-	return m_objects;
+	//return m_objects;
 }
 
 bool Quadtree::contains(Object* object) {
