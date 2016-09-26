@@ -155,9 +155,9 @@ void Ship::ProcessOLD() {
 void Ship::Fire() {
 	const Asset::Texture& texture = GameState::asset.GetTexture("projectile.png");
 	glm::dvec2 world_coord = local_to_world_coord(glm::dvec2(0-texture.size.x*0.5+2.0, -m_size.y*0.5-texture.size.y*0.5-3.0));
+	glm::dvec2 dir = glm::normalize(glm::dvec2(GameState::worldMousePosition) - GetPosition());
 	world_coord.x -= texture.size.x*0.5;
 	world_coord.y -= texture.size.y*0.5;
-	glm::dvec2 dir = glm::normalize(world_coord - GetPosition());
 	Projectile projectile(texture, world_coord, glm::dvec2(0));
 	
 	const double acceleration_constant = 300.0;

@@ -36,7 +36,7 @@ TODO:
 			- asteroid resources (multiple resource types to gather from asteroids)
 			- asteroid destroying, leaving scrap
 			
-		- terminal, commands, debug
+		+ terminal, commands, debug
 		- configuration files (linux: $HOME/.config/galaxy31/, windows: C:\...\Documents\configuration files ...\galaxy31\...)
 		- local data configuration (downloads)
 		- advanced weapons (which are crafted or bought later)

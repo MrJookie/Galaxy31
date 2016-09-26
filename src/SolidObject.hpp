@@ -13,6 +13,8 @@
 
 #include "Object.hpp"
 
+class Quadtree;
+
 class SolidObject : public Object {
 	public:
 		SolidObject(glm::vec2 size = {0,0}, glm::vec2 position = {0,0}, float rotation = 0, glm::vec2 speed = {0,0}) : Object(size,position,rotation,speed) {}
@@ -31,6 +33,7 @@ class SolidObject : public Object {
 		bool Collides(SolidObject* obj);
 		
 		std::vector<glm::vec2> m_hullVertices;
+		Quadtree* NodePtr;
 		
 	private:
 

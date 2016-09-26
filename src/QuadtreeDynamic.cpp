@@ -1,8 +1,6 @@
 #include "Quadtree.hpp"
 
-static int nodesSum = 0;
-
-Quadtree::Quadtree(int left, int right, int top, int down, unsigned int maxObjects, Quadtree* parent, int level, int maxLevel) {
+Quadtree::Quadtree(int left, int right, int top, int down, unsigned int maxObjects, Quadtree* parent) {
 	m_left = left;
 	m_right = right;
 	m_top = top;
@@ -10,12 +8,6 @@ Quadtree::Quadtree(int left, int right, int top, int down, unsigned int maxObjec
 	m_maxObjects = maxObjects;
 	m_parent = parent;
 	m_isLeaf = true;
-	
-	m_level = level;
-	m_maxLevel = maxLevel;
-	nodesSum++;
-	
-	std::cout << nodesSum << std::endl;
 }
 
 Quadtree::~Quadtree() {}
@@ -80,14 +72,20 @@ void Quadtree::Draw() {
 }
 
 void Quadtree::AddObject(Object* object) {
-	//if(m_level == m_maxLevel) {
 	if(m_isLeaf) {
+		//object->InNode = this;
 		m_objects.push_back(object);
+
+		if(m_objects.size() == m_maxObjects + 1) {
+			this->createLeaves();
+			this->moveObjectsToLeaves();
+		}
+		
 		((SolidObject*)object)->NodePtr = this;
 		
 		return;
 	}
-
+	
 	for(auto& child : m_children) {
 		if(child->contains(object)) {
 			child->AddObject(object);
@@ -95,25 +93,22 @@ void Quadtree::AddObject(Object* object) {
 	}
 }
 
-void Quadtree::Resize() {
-	this->createLeaves();
-	
-	for(auto& child : m_children) {
-		child->Resize();
-	}
-}
-
 void Quadtree::Clear() {
 	m_objects.clear();
-	
+
 	for(auto& child : m_children) {
-		child->Clear();
+		child.reset();
 	}
+	
+	m_children.clear();
+	
+	m_isLeaf = true;
 }
 
 void Quadtree::QueryRectangle(int x, int y, int w, int h, std::unordered_map<Object*, Quadtree*>& returnObjects) {
 	if(intersects(x, y, w, h) ) {	
 		for(auto& object : m_objects) {
+			//returnObjects[object] = m_parent;
 			returnObjects[object] = this;
 		}
 		
@@ -163,15 +158,11 @@ bool Quadtree::intersects(int x, int y, int w, int h) {
 }
 
 void Quadtree::createLeaves() {
-	if (m_level == m_maxLevel) {
-		return;
-	}
-	
 	m_children.resize(4);
-	m_children[0] = std::make_unique<Quadtree>(m_left, (m_left+m_right)/2, m_top, (m_top+m_down)/2, m_maxObjects, this, m_level+1, m_maxLevel);
-	m_children[1] = std::make_unique<Quadtree>((m_left+m_right)/2, m_right, m_top, (m_top+m_down)/2, m_maxObjects, this, m_level+1, m_maxLevel);
-	m_children[2] = std::make_unique<Quadtree>(m_left, (m_left+m_right)/2, (m_top+m_down)/2, m_down, m_maxObjects, this, m_level+1, m_maxLevel);
-	m_children[3] = std::make_unique<Quadtree>((m_left+m_right)/2, m_right, (m_top+m_down)/2, m_down, m_maxObjects, this, m_level+1, m_maxLevel);
+	m_children[0] = std::make_unique<Quadtree>(m_left, (m_left+m_right)/2, m_top, (m_top+m_down)/2, m_maxObjects, this);
+	m_children[1] = std::make_unique<Quadtree>((m_left+m_right)/2, m_right, m_top, (m_top+m_down)/2, m_maxObjects, this);
+	m_children[2] = std::make_unique<Quadtree>(m_left, (m_left+m_right)/2, (m_top+m_down)/2, m_down, m_maxObjects, this);
+	m_children[3] = std::make_unique<Quadtree>((m_left+m_right)/2, m_right, (m_top+m_down)/2, m_down, m_maxObjects, this);
 	
 	m_isLeaf = false;
 }
