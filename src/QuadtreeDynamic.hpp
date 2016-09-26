@@ -9,7 +9,7 @@
 
 class Quadtree {
 	public:
-		Quadtree(int left, int right, int top, int down, unsigned int maxObjects = 2, Quadtree* parent = nullptr, int level = 1, int maxLevel = 5);
+		Quadtree(int left, int right, int top, int down, unsigned int maxObjects = 2, Quadtree* parent = nullptr);
 		~Quadtree();
 				
 		void AddObject(Object* object);
@@ -18,7 +18,6 @@ class Quadtree {
 		void Draw();
 		void DrawRect(int x, int y, int w, int h, glm::vec4 color);
 		void Clear();
-		void Resize();
 
 	private:
 		int m_left;
@@ -37,9 +36,6 @@ class Quadtree {
 		
 		bool contains(Object* object);
 		bool intersects(int x, int y, int w, int h);
-		
-		int m_level;
-		int m_maxLevel;
 };
 
 #endif
