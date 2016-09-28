@@ -2,7 +2,7 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
-
+#include <map>
 Asset::Asset() {}
 
 #define SHADER_PATH "Assets/Shaders/"

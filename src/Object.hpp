@@ -4,9 +4,16 @@
 #include <glm/glm.hpp>
 #include <vector>
 
+enum class object_type {
+	unknown,
+	projectile,
+	ship,
+	solidobject
+};
+
 class Object {
 	public:
-		Object(glm::vec2 size = {0,0}, glm::vec2 position = {0,0}, double rotation = 0, glm::vec2 speed = {0,0}) : 
+		Object(glm::dvec2 size = {0,0}, glm::dvec2 position = {0,0}, double rotation = 0, glm::dvec2 speed = {0,0}) : 
 			m_size(size), m_position(position), m_rotation(rotation), m_speed(speed), m_rotation_speed(0) {}
 		~Object() {}
 
@@ -31,20 +38,24 @@ class Object {
 		
 		void Process(double dt = 0);
 		
-		unsigned int GetId() { return id; }
-		void SetId(unsigned int id) { this->id = id; }
+		unsigned int GetId() { return m_id; }
+		void SetId(unsigned int id) { this->m_id = id; }
 		
-		unsigned int GetOwner() { return owner; }
-		void SetOwner(unsigned int owner) { this->owner = owner; }
+		unsigned int GetOwner() { return m_owner; }
+		void SetOwner(unsigned int owner) { this->m_owner = owner; }
 		
-		unsigned int GetTicks() { return m_ticks; }
-		unsigned int SetTicks(unsigned int tick) { m_ticks = tick; }
-		unsigned int AddTicks(unsigned int tick) { m_ticks += tick; }
+		object_type GetType() { return m_type; }
+		void SetType(object_type type) { m_type = type; }
+		
+		uint32_t GetTicks() { return m_ticks; }
+		uint32_t SetTicks(uint32_t tick) { m_ticks = tick; }
+		uint32_t AddTicks(uint32_t tick) { m_ticks += tick; }
 		void UpdateTicks();
 
 	protected:
-		uint32_t id;
-		uint32_t owner;
+		object_type m_type;
+		uint32_t m_id;
+		uint32_t m_owner;
 		
 		glm::dvec2 m_size;
 		glm::dvec2 m_position;

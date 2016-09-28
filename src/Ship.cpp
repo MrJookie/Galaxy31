@@ -3,8 +3,9 @@
 #include <glm/gtx/vector_angle.hpp>
 #include <random>
 #include "Network.hpp"
-
+#include "EventSystem/Event.hpp"
 Ship::Ship(glm::dvec2 position, double rotation, const Chassis& chassis) {
+	m_type = object_type::ship;
 	m_position = position;
 	m_rotation = rotation;
 	m_speed = glm::dvec2(0);
@@ -20,7 +21,7 @@ Ship::Ship(glm::dvec2 position, double rotation, const Chassis& chassis) {
 	m_max_distance_acceleration = 768;
 	m_downshift_coefficient = 0.8;
 	m_max_speed_coefficient = 6000.0;
-	m_acceleration_speed_coefficient = 2.0;
+	m_acceleration_speed_coefficient = 1000.0;
 	m_brake_coefficient = 4.0;
 	m_engine_propulsion_coefficient = 6.2;
 	m_engine_propulsion.SetTexture(GameState::asset.GetTexture("propulsion2.png"));
@@ -98,10 +99,11 @@ void Ship::Process() {
 	if(!GameState::input_taken && state[SDL_SCANCODE_W]) {
 		
 		// this->Accelerate(direction * distance * m_acceleration_speed_coefficient * double(GameState::deltaTime));
-		this->SetAcceleration(direction * distance * m_acceleration_speed_coefficient);
+		this->SetAcceleration(direction * m_acceleration_speed_coefficient);
 	} else {
 		// dampening
 		this->SetAcceleration(this->GetAcceleration() *  0.95);
+		this->SetSpeed(this->GetSpeed() *  0.995);
 	}
 	
 	if(!GameState::input_taken && state[SDL_SCANCODE_S]) {
@@ -117,45 +119,11 @@ void Ship::Process() {
 	}
 }
 
-/*
-void Ship::ProcessOLD() {
-	glm::dvec2 pos_to_mouse_vector = glm::dvec2( GameState::worldMousePosition.x - this->GetPosition().x, GameState::worldMousePosition.y - this->GetPosition().y );
-	glm::dvec2 direction = glm::normalize(pos_to_mouse_vector);
-	double distance = glm::length(pos_to_mouse_vector);
-	double angle;
-	
-	if(m_stabilizers_on) {
-		angle = glm::degrees( glm::orientedAngle( glm::dvec2(1.0f,0.0f), glm::normalize(-m_speed) ) );
-	} else {
-		angle = glm::degrees( glm::orientedAngle( glm::dvec2(1.0f,0.0f), direction ) );
-	}
-	
-	double angle_to = (angle+90.0f) - this->GetRotation();
-	while(angle_to > 180) angle_to -= 360;
-	while(angle_to < -180) angle_to += 360;
-
-	double angle_speed = 0;
-	const double angle_thresshold = 1.0f;
-	if(angle_to > angle_thresshold) angle_speed = m_rotation_speed_coefficient;
-	else if(angle_to < -angle_thresshold) angle_speed = -m_rotation_speed_coefficient;
-	this->SetRotationSpeed( angle_speed );
-	
-	if(m_stabilizers_on) {
-		this->Accelerate( -m_speed * 0.2f * double(GameState::deltaTime) );
-	} else {
-		if(distance > (this->GetSize().y * 0.5)) {
-			this->Accelerate(direction * distance * m_acceleration_speed_coefficient*0.001f);
-		}
-	}
-	
-	Object::Process();
-}
-*/
-
+int fire_evt = Event::Register("fire");
 void Ship::Fire() {
 	const Asset::Texture& texture = GameState::asset.GetTexture("projectile.png");
-	glm::dvec2 world_coord = local_to_world_coord(glm::dvec2(0-texture.size.x*0.5+2.0, -m_size.y*0.5-texture.size.y*0.5-3.0));
-	glm::dvec2 dir = glm::normalize(glm::dvec2(GameState::worldMousePosition) - GetPosition());
+	glm::dvec2 world_coord = local_to_world_coord(glm::dvec2(-texture.size.x*0.5+8.0, -m_size.y*0.5-texture.size.y*0.5-3.0));
+	glm::dvec2 dir = glm::normalize(world_coord - GetPosition());
 	world_coord.x -= texture.size.x*0.5;
 	world_coord.y -= texture.size.y*0.5;
 	Projectile projectile(texture, world_coord, glm::dvec2(0));
@@ -167,6 +135,7 @@ void Ship::Fire() {
 	projectile.SetRotation(GetRotation());
 	Network::QueueObject(&projectile);
 	GameState::projectiles.push_back(projectile);
+	Event::Emit(fire_evt);
 }
 
 void Ship::Stabilizers() {

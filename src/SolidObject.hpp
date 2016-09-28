@@ -17,7 +17,7 @@ class Quadtree;
 
 class SolidObject : public Object {
 	public:
-		SolidObject(glm::vec2 size = {0,0}, glm::vec2 position = {0,0}, float rotation = 0, glm::vec2 speed = {0,0}) : Object(size,position,rotation,speed) {}
+		SolidObject(glm::dvec2 size = {0,0}, glm::dvec2 position = {0,0}, float rotation = 0, glm::dvec2 speed = {0,0}) : Object(size,position,rotation,speed) {}
 
 		~SolidObject() {}
 		

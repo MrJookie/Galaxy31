@@ -69,7 +69,7 @@ void Object::SetRotationSpeed( double rotation_speed ) {
 }
 
 static double lerp(double start, double end, double interpolate) {
-	double difference = abs(end - start);
+	double difference = std::abs(end - start);
 	if (difference > 180.0) {
 		if (end > start) {
 			start += 360.0;
@@ -93,11 +93,8 @@ static double lerp(double start, double end, double interpolate) {
 void Object::InterpolateToState(Object &obj, double interpolation) {
 	// m_speed += (obj.m_speed - m_speed) * interpolation;
 	m_position += (obj.m_position - m_position) * interpolation;
-	
-		
 	// m_rotation += (obj.m_rotation - m_rotation) * interpolation;
 	m_rotation = lerp(m_rotation, obj.m_rotation, interpolation);
-	// cout << "m_rotation: " << m_rotation << endl;
 	m_rotation_speed = obj.m_rotation_speed;
 	m_acceleration += (obj.m_acceleration - m_acceleration) * interpolation;
 }

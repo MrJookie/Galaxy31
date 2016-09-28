@@ -13,6 +13,26 @@
 #include <queue>
 #include <map>
 
+
+#include "Gui.hpp"
+#include "Control.hpp"
+#include "controls/Button.hpp"
+#include "controls/ScrollBar.hpp"
+// #include "controls/Container.hpp"
+#include "controls/ComboBox.hpp"
+// #include "controls/GridContainer.hpp"
+#include "controls/TextBox.hpp"
+#include "controls/RadioButton.hpp"
+#include "controls/ListBox.hpp"
+#include "controls/Label.hpp"
+// #include "controls/TrackBar.hpp"
+#include "controls/Canvas.hpp"
+// #include "controls/CheckBox.hpp"
+// #include "controls/WidgetMover.hpp"
+#include "controls/Terminal.hpp"
+#include "controls/Form.hpp"
+#include "common/SDL/Drawing.hpp"
+
 namespace GameState {
 	extern glm::vec2 windowSize;
 	extern glm::vec2 screenMousePosition;
@@ -24,6 +44,7 @@ namespace GameState {
 	extern std::string activePage;
 	extern bool input_taken;
 	extern int objectsDrawn;
+	extern std::string debug_string;
 	
 	extern std::vector<Projectile> projectiles;
 	extern ng::GuiEngine gui;
@@ -32,6 +53,8 @@ namespace GameState {
 	extern Ship* player;
 	
 	extern std::map< unsigned int, std::pair<Ship*, std::queue<Object>> > ships;
+	
+	void set_gui_page(std::string page);
 	
 	//move to Ship
 	extern int account_challenge;

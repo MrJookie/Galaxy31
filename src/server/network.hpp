@@ -45,7 +45,9 @@ enum PacketType {
 	signup,
 	chat_login,
 	chat_login_response,
-	chat_message
+	chat_message,
+	goodbye,
+	player_removed
 };
 
 #endif

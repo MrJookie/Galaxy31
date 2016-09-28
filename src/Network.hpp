@@ -16,6 +16,7 @@ namespace Network {
 	void SendOurState();
 	void SendAuthentication(std::string user_email, std::string user_password);
 	void SendRegistration(std::string user_email, std::string user_name, std::string user_password);
+	void SendGoodBye();
 };
 
 namespace NetworkChat {

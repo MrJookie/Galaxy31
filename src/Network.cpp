@@ -8,10 +8,13 @@
 #include "controls/TextBox.hpp"
 #include "controls/Terminal.hpp"
 
+#include "EventSystem/Event.hpp"
+#include "commands/commands.hpp"
+
+
 #include "server/network.hpp"
 #include "Packet.hpp"
 #include "Object.hpp"
-using namespace ng;
 
 using std::cout;
 using std::endl;
@@ -21,6 +24,17 @@ namespace Network {
 	ENetPeer *host;
 	
 	std::vector<Object> objects_to_send;
+	
+	uint32_t server_ticks;
+	
+	// TODO: implement
+	struct Frame {
+		uint32_t tick;
+		// contains all objects that have changed its state in given frame
+		std::vector<Object> objects;
+	};
+	std::vector<Frame> frames;
+	// ----------
 	
 	// private forwards
 	void parse_packet(ENetPeer* peer, ENetPacket* pkt);
@@ -33,6 +47,8 @@ namespace Network {
 			return;
 		}
 		atexit (enet_deinitialize);
+		
+		Event::Register("lag");
 	}
 	
 	bool connect(const char* ip, int port) {
@@ -100,13 +116,17 @@ namespace Network {
 			return;
 		}
 		
+		
 		Packet p;
 		p.put("type", PacketType::update_objects);
 		p.put("num_objects", 1);
 		
+		// send ship state
 		Object* obj = GameState::player;
 		obj->UpdateTicks();
+		memcpy(p.allocate("objects",sizeof(Object)), obj, sizeof(Object));
 		
+		// send new projectiles
 		uint32_t owner = GameState::player->GetId();
 		p.put("num_static_objects", objects_to_send.size());
 		if(objects_to_send.size() > 0) {
@@ -118,7 +138,7 @@ namespace Network {
 			objects_to_send.clear();
 		}
 		
-		memcpy(p.allocate("objects",sizeof(Object)), obj, sizeof(Object));
+		
 		p.send(host, Channel::data, 0);
 	}
 	
@@ -166,6 +186,15 @@ namespace Network {
 		s.send(host, Channel::control, ENET_PACKET_FLAG_RELIABLE);
 	}
 	
+	void SendGoodBye() {
+		Packet p;
+		p.put("type", PacketType::goodbye);
+		p.send(host, Channel::control, ENET_PACKET_FLAG_RELIABLE);
+		flush();
+	}
+	
+	
+	
 	void cleanup() {
 		enet_host_destroy(client);
 	}
@@ -176,47 +205,102 @@ namespace Network {
 		objects_to_send.push_back(*o);
 	}
 	
-	void Process() {
-			// handle multiplayer states interpolation (this code should be moved elsewhere later)
-			// extern std::map< unsigned int, std::pair<Ship*, std::queue<Object>> > ships;
-			// (id, (current, next states queue))
-			for(auto& obj : GameState::ships) {
-				auto& p = obj.second;
-				// if(wait_for_packets) {
-					// if(p.second.size() > 5)
-						// wait_for_packets = false;
-					// break;
-				// }
-				// else if(p.second.size() < 2)
-					// wait_for_packets = true;
-				
-				while(p.second.size() > 1 && p.second.front().GetTicks() <= p.first->GetTicks()) {
-					// std::cout << "poping : " << p.second.size() << std::endl;
-					p.second.pop();
-				}
-				
-				if(!p.second.empty() && p.second.front().GetTicks() <= p.first->GetTicks()) {
-					// std::cout << "copy state\n";
-					// p.first->CopyObjectState(p.second.front());
-					p.second.pop();
-				}
-				
-				
-				double dtime = GameState::deltaTime*1000000.0;
-				if(p.second.empty()) {
-					// cout << "processing\n";
-					((Object*)p.first)->Process();
-				} else {
-					double diff = p.second.front().GetTicks()+dtime - p.first->GetTicks();
-					// std::cout << "interpolating [" << p.second.size() << "] : " << (dtime) << "  (" << p.second.front().GetTicks() << ", " << p.first->GetTicks() << ") " << "diff: " << diff << "\n";
-					// cout << "from: " << p.first->GetRotation() << " interpolate to: " << p.second.front().GetRotation() << endl;
-					if(diff > dtime)
-						p.first->InterpolateToState(p.second.front(), dtime / diff );
-				}
-				p.first->AddTicks( dtime );
-				
-			}
+	
+	
+	// ------------------ [ PROCESSING ] -------------------
+	
+	// auto tp = std::chrono::high_resolution_clock::now();
+	/*
+	int n_dtime = 0;
+	std::array<double, 100> dtime_arr;
+	double mean;
+	*/
+	bool wait_for_packets = false;
+	int min_packets = 5;
+	int max_packets_delayed = 10;
+	
+	COMMAND(void, packets_range, (int min, int max)) {
+		max_packets_delayed = max;
+		min_packets = min;
 	}
+	
+	void Process() {
+		
+		// auto now = std::chrono::high_resolution_clock::now();
+		// uint32_t dtime = std::chrono::duration_cast<std::chrono::microseconds>(now - tp).count();
+		// tp = now;
+		
+		// extern std::map< unsigned int, std::pair<Ship*, std::queue<Object>> > ships;
+		// (id, (current, next states queue))
+		double dtime = GameState::deltaTime*1000000.0;
+		/*
+		if(n_dtime >= dtime_arr.size()) {
+			double s = 0;
+			for(auto d : dtime_arr) {
+				s += d;
+			}
+			mean = s / (double)dtime_arr.size();
+			
+			n_dtime = 0;
+		} else {
+			dtime_arr[n_dtime++] = dtime;
+		}
+		GameState::debug_string += "dtime mean: " + std::to_string(mean) + "\n";
+		*/
+		
+		for(auto& obj : GameState::ships) {
+			auto& p = obj.second;
+			auto &queue = p.second;
+			auto &current = p.first;
+			// cout << "id: " << obj.first << ", packets: " << p.second.size() << endl;
+			GameState::debug_string += "Packets: " + std::to_string(queue.size()) + "\n";
+			
+			if(wait_for_packets) {
+				if(queue.size() >= max_packets_delayed/2)
+					wait_for_packets = false;
+				break;
+			}
+			else if(queue.size() < min_packets)
+				wait_for_packets = true;
+			
+			while(queue.size() > max_packets_delayed) {
+				while(queue.size() > max_packets_delayed/2) queue.pop();
+				current->CopyObjectState(queue.front());
+				queue.pop();
+				Event::Emit("lag", true);
+			}
+			
+			while(queue.size() > 1 && queue.front().GetTicks() <= current->GetTicks()) {
+				// std::cout << "poping : " << p.second.size() << std::endl;
+				queue.pop();
+			}
+			
+			if(!p.second.empty() && queue.front().GetTicks() <= current->GetTicks()) {
+				// std::cout << "copy state\n";
+				// p.first->CopyObjectState(p.second.front());
+				queue.pop();
+			}
+			
+			// cout << "dtime: " << dtime << endl;
+			if(queue.empty()) {
+				// no packets, try predict, but should trigger lag effect
+				Event::Emit("lag", false);
+				// ((Object*)p.first)->Process();
+			} else {
+				double diff = queue.front().GetTicks()+dtime - current->GetTicks();
+				if(diff > dtime)
+					current->InterpolateToState(p.second.front(), dtime / diff );
+				current->AddTicks( dtime+1 );
+			}
+			
+		}
+	}
+	
+	
+	
+	// ------------------ [ PARSING PACKETS ] --------------------------
+	
+	
 	
 	int max_queue = 10000;
 	Ship::Chassis *chassis = nullptr;
@@ -240,7 +324,6 @@ namespace Network {
 				for(int i=0; i < num_objects; i++) {
 					Object &o = objs[i];
 					if(GameState::player->GetId() == o.GetId())  {
-						
 						//cout << "id: " << o.GetId() << endl;
 						continue;
 					}
@@ -261,6 +344,7 @@ namespace Network {
 					}
 				}
 				
+				// add new projectiles fired
 				int num_static_objects = p.get_int("num_static_objects");
 				if(num_static_objects > 0) {
 					Object* obj = (Object*)p.get_pair("static_objects").first;
@@ -268,9 +352,10 @@ namespace Network {
 						Object& o = obj[i];
 						if(o.GetOwner() != GameState::player->GetId()) {
 							const Asset::Texture& texture = GameState::asset.GetTexture("projectile.png");
-							Projectile proj(texture, o.GetPosition(), o.GetSpeed());
-							proj.SetAcceleration(o.GetAcceleration());
-							proj.SetRotation(o.GetRotation());
+							Projectile proj(texture);
+							proj.CopyObjectState(o);
+							// proj.SetAcceleration(o.GetAcceleration());
+							// proj.SetRotation(o.GetRotation());
 							GameState::projectiles.push_back(proj);
 						}
 					}
@@ -281,38 +366,45 @@ namespace Network {
 			case PacketType::authorize: {
 				GameState::user_id = p.get_int("user_id");
 				GameState::user_name = p.get_string("user_name");
-				
-				
-				
 				if(p.get_int("status_code") == status_code::login_ok) { //login ok after registration login
 					NetworkChat::connect(p.get_string("chat_ip").c_str(), p.get_int("chat_port")); //connect to chat server
 					NetworkChat::SendChatLogin(GameState::user_id, GameState::user_name);
-					GameState::activePage = "game";
+					GameState::set_gui_page("game");
 				} else if(p.get_int("status_code") == status_code::email_exist) {
-					TextBox* tb_register_status = (TextBox*)GameState::gui.GetControlById("register_status"); //move this?
+					ng::TextBox* tb_register_status = (ng::TextBox*)GameState::gui.GetControlById("register_status"); //move this?
 					tb_register_status->SetText("Error email exists!");
 					
-					GameState::activePage = "register";
+					GameState::set_gui_page("register");
 				} else if(p.get_int("status_code") == status_code::username_taken) {
-					TextBox* tb_register_status = (TextBox*)GameState::gui.GetControlById("register_status"); //move this?
+					ng::TextBox* tb_register_status = (ng::TextBox*)GameState::gui.GetControlById("register_status"); //move this?
 					tb_register_status->SetText("Username taken!");
 					
-					GameState::activePage = "register";
+					GameState::set_gui_page("register");
 				} else if(p.get_int("status_code") == 3) { //login ok after just login ////REMOVE?
-	
-					GameState::activePage = "game";
+					GameState::set_gui_page("game");
 				} else if(p.get_int("status_code") == status_code::error_logging_in) {
-					TextBox* tb_login_status = (TextBox*)GameState::gui.GetControlById("login_status"); //move this?
+					ng::TextBox* tb_login_status = (ng::TextBox*)GameState::gui.GetControlById("login_status"); //move this?
 					tb_login_status->SetText("Error logging in!");
-					
-					GameState::activePage = "login";
+					GameState::set_gui_page("login");
 				}
+				break;
+			}
+			case PacketType::player_removed: {
+				int id = p.get_int("user_id");
+				cout << "removing player: " << id << endl;
+				GameState::ships.erase(id);
 				break;
 			}
 		}
 	}
 }
 
+
+
+
+
+
+// ----------------------------[ Chat ]---------------------
 namespace NetworkChat {
 	ENetHost *client;
 	ENetPeer *host;
@@ -466,7 +558,7 @@ namespace NetworkChat {
 
 						CryptoPP::StringSource ss(encrypted, true, new CryptoPP::StreamTransformationFilter(d, new CryptoPP::StringSink(decrypted)));
 						
-						Terminal* tm_game_chat = (Terminal*)GameState::gui.GetControlById("game_terminal"); //move this?
+						ng::Terminal* tm_game_chat = (ng::Terminal*)GameState::gui.GetControlById("game_terminal"); //move this?
 						if(p.get_int("message_type") == 0) {
 							tm_game_chat->WriteLog( p.get_string("from_username") + ": " + decrypted + "^w" );
 						} else if(p.get_int("message_type") == 1) {

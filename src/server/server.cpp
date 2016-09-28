@@ -86,6 +86,8 @@ static TCLAP::ValueArg<std::string> sql_port("", "sql_port", "", false, std::to_
 TCLAP::ValueArg<std::string> config("c", "cfg", "configuration file", false, "server.cfg", "config filename");
 //
 
+auto send_states_frequency = std::chrono::milliseconds(5);
+
 int main(int argc, char* argv[]) {
 	if (enet_initialize () != 0) {
 		std::cout << "An error occurred while initializing ENet." << std::endl;
@@ -201,7 +203,7 @@ void server_work() {
 		}
 		
 		std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
-		if(now - last_status_update > std::chrono::milliseconds(50)) {
+		if(now - last_status_update > send_states_frequency) {
 			std::unique_lock<std::mutex> l(host_mutex);
 			last_status_update = now;
 			
@@ -218,10 +220,11 @@ void mysql_work() {
 	// cout << Command::GetString("sql_ip").c_str() << endl;
 	mysqlpp::Connection con = mysql_connect(Command::GetString("sql_db").c_str(), Command::GetString("sql_ip").c_str(), 
 											Command::GetString("sql_user").c_str(), Command::GetString("sql_pw").c_str(), Command::Get("sql_port"));
-	
+	int ping_freq = Command::Get("mysql_ping_frequency");
+	auto mysql_ping_freq = std::chrono::milliseconds(ping_freq <= 1 ? 3000 : ping_freq);
 	while(1) {
 		std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
-		if(now - last_time_mysql_pinged > std::chrono::milliseconds(3000)) {
+		if(now - last_time_mysql_pinged > mysql_ping_freq) {
 			if(!con.ping()) {
 				cout << "(MySQL has gone away): reconnecting" << endl;
 			}
@@ -313,7 +316,7 @@ void handle_new_client(ENetPeer* peer) {
 }
 
 void remove_client(ENetPeer* peer) {
-	cout << "removing client user_id: " << players[peer]->user_id << endl;
+	cout << "removing client id: " << players[peer]->id << endl;
 	delete players[peer];
 	players.erase( peer );
 }
@@ -329,11 +332,15 @@ void send_states() {
 	s.put("type", PacketType::update_objects);
 	s.put("num_objects", num_objects);
 	
-	Object* obj = new (s.allocate("objects", num_objects*sizeof(Object))) Object[num_objects];
+	Object* obj = (Object*)s.allocate("objects", num_objects*sizeof(Object));
 	for(auto& p : players) {
 		for(auto& o : p.second->obj) {
 			obj[i] = o;
 			obj[i].SetId(p.second->id);
+			if(i >= num_objects) {
+				cout << "FAIL: someone added objects in meantime xD" << endl;
+				exit(-1);
+			}
 			i++;
 		}
 		p.second->obj.clear();
@@ -342,7 +349,7 @@ void send_states() {
 	// static objects
 	int num_static_objects = static_objects.size();
 	s.put("num_static_objects", num_static_objects);
-	Object* st_obj = new (s.allocate("static_objects", num_static_objects*sizeof(Object))) Object[num_static_objects];
+	Object* st_obj = (Object*)s.allocate("static_objects", num_static_objects*sizeof(Object));
 	memcpy(st_obj, &static_objects[0], num_static_objects*sizeof(Object));
 	static_objects.clear();
 	
@@ -471,6 +478,15 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 
 			break;
 		}
+		case PacketType::goodbye: {
+			Packet s;
+			s.put("type", PacketType::player_removed);
+			s.put("user_id", player.id);
+			s.broadcast(host, ENET_PACKET_FLAG_RELIABLE);
+			remove_client(peer);
+			enet_peer_reset(peer);
+			break;
+		}
 		default:
 			cout << "received unknown packet! " << p.get_int("type") << endl;
 			break;
@@ -481,7 +497,10 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 
 // commands
 
-COMMAND(int, quit, ()) {
+COMMAND(void, quit, ()) {
 	running = false;
-	return 0;
+}
+
+COMMAND(void, send_states_frequency, (int ms)) {
+	send_states_frequency = std::chrono::milliseconds(ms);
 }

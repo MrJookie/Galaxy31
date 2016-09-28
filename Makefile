@@ -29,6 +29,7 @@ hpp :=	\
 cpp := 	\
 		libs/commands/commands.cpp						\
 		libs/commands/bind.cpp							\
+		libs/EventSystem/Event.cpp						\
 		\
 		src/Main.cpp									\
 		src/App.cpp										\
@@ -42,6 +43,9 @@ cpp := 	\
 		src/Projectile.cpp								\
 		src/Network.cpp									\
 		src/Quadtree.cpp								\
+		src/Collision.cpp								\
+		src/Timer.cpp									\
+		src/Radar.cpp									\
 		\
 
 release := release
@@ -84,6 +88,7 @@ make_dirs:
 	@mkdir -p $(build)
 	@mkdir -p $(build)/src/
 	@mkdir -p $(build)/libs/commands
+	@mkdir -p $(build)/libs/EventSystem
 
 clean_gui:
 	cd libs/GUI/ && make clean

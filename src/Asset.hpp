@@ -16,25 +16,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-//gui
-#include "Gui.hpp"
-#include "Control.hpp"
-#include "controls/Button.hpp"
-#include "controls/ScrollBar.hpp"
-#include "controls/Container.hpp"
-#include "controls/ComboBox.hpp"
-#include "controls/GridContainer.hpp"
-#include "controls/TextBox.hpp"
-#include "controls/RadioButton.hpp"
-#include "controls/ListBox.hpp"
-#include "controls/Label.hpp"
-#include "controls/TrackBar.hpp"
-#include "controls/Canvas.hpp"
-#include "controls/CheckBox.hpp"
-#include "controls/WidgetMover.hpp"
-#include "controls/Terminal.hpp"
-#include "controls/Form.hpp"
-#include "common/SDL/Drawing.hpp"
+#include <vector>
 
 //later pack files and access just by filenames and hardcode filepaths
 

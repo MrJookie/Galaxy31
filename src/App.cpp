@@ -5,10 +5,33 @@
 #include "commands/commands.hpp"
 #include "commands/bind.hpp"
 #include "server/network.hpp"
-
+#include "EventSystem/Event.hpp"
+#include "Collision.hpp"
+#include "Radar.hpp"
 #include <sstream>
+#include <algorithm>
+
+
+
 
 using Commands::Arg;
+using ng::Control;
+using ng::Button;
+using ng::TextBox;
+// using ng::TextBox;
+
+bool toggleMouseRelative = false;
+bool toggleFullscreen = false;
+bool toggleWireframe = false;
+
+int skipMouseResolution = 0;
+bool wait_for_packets = false;
+bool isFiring = false;
+std::vector<Ship*> ships;
+ng::Canvas *cv_minimap;
+ng::TextBox *tb_debug;
+TextBox* tb_game_user_name;
+int tick_id;
 
 App::App() {
 	m_initialWindowSize = glm::vec2(1024, 768);
@@ -27,22 +50,9 @@ App::App() {
     
    
     this->generate_RSA_keypair();
-    this->init();
 }
 
 
-COMMAND(std::string, concat, (std::vector<Arg> args)) {
-	// cout << "func: " << a << ", " << b << endl;
-	std::string str = "";
-	for(auto& a : args) {
-		if(a.type == Arg::t_int) 
-			str = str + std::to_string(a.i);
-		if(a.type == Arg::t_string) {
-			str += a.s;
-		} 
-	}
-	return str;
-}
 
 App::~App() {
 	GameState::asset.FreeAssets();
@@ -55,13 +65,17 @@ App::~App() {
     SDL_Quit();
 }
 
+namespace Timer {
+	void Init();
+}
+
 void App::init() {
 	
 	
     Network::initialize();
     NetworkChat::initialize();
     // Network::connect("89.177.76.215", SERVER_PORT);
-
+	
     
     if(SDL_Init(SDL_INIT_EVERYTHING) != 0) {
         throw std::string("Failed to initialize SDL: ") + SDL_GetError();
@@ -86,20 +100,6 @@ void App::init() {
 
     //SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG);
     
-    if(!Mix_Init(MIX_INIT_OGG)) {
-		throw std::string("Failed to initialize SDL_mixer");
-	}
-	if(Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 1024)==-1) {
-		/*
-		 * ALSA lib pcm_dmix.c:1079:(snd_pcm_dmix_open) unable to open slave
-		 * Mix_OpenAudio: ALSA: Couldn't open audio device: File descriptor in bad state
-		 * Even tho ALSA lib complains, Mix_OpenAudio throws an error, but if its not thrown, music continue to play and everything works correctly.
-		 * Commented during development
-		*/
-		//throw std::string("Mix_OpenAudio: ") + Mix_GetError();
-	}
-	Mix_PlayMusic(GameState::asset.GetMusic("loop.ogg"), -1);
-	Mix_VolumeMusic(MIX_MAX_VOLUME);
 
     glContext = SDL_GL_CreateContext(window);
     if(glContext == nullptr) {
@@ -117,21 +117,16 @@ void App::init() {
     printf("Version:  %s\n", glGetString(GL_VERSION));
     printf("GLSL:  %s\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
 
-    bool toggleMouseRelative = false;
-    bool toggleFullscreen = false;
-    bool toggleWireframe = false;
-    
-    int skipMouseResolution = 0;
-	bool wait_for_packets = false;
-    bool running = true;
-	bool isFiring = false;
-
+   
     SDL_SetHintWithPriority(SDL_HINT_MOUSE_RELATIVE_MODE_WARP, "1", SDL_HINT_OVERRIDE);
     //SDL_SetWindowGrab(window, SDL_TRUE);
 
     if(toggleMouseRelative) {
         SDL_SetRelativeMouseMode(SDL_TRUE);
     }
+    
+    
+    init_audio();
     
     //load all textures here
     GameState::asset.LoadTexture("ship_01_skin.png");
@@ -148,23 +143,15 @@ void App::init() {
     
     //gui
     GameState::gui = ng::GuiEngine(this->getWindowSize().x, this->getWindowSize().y);
-	//GameState::gui->SetSize(this->getWindowSize().x, this->getWindowSize().y);
-	//Drawing::SetResolution( this->getWindowSize().x, this->getWindowSize().y );
-	//Drawing::Init();
-	
 	GameState::gui.SetDefaultFont("Assets/Fonts/DroidSansMono.ttf");
 	GameState::gui.LoadXml("Assets/gui.xml");
 	GameState::gui.ApplyAnchoring();
 	
-	TextBox* tb_debug = (TextBox*)GameState::gui.GetControlById("game_debug");
-	//tb_debug->SetRect(0, 0, 100, 50);
-	//tb_debug->SetBackgroundColor(0);
+	tb_debug = (TextBox*)GameState::gui.GetControlById("game_debug");
+	// cv_minimap = (Canvas*)GameState::gui.GetControlById("game_minimap");
 	
-	Canvas* cv_minimap = (Canvas*)GameState::gui.GetControlById("game_minimap");
-	//cv_minimap->SetReadOnly(true);
-	//cv_minimap->SetBackgroundColor(0);
 	
-	GameState::activePage = "login";
+	GameState::set_gui_page("login");
 
 	Button &bt_login_submit = *((Button*)GameState::gui.GetControlById("login_submit"));
 	bt_login_submit.SubscribeEvent(Button::event::click, [&](Control* c) {
@@ -184,7 +171,7 @@ void App::init() {
 	bt_pass_restore_submit.SubscribeEvent(Button::event::click, [&](Control* c) {
 		TextBox* tb_pass_restore_email = (TextBox*)GameState::gui.GetControlById("pass_restore_email");
 		
-		if(this->TODOserver_doPassRestore(tb_pass_restore_email->GetText())) {
+		if(this->server_doPassRestore(tb_pass_restore_email->GetText())) {
 			GameState::gui.GetControlById("pass_restore_ok")->SetVisible(true);
 		}
 	});
@@ -206,118 +193,34 @@ void App::init() {
 			tb_register_status->SetText("Error! Passwords differ...");
 		}
 	});
-
+	
+	tb_game_user_name = (TextBox*)GameState::gui.GetControlById("game_user_name");
+	
 	Button &bt_login_register = *((Button*)GameState::gui.GetControlById("login_register"));
 	bt_login_register.SubscribeEvent(Button::event::click, [&](Control* c) {
-		GameState::activePage = "register";
+		GameState::set_gui_page("register");
 	});
 	
 	Button &bt_login_pass_restore = *((Button*)GameState::gui.GetControlById("login_pass_restore"));
 	bt_login_pass_restore.SubscribeEvent(Button::event::click, [&](Control* c) {
-		GameState::activePage = "pass_restore";
+		GameState::set_gui_page("pass_restore");
 	});
 	
 	Button &bt_register_login = *((Button*)GameState::gui.GetControlById("register_login"));
 	bt_register_login.SubscribeEvent(Button::event::click, [&](Control* c) {
-		GameState::activePage = "login";
+		GameState::set_gui_page("login");
 	});
 	
 	Button &bt_pass_restore_login = *((Button*)GameState::gui.GetControlById("pass_restore_login"));
 	bt_pass_restore_login.SubscribeEvent(Button::event::click, [&](Control* c) {
-		GameState::activePage = "login";
+		GameState::set_gui_page("login");
 	});
 	
-	/*
-	Terminal &tm_game_chat = *((Terminal*)GameState::gui.GetControlById("game_terminal"));
-	tm_game_chat.SubscribeEvent(Terminal::event::command, [&](Control* c) {
-		Terminal* t = (Terminal*)c;
-		
-		std::vector<std::string> exploded;
-		
-		std::string buf;
-		std::stringstream ss(t->GetText());
 
-		int i = 0;
-		while(ss >> buf && i < 3) {
-			exploded.push_back(buf);
-			i++;
-		}
-		
-		if(exploded.size() != 0 && exploded[0] == "/w") {
-			if(GameState::user_name != exploded[1]) {
-				t->WriteLog("^p[pm to " + exploded[1] + "]^w: " + &t->GetText()[exploded[0].size()+exploded[1].size()+2] + "^w");
-				NetworkChat::SendChatMessage(exploded[1], &t->GetText()[exploded[0].size()+exploded[1].size()+2]);
-			}
-		} else {
-			t->WriteLog(GameState::user_name + ": " + t->GetText() + "^w");
-			NetworkChat::SendChatMessage("", t->GetText());
-		}
-	});
-	*/
-	
-	Terminal &tm_game_chat = *((Terminal*)GameState::gui.GetControlById("game_terminal"));
-	
-	// commands
-	Command::AddCommand("w", [&](std::string nick, std::string message) {
-		tm_game_chat.WriteLog("^p[pm to " + nick + "]^w: " + message + "^w");
-		NetworkChat::SendChatMessage(nick, message);
-	});
-	
-	Command::AddCommand("fullscreen", [&]() {
-		toggleFullscreen = !toggleFullscreen;
-				
-		if(toggleFullscreen) {
-			SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+	ng::Terminal &tm_game_chat = *((ng::Terminal*)GameState::gui.GetControlById("game_terminal"));
 
-			int w, h;
-			SDL_GetWindowSize(window, &w, &h);
-			this->setWindowSize(glm::vec2(w, h));
-
-			skipMouseResolution = 4;
-		} else {
-			SDL_SetWindowFullscreen(window, 0);
-			this->setWindowSize(m_initialWindowSize);
-
-			skipMouseResolution = 4;
-		}
-	});
-	
-	Command::AddCommand("wireframe", [&]() {
-		toggleWireframe = !toggleWireframe;
-				
-		if(toggleWireframe) {
-			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-		} else {
-			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-		}
-	});
-	
-	Command::AddCommand("quit", [&]() {
-		running = false;
-	});
-	
-	Command::AddCommand("clear", [&]() {
-		tm_game_chat.ClearLog();
-	});
-	
-	Command::AddCommand("talk", [&]() {
-		tm_game_chat.Focus();
-	});
-	
-	Command::AddCommand("say", [&](std::string msg) {
-		tm_game_chat.WriteLog(GameState::user_name + ": " + msg + "^w");
-		NetworkChat::SendChatMessage("", msg);
-		cout << "say: " << msg << endl;
-	});
-	
-	Command::AddCommand("loop", [&](int n, Arg e) {
-		std::vector<Arg> arg;
-		for(int i=0; i < n; i++)
-			Command::Execute(e, arg);
-	});
-	
-	tm_game_chat.SubscribeEvent(Terminal::event::command, [&](Control* c) {
-		Terminal* t = (Terminal*)c;
+	tm_game_chat.SubscribeEvent(ng::Terminal::event::command, [&](Control* c) {
+		ng::Terminal* t = (ng::Terminal*)c;
 		if(t->GetLastCommand().size() > 0) {
 			if(t->GetLastCommand()[0] == '/') {
 				try {
@@ -333,15 +236,17 @@ void App::init() {
 		t->Unselect();
 		GameState::gui.Activate(0);
 	});
+	
+	init_commands();
 		
 	Ship::Chassis chassis("main_ship", "ship_01_skin.png", "ship_01_skin.png");
-    Ship ship(glm::vec2(0, 0), 0.0, chassis);
-    GameState::player = &ship;
+    GameState::player = new Ship(glm::vec2(0, 0), 0.0, chassis);;
     
-    Quadtree* quadtree = new Quadtree ( -GameState::worldSize.x, GameState::worldSize.x, -GameState::worldSize.y, GameState::worldSize.x, 6 ) ;
-	quadtree->Resize();
+    m_quadtree = new Quadtree ( -GameState::worldSize.x, GameState::worldSize.x, -GameState::worldSize.y, GameState::worldSize.x, 6 ) ;
+	m_quadtree->Resize();
 	
-    std::vector<Ship*> ships;
+    tick_id = Event::Register("tick");
+	Timer::Init();
     /*
     for(int x = 0; x < 20; ++x) {
 		for(int y = 0; y < 20; y++) {
@@ -350,71 +255,54 @@ void App::init() {
 		}
 	}
 	*/
+	
 	Command::LoadFromFile("galaxy31.cfg");
 	Network::connect(Command::GetString("server_ip").c_str(), SERVER_PORT);
 	
-	auto firing_tp = std::chrono::steady_clock::now();
-    while(running) {
+	Collision::Init();
+	
+	Event::Listen("collision", [](Object* obj1, Object* obj2) {
+		if(obj2->GetType() == object_type::projectile) {
+			Projectile* p = (Projectile*)obj2;
+			p->Destroy();
+		}
+	});
+	
+    
+}
+
+void App::main_loop() {
+	
+	Ship& ship = *GameState::player;
+	ng::Terminal &tm_game_chat = *((ng::Terminal*)GameState::gui.GetControlById("game_ng::Terminal"));
+	Ship::Chassis chassis("main_ship", "ship_01_skin.png", "ship_01_skin.png");
+	int lst = Event::Listen("timer", []() {
+		cout << "timer test each 5 seconds \n";
+	}, 5.0);
+	Event::StopListening(lst);
+	while(m_running) {
         this->loop();
 
         SDL_Event e;
-
+		Event::Emit(tick_id, GameState::deltaTime);
 		GameState::input_taken = GameState::gui.GetActiveControl() != nullptr;
         while(SDL_PollEvent(&e)) {
 			
 
             if(e.type == SDL_QUIT) {
-                running = false;
+                m_running = false;
             } else if(e.type == SDL_KEYDOWN) {
 				if(!GameState::input_taken) {
-					if(m_bind.OnEvent(e))
+					if(m_bind.OnEvent(e).i != 0)
 						continue;
 					switch(e.key.keysym.sym) {
 						case SDLK_ESCAPE:
-							running = false;
+							m_running = false;
 						break;
 						case SDLK_SLASH:
 							tm_game_chat.Focus();
 							break;
 						
-						/*
-						case SDLK_f: {
-							if(toggleFullscreen) {
-								SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
-
-								int w, h;
-								SDL_GetWindowSize(window, &w, &h);
-								this->setWindowSize(glm::vec2(w, h));
-
-								toggleFullscreen = false;
-							} else {
-								SDL_SetWindowFullscreen(window, 0);
-								//SDL_SetWindowDisplayMode(window, 0);
-
-								
-								//int w, h;
-								//SDL_GetWindowSize(window, &w, &h); //?
-
-								this->setWindowSize(m_initialWindowSize);
-
-								toggleFullscreen = true;
-							}
-							
-							skipMouseResolution = 4;
-						}
-						break;
-						
-						case SDLK_e: {
-							if(toggleWireframe) {
-								glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-								toggleWireframe = false;
-							} else {
-								glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-								toggleWireframe = true;
-							}
-						}
-						break;
-						*/
 					}
 				}
             } else if(e.type == SDL_MOUSEBUTTONDOWN && GameState::gui.GetSelectedControl() == nullptr) {
@@ -453,7 +341,7 @@ void App::init() {
 				}
 				text += Command::Complete(text, text.size()-1);
 				if(!text.empty())
-				tm_game_chat.SetText(text);
+					tm_game_chat.SetText(text);
 				
 			} else {
 				
@@ -478,10 +366,12 @@ void App::init() {
             SDL_GetMouseState(&mousePositionX, &mousePositionY);
             this->setScreenMousePosition(glm::vec2(mousePositionX, mousePositionY));
 
-            this->setWorldMousePosition(glm::vec2(
-                                            ((float)this->getScreenMousePosition().x - this->getWindowSize().x * 0.5) * m_zooming + GameState::camera.GetPosition().x,
-                                            ((float)this->getScreenMousePosition().y - this->getWindowSize().y * 0.5) * m_zooming + GameState::camera.GetPosition().y
-                                        ));
+            this->setWorldMousePosition(
+				glm::vec2(
+					((float)this->getScreenMousePosition().x - this->getWindowSize().x * 0.5) * m_zooming + GameState::camera.GetPosition().x,
+					((float)this->getScreenMousePosition().y - this->getWindowSize().y * 0.5) * m_zooming + GameState::camera.GetPosition().y
+				)
+			);
         }
         
         GameState::windowSize = this->getWindowSize();
@@ -494,33 +384,8 @@ void App::init() {
         
         Network::handle_events(5);
         
-        if(GameState::activePage == "login") {
-			GameState::gui.GetControlById("login")->SetVisible(true);
-			GameState::gui.GetControlById("register")->SetVisible(false);
-			GameState::gui.GetControlById("pass_restore")->SetVisible(false);
-			//GameState::gui.GetControlById("lobby")->SetVisible(false);
-			GameState::gui.GetControlById("game")->SetVisible(false);
-		} else if(GameState::activePage == "register") {
-			GameState::gui.GetControlById("login")->SetVisible(false);
-			GameState::gui.GetControlById("register")->SetVisible(true);
-			GameState::gui.GetControlById("pass_restore")->SetVisible(false);
-			//GameState::gui.GetControlById("lobby")->SetVisible(false);
-			GameState::gui.GetControlById("game")->SetVisible(false);
-		} else if(GameState::activePage == "pass_restore") {
-			GameState::gui.GetControlById("login")->SetVisible(false);
-			GameState::gui.GetControlById("register")->SetVisible(false);
-			GameState::gui.GetControlById("pass_restore")->SetVisible(true);
-			//GameState::gui.GetControlById("lobby")->SetVisible(false);
-			GameState::gui.GetControlById("game")->SetVisible(false);
-		} else if(GameState::activePage == "game") {
-			GameState::gui.GetControlById("login")->SetVisible(false);
-			GameState::gui.GetControlById("register")->SetVisible(false);
-			GameState::gui.GetControlById("pass_restore")->SetVisible(false);
-			//GameState::gui.GetControlById("lobby")->SetVisible(false);
-			GameState::gui.GetControlById("game")->SetVisible(true);
-		}
 
-		// background
+		// draw space background
         glUseProgram(GameState::asset.GetShader("background.vs").id);
 
         GLuint VAO, VBO, EBO;
@@ -566,183 +431,7 @@ void App::init() {
         //
         
         if(GameState::activePage == "game") {
-			NetworkChat::handle_events(5);
-			cv_minimap->Clear(0);
-			
-			// draw my ship on radar
-			int pointX = (ship.GetPosition().x / (2 * GameState::worldSize.x) * (cv_minimap->GetRect().w-5)) + (cv_minimap->GetRect().w-5)/2.0f; //-4 is for pixelsize
-			int pointY = (ship.GetPosition().y / (2 * GameState::worldSize.y) * (cv_minimap->GetRect().h-5)) + (cv_minimap->GetRect().h-5)/2.0f;
-			cv_minimap->SetPixelColor(0xFFFFFF00);
-			cv_minimap->PutPixel(pointX, pointY);
-			
-			// draw enemy ships on radar
-			for(auto& obj : GameState::ships) {
-				auto& o = obj.second.first;
-				
-				int pointX = (o->GetPosition().x / (2 * GameState::worldSize.x) * cv_minimap->GetRect().w) + cv_minimap->GetRect().w/2.0f;
-				int pointY = (o->GetPosition().y / (2 * GameState::worldSize.y) * cv_minimap->GetRect().h) + cv_minimap->GetRect().h/2.0f;
-				cv_minimap->SetPixelColor(0xFFFF0000);
-				cv_minimap->PutPixel(pointX, pointY);
-			}
-			
-			// world boundaries
-			if(ship.GetPosition().x > GameState::worldSize.x) {
-				ship.SetSpeed(glm::vec2(0, ship.GetSpeed().y));
-				ship.SetPosition(glm::vec2(GameState::worldSize.x, ship.GetPosition().y));
-			}
-
-			if(ship.GetPosition().x < -GameState::worldSize.x) {
-				ship.SetSpeed(glm::vec2(0, ship.GetSpeed().y));
-				ship.SetPosition(glm::vec2(-GameState::worldSize.x, ship.GetPosition().y));
-			}
-			
-			if(ship.GetPosition().y > GameState::worldSize.y) {
-				ship.SetSpeed(glm::vec2(ship.GetSpeed().x, 0));
-				ship.SetPosition(glm::vec2(ship.GetPosition().x, GameState::worldSize.y));
-			}
-
-			if(ship.GetPosition().y < -GameState::worldSize.y) {
-				ship.SetSpeed(glm::vec2(ship.GetSpeed().x, 0));
-				ship.SetPosition(glm::vec2(ship.GetPosition().x, -GameState::worldSize.y));
-			}
-			//
-			
-			//Network::handle_events(5);
-			ship.Process();
-			for(auto it = GameState::projectiles.begin(); it != GameState::projectiles.end(); it++) {
-				it->Process();
-			}
-			
-			Network::Process();
-			
-			if(isFiring) {
-				
-				auto delta = std::chrono::steady_clock::now() - firing_tp;
-				if(std::chrono::duration_cast<std::chrono::milliseconds>(delta).count() > Command::Get("rocket_milliseconds")) {
-					ship.Fire();
-					firing_tp = std::chrono::steady_clock::now();
-				}
-			}
-
-			GameState::camera.SetPosition( glm::vec3(ship.GetPosition().x, ship.GetPosition().y, 0) );
-			glm::mat4 projection = glm::ortho(-(float)this->getWindowSize().x*this->getZoom()*0.5, (float)this->getWindowSize().x*this->getZoom()*0.5, (float)this->getWindowSize().y*this->getZoom()*0.5, -(float)this->getWindowSize().y*this->getZoom()*0.5);
-			glm::mat4 view = GameState::camera.GetViewMatrix();
-			GameState::camera.SetProjection(projection);
-			GameState::camera.SetView(view);
-			
-			Network::SendOurState();
-			
-			for(auto& projectile : GameState::projectiles) {
-				quadtree->AddObject(&projectile);
-				
-				projectile.UpdateHullVertices(GameState::asset.GetTextureHull("projectile_collision.png").vertices);
-				if(Command::Get("collisionhull"))
-				projectile.RenderCollisionHull();
-			}
-			
-			// add multiplayer enemy ships to quadtree
-			for(auto& obj : GameState::ships) {
-				quadtree->AddObject(obj.second.first);
-			}
-
-			// add clicked ships to quadtree
-			for(auto& ship : ships) {
-				quadtree->AddObject(ship);
-				
-				ship->UpdateHullVertices(GameState::asset.GetTextureHull("ship_01_skin_collision.png").vertices);
-				
-				if(Command::Get("collisionhull"))
-				ship->RenderCollisionHull();
-			}
-			
-			// add my ship to quadtree
-			quadtree->AddObject(&ship);
-			
-			// quadtree
-			std::vector<Object*> drawObjects;
-			quadtree->QueryRectangle(ship.GetPosition().x - GameState::windowSize.x/2*GameState::zoom, ship.GetPosition().y - GameState::windowSize.y/2*GameState::zoom, GameState::windowSize.x*GameState::zoom, GameState::windowSize.y*GameState::zoom, drawObjects);
-			for(auto& object : drawObjects) {
-				((SolidObject*)object)->Draw();
-			}
-			
-			ship.CollisionHullColor = glm::vec4(1.0, 0.0, 1.0, 1.0);
-			
-			std::vector<Object*> nearObjects;
-			quadtree->QueryRectangle(ship.GetPosition().x - ship.GetSize().x/2, ship.GetPosition().y - ship.GetSize().y/2, ship.GetSize().x, ship.GetSize().y, nearObjects);
-			for(auto& object : nearObjects) {
-				if((SolidObject*)&ship == (SolidObject*)object) continue;
-				
-				quadtree->DrawRect(object->GetPosition().x - object->GetSize().x/2, object->GetPosition().y - object->GetSize().y/2, object->GetSize().x, object->GetSize().y, glm::vec4(1, 1, 1, 1));
-				
-				if(ship.Collides((SolidObject*)object)) {
-					//std::cout << "collides!" << std::endl;
-					ship.CollisionHullColor = glm::vec4(0.0, 1.0, 0.0, 1.0);
-				}
-				
-				if(((SolidObject*)object)->NodePtr == nullptr) continue;
-				
-				std::vector<Object*> objcts;
-				//((SolidObject*)object)->NodePtr->GetObjectsInNode(objcts);
-				quadtree->QueryRectangle(object->GetPosition().x - object->GetSize().x/2, object->GetPosition().y - object->GetSize().y/2, object->GetSize().x, object->GetSize().y, objcts);
-				for(auto& object2 : objcts) {
-					if(Command::Get("aabb"))
-					quadtree->DrawRect(object2->GetPosition().x - object2->GetSize().x/2, object2->GetPosition().y - object2->GetSize().y/2, object2->GetSize().x, object2->GetSize().y, glm::vec4(0, 0, 1, 1));
-				}
-			}
-			
-			//needs fix
-			/*
-			std::vector<Object*> objcts = ship.NodePtr->GetObjectsInNode();
-			for(auto& object2 : objcts) {
-				quadtree->DrawRect(object2->GetPosition().x - object2->GetSize().x/2, object2->GetPosition().y - object2->GetSize().y/2, object2->GetSize().x, object2->GetSize().y, glm::vec4(0, 0, 1, 1));
-			}
-			*/
-			
-			if(Command::Get("quadtree")) {
-				quadtree->Draw();
-			}
-			quadtree->Clear();
-			if(Command::Get("aabb"))
-			quadtree->DrawRect(ship.GetPosition().x - ship.GetSize().x/2, ship.GetPosition().y - ship.GetSize().y/2, ship.GetSize().x, ship.GetSize().y, glm::vec4(0, 1, 0, 1));
-			//
-			
-			ship.Draw();
-			ship.UpdateHullVertices(GameState::asset.GetTextureHull("ship_01_skin_collision.png").vertices);
-			
-			if(Command::Get("collisionhull"))
-			ship.RenderCollisionHull();
-			
-			TextBox* tb_game_user_name = (TextBox*)GameState::gui.GetControlById("game_user_name");
-			tb_game_user_name->SetText(std::to_string(GameState::user_id) + " | " + GameState::user_name);
-			//tb_game_user_name->SetRect(ship.GetPosition().x - ship.GetSize().x/2, ship.GetPosition().y - ship.GetSize().y/2, 200, 28);
-			
-			for(Projectile& projectile : GameState::projectiles) {
-				projectile.Draw();
-			}
-			
-			showFPS();
-			std::string debugString(
-				/*
-				"App:m_windowSize: " + std::to_string(this->getWindowSize().x) + "x" + std::to_string(this->getWindowSize().y)  + "\n" +
-				"App:m_screenMousePosition: " + std::to_string(this->getScreenMousePosition().x) + "," + std::to_string(this->getScreenMousePosition().y)  + "\n" +
-				*/
-				"App:m_worldMousePosition: " + std::to_string(this->getWorldMousePosition().x) + "," + std::to_string(this->getWorldMousePosition().y)  + "\n" +
-				"Ship:m_position (center): " + std::to_string(ship.GetPosition().x) + "," + std::to_string(ship.GetPosition().y)  + "\n" +
-				"Ship::m_speed: " + std::to_string(glm::length(ship.GetSpeed()))  + "\n" +
-				"GameState::objectsDrawn: " + std::to_string(GameState::objectsDrawn)  + "\n" +
-				"Quadtree::DrawnOnScreen: " + std::to_string((drawObjects.size())) + "\n" +
-				"Quadtree::GetObjects: " + std::to_string((nearObjects.size())) + "\n" +
-				"FPS: " + std::to_string(m_frames_current)
-			);
-			tb_debug->SetText(debugString);
-			
-			for(auto it = GameState::projectiles.begin(); it != GameState::projectiles.end(); it++) {
-				// it->Process();
-				if(it->IsDead()) {
-					it = GameState::projectiles.erase(it);
-					if(it == GameState::projectiles.end()) break;
-				}
-			}
+			game_loop();
 		}
 	
         
@@ -755,9 +444,138 @@ void App::init() {
 
         // SDL_Delay(16);
     }
-    
-    m_bind.SaveKeys("galaxy31.cfg");
-	Command::SaveVarariablesToFile("galaxy31.cfg",false);
+}
+
+auto firing_tp = std::chrono::steady_clock::now();
+void App::game_loop() {
+	GameState::debug_string = "";
+	Ship& ship = *GameState::player;
+	NetworkChat::handle_events(5);
+	
+	
+	Radar::Draw();
+	
+	Collision::WorldBoundary();
+	//
+	
+	//Network::handle_events(5);
+	ship.Process();
+	
+	for(auto it = GameState::projectiles.begin(); it != GameState::projectiles.end(); it++) {
+		it->Process();
+	}
+	
+	Network::Process();
+	
+	if(isFiring) {
+		auto delta = std::chrono::steady_clock::now() - firing_tp;
+		if(std::chrono::duration_cast<std::chrono::milliseconds>(delta).count() > Command::Get("rocket_milliseconds")) {
+			ship.Fire();
+			firing_tp = std::chrono::steady_clock::now();
+		}
+	}
+
+	GameState::camera.SetPosition( glm::vec3(ship.GetPosition().x, ship.GetPosition().y, 0) );
+	glm::mat4 projection = glm::ortho(-(float)this->getWindowSize().x*this->getZoom()*0.5, (float)this->getWindowSize().x*this->getZoom()*0.5, (float)this->getWindowSize().y*this->getZoom()*0.5, -(float)this->getWindowSize().y*this->getZoom()*0.5);
+	glm::mat4 view = GameState::camera.GetViewMatrix();
+	GameState::camera.SetProjection(projection);
+	GameState::camera.SetView(view);
+	
+	Network::SendOurState();
+	
+	for(auto& projectile : GameState::projectiles) {
+		m_quadtree->AddObject(&projectile);
+		
+		projectile.UpdateHullVertices(GameState::asset.GetTextureHull("projectile_collision.png").vertices);
+		if(Command::Get("collisionhull"))
+			projectile.RenderCollisionHull();
+	}
+	
+	// add multiplayer enemy ships to m_quadtree
+	for(auto& obj : GameState::ships) {
+		m_quadtree->AddObject(obj.second.first);
+	}
+
+	// add clicked ships to m_quadtree
+	for(auto& ship : ships) {
+		m_quadtree->AddObject(ship);
+		
+		ship->UpdateHullVertices(GameState::asset.GetTextureHull("ship_01_skin_collision.png").vertices);
+		
+		if(Command::Get("collisionhull"))
+			ship->RenderCollisionHull();
+	}
+	
+	// add my ship to quadtree
+	m_quadtree->AddObject(&ship);
+	
+	// quadtree
+	std::vector<Object*> drawObjects;
+	m_quadtree->QueryRectangle(ship.GetPosition().x - GameState::windowSize.x/2*GameState::zoom, ship.GetPosition().y - GameState::windowSize.y/2*GameState::zoom, GameState::windowSize.x*GameState::zoom, GameState::windowSize.y*GameState::zoom, drawObjects);
+	for(auto& object : drawObjects) {
+		((SolidObject*)object)->Draw();
+	}
+	
+	
+	
+	Collision::Check(m_quadtree);
+	
+	//needs fix
+	/*
+	std::vector<Object*> objcts = ship.NodePtr->GetObjectsInNode();
+	for(auto& object2 : objcts) {
+		m_quadtree->DrawRect(object2->GetPosition().x - object2->GetSize().x/2, object2->GetPosition().y - object2->GetSize().y/2, object2->GetSize().x, object2->GetSize().y, glm::vec4(0, 0, 1, 1));
+	}
+	*/
+	
+	if(Command::Get("m_quadtree")) {
+		m_quadtree->Draw();
+	}
+	m_quadtree->Clear();
+	if(Command::Get("aabb"))
+		m_quadtree->DrawRect(ship.GetPosition().x - ship.GetSize().x/2, ship.GetPosition().y - ship.GetSize().y/2, ship.GetSize().x, ship.GetSize().y, glm::vec4(0, 1, 0, 1));
+	//
+	
+	ship.Draw();
+	
+	if(Command::Get("collisionhull")) {
+		ship.UpdateHullVertices(GameState::asset.GetTextureHull("ship_01_skin_collision.png").vertices);
+		ship.RenderCollisionHull();
+	}
+	
+	
+	tb_game_user_name->SetText(std::to_string(GameState::user_id) + " | " + GameState::user_name);
+	//tb_game_user_name->SetRect(ship.GetPosition().x - ship.GetSize().x/2, ship.GetPosition().y - ship.GetSize().y/2, 200, 28);
+	
+	for(Projectile& projectile : GameState::projectiles) {
+		projectile.Draw();
+	}
+	
+	showFPS();
+	std::string debugString(
+		/*
+		"App:m_windowSize: " + std::to_string(this->getWindowSize().x) + "x" + std::to_string(this->getWindowSize().y)  + "\n" +
+		"App:m_screenMousePosition: " + std::to_string(this->getScreenMousePosition().x) + "," + std::to_string(this->getScreenMousePosition().y)  + "\n" +
+		*/
+		
+		"App:m_worldMousePosition: " + std::to_string(this->getWorldMousePosition().x) + "," + std::to_string(this->getWorldMousePosition().y)  + "\n" +
+		"Ship:m_position (center): " + std::to_string(ship.GetPosition().x) + "," + std::to_string(ship.GetPosition().y)  + "\n" +
+		"Ship::m_speed: " + std::to_string(glm::length(ship.GetSpeed()))  + "\n" +
+		"GameState::objectsDrawn: " + std::to_string(GameState::objectsDrawn)  + "\n" +
+		"Quadtree::DrawnOnScreen: " + std::to_string((drawObjects.size())) + "\n" +
+		// "Quadtree::GetObjects: " + std::to_string((nearObjects.size())) + "\n" +
+		"FPS: " + std::to_string(m_frames_current) + "\n" +
+		GameState::debug_string
+	);
+	tb_debug->SetText(debugString);
+	
+	// cleanup dead projectiles
+	for(auto it = GameState::projectiles.begin(); it != GameState::projectiles.end(); it++) {
+		if(it->IsDead()) {
+			it = GameState::projectiles.erase(it);
+			if(it == GameState::projectiles.end()) break;
+		}
+	}
 }
 
 void App::loop() {
@@ -828,7 +646,8 @@ float App::getZoom() const {
 	return m_zooming;
 }
 
-bool App::TODOserver_doPassRestore(std::string user_email) {
+// TODO:
+bool App::server_doPassRestore(std::string user_email) {
 	//if email was not restored >10 mins ago, return true; else false;
 	
 	return true;
@@ -847,7 +666,88 @@ void App::generate_RSA_keypair() {
 	privateKey.Save(CryptoPP::HexEncoder(new CryptoPP::StringSink(GameState::clientPrivateKeyStr)).Ref());
 }
 
+void App::init_audio() {
+	if(!Mix_Init(MIX_INIT_OGG)) {
+		throw std::string("Failed to initialize SDL_mixer");
+	}
+	if(Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 1024)==-1) {
+		/*
+		 * ALSA lib pcm_dmix.c:1079:(snd_pcm_dmix_open) unable to open slave
+		 * Mix_OpenAudio: ALSA: Couldn't open audio device: File descriptor in bad state
+		 * Even tho ALSA lib complains, Mix_OpenAudio throws an error, but if its not thrown, music continue to play and everything works correctly.
+		 * Commented during development
+		*/
+		//throw std::string("Mix_OpenAudio: ") + Mix_GetError();
+	}
+	Mix_PlayMusic(GameState::asset.GetMusic("loop.ogg"), -1);
+	Mix_VolumeMusic(MIX_MAX_VOLUME);
+}
+
+void App::init_commands() {
+	ng::Terminal &tm_game_chat = *((ng::Terminal*)GameState::gui.GetControlById("game_ng::Terminal"));
+	
+	// -----------------[ commands ]-----------------------
+	Command::AddCommand("w", [&](std::string nick, std::string message) {
+		tm_game_chat.WriteLog("^p[pm to " + nick + "]^w: " + message + "^w");
+		NetworkChat::SendChatMessage(nick, message);
+	});
+	
+	Command::AddCommand("fullscreen", [&]() {
+		toggleFullscreen = !toggleFullscreen;
+				
+		if(toggleFullscreen) {
+			SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+
+			int w, h;
+			SDL_GetWindowSize(window, &w, &h);
+			this->setWindowSize(glm::vec2(w, h));
+
+			skipMouseResolution = 4;
+		} else {
+			SDL_SetWindowFullscreen(window, 0);
+			this->setWindowSize(m_initialWindowSize);
+
+			skipMouseResolution = 4;
+		}
+	});
+	
+	Command::AddCommand("wireframe", [&]() {
+		toggleWireframe = !toggleWireframe;
+				
+		if(toggleWireframe) {
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		} else {
+			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		}
+	});
+	
+	Command::AddCommand("quit", [&]() {
+		m_running = false;
+	});
+	
+	Command::AddCommand("clear", [&]() {
+		tm_game_chat.ClearLog();
+	});
+	
+	Command::AddCommand("talk", [&]() {
+		tm_game_chat.Focus();
+	});
+	
+	Command::AddCommand("say", [&](std::string msg) {
+		tm_game_chat.WriteLog(GameState::user_name + ": " + msg + "^w");
+		NetworkChat::SendChatMessage("", msg);
+		cout << "say: " << msg << endl;
+	});
+	
+	
+}
 
 COMMAND(void, setspeed, (float speed)) {
 	cout << "speed: " << speed << endl;
+}
+
+void App::on_exit() {
+	m_bind.SaveKeys("galaxy31.cfg");
+	Command::SaveVarariablesToFile("galaxy31.cfg",false);
+	Network::SendGoodBye();
 }

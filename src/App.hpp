@@ -7,23 +7,27 @@
 
 #include <vector>
 #include <glm/glm.hpp>
-#include <algorithm>
+
 #include "commands/bind.hpp"
 
-using namespace ng;
 
 class App {
     public:
         App();
         ~App();
 
-    private:
         void init();
+        void main_loop();
+        void on_exit();
+    private:
+        void init_commands();
+        void init_audio();
         void loop(); 
+        void game_loop(); 
         void showFPS();
         
         
-        bool TODOserver_doPassRestore(std::string user_email);
+        bool server_doPassRestore(std::string user_email);
         
         void setWindowSize(glm::vec2 windowSize);
         void setScreenMousePosition(glm::vec2 screenMousePosition);
@@ -50,6 +54,7 @@ class App {
         int m_ticks_current;
         int m_frames_current;
         int m_frames_elapsed;
+        int m_running;
         
         double m_zooming = 2;
 
@@ -59,6 +64,7 @@ class App {
         std::chrono::high_resolution_clock::time_point m_chrono_start;
         double m_chrono_elapsed;
         
+        Quadtree* m_quadtree;
         Bind m_bind;
         SDL_Window* window;
         SDL_GLContext glContext;

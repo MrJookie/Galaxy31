@@ -19,8 +19,8 @@ class Packet {
 			return s[off] ? (hash(s, off+(s[off+1] == '_' ? 2 : 1))*33) ^ s[off] : 5381;
 		}
 		
-		using key_type = unsigned short;
-		using size_type = unsigned short;
+		using key_type = unsigned int;
+		using size_type = unsigned int;
 		size_type m_size;
 		size_type m_allocated_size;
 		size_type m_keys_offset;
@@ -60,7 +60,9 @@ class Packet {
 		
 		void alloc(int size) {
 			if(m_size+size > m_allocated_size) {
-				m_allocated_size = m_allocated_size*3/2;
+				int new_size = m_size+size;
+				
+				m_allocated_size = std::max<size_type>(new_size+100, m_allocated_size*3/2);
 				char* new_alloc = new char[m_allocated_size];
 				memcpy(new_alloc, m_data, m_size);
 				delete[] m_data;
@@ -126,8 +128,8 @@ class Packet {
 			m_size = sizeof(size_type)*2;
 			
 			if(initial_allocation < 0) initial_allocation = INITIAL_ALLOCATION;
-			m_data = new char[initial_allocation];
 			m_allocated_size = initial_allocation;
+			m_data = new char[m_allocated_size];
 			m_sent = false;
 			m_readonly = false;
 			m_keys_offset = 0;
