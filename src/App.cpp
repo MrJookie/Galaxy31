@@ -265,6 +265,7 @@ void App::init() {
 		if(obj2->GetType() == object_type::projectile) {
 			Projectile* p = (Projectile*)obj2;
 			p->Destroy();
+			cout << "COLLISION !!\n";
 		}
 	});
 	
@@ -274,7 +275,7 @@ void App::init() {
 void App::main_loop() {
 	
 	Ship& ship = *GameState::player;
-	ng::Terminal &tm_game_chat = *((ng::Terminal*)GameState::gui.GetControlById("game_ng::Terminal"));
+	ng::Terminal &tm_game_chat = *((ng::Terminal*)GameState::gui.GetControlById("game_terminal"));
 	Ship::Chassis chassis("main_ship", "ship_01_skin.png", "ship_01_skin.png");
 	int lst = Event::Listen("timer", []() {
 		cout << "timer test each 5 seconds \n";
@@ -528,7 +529,7 @@ void App::game_loop() {
 	}
 	*/
 	
-	if(Command::Get("m_quadtree")) {
+	if(Command::Get("quadtree")) {
 		m_quadtree->Draw();
 	}
 	m_quadtree->Clear();
@@ -684,7 +685,7 @@ void App::init_audio() {
 }
 
 void App::init_commands() {
-	ng::Terminal &tm_game_chat = *((ng::Terminal*)GameState::gui.GetControlById("game_ng::Terminal"));
+	ng::Terminal &tm_game_chat = *((ng::Terminal*)GameState::gui.GetControlById("game_terminal"));
 	
 	// -----------------[ commands ]-----------------------
 	Command::AddCommand("w", [&](std::string nick, std::string message) {

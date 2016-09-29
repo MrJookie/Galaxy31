@@ -5,7 +5,9 @@
 #include "commands/commands.hpp"
 #include "SolidObject.hpp"
 #include "GameState.hpp"
-
+#include <iostream>
+using std::cout;
+using std::endl;
 namespace Collision {
 	
 	int collision_evt;
@@ -28,6 +30,7 @@ namespace Collision {
 			quadtree->DrawRect(object->GetPosition().x - object->GetSize().x/2, object->GetPosition().y - object->GetSize().y/2, object->GetSize().x, object->GetSize().y, glm::vec4(1, 1, 1, 1));
 			
 			if(ship.Collides((SolidObject*)object)) {
+				cout << "collision should happend\n";
 				Event::Emit(collision_evt, &ship, object);
 				ship.CollisionHullColor = glm::vec4(0.0, 1.0, 0.0, 1.0);
 			}

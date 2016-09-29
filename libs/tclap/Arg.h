@@ -86,7 +86,7 @@ class Arg
 		static char& delimiterRef() { static char delim = ' '; return delim; }
 
 	protected:
-		bool is_string;
+		
 		/**
 		 * The single char flag used to identify the argument.
 		 * This value (preceded by a dash {-}), can be used to identify
@@ -183,6 +183,7 @@ class Arg
 			 Visitor* v = NULL );
 
 	public:
+		bool is_string;
 		/**
 		 * Destructor.
 		 */

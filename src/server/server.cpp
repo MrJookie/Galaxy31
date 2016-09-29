@@ -25,6 +25,7 @@
 #include "commands/tclap_loader.hpp"
 
 #include <sstream>
+#include <cassert>
 
 using Commands::Arg;
 
@@ -337,10 +338,7 @@ void send_states() {
 		for(auto& o : p.second->obj) {
 			obj[i] = o;
 			obj[i].SetId(p.second->id);
-			if(i >= num_objects) {
-				cout << "FAIL: someone added objects in meantime xD" << endl;
-				exit(-1);
-			}
+			assert(i < num_objects);
 			i++;
 		}
 		p.second->obj.clear();
@@ -349,9 +347,11 @@ void send_states() {
 	// static objects
 	int num_static_objects = static_objects.size();
 	s.put("num_static_objects", num_static_objects);
-	Object* st_obj = (Object*)s.allocate("static_objects", num_static_objects*sizeof(Object));
-	memcpy(st_obj, &static_objects[0], num_static_objects*sizeof(Object));
-	static_objects.clear();
+	if(num_static_objects > 0) {
+		Object* st_obj = (Object*)s.allocate("static_objects", num_static_objects*sizeof(Object));
+		memcpy(st_obj, &static_objects[0], num_static_objects*sizeof(Object));
+		static_objects.clear();
+	}
 	
 	s.broadcast(host, Channel::data, 0);
 }
@@ -479,12 +479,13 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 			break;
 		}
 		case PacketType::goodbye: {
+			std::unique_lock<std::mutex> l(host_mutex);
+			enet_peer_reset(peer);
+			
 			Packet s;
 			s.put("type", PacketType::player_removed);
 			s.put("user_id", player.id);
 			s.broadcast(host, ENET_PACKET_FLAG_RELIABLE);
-			remove_client(peer);
-			enet_peer_reset(peer);
 			break;
 		}
 		default:

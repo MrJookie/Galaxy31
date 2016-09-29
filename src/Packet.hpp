@@ -8,7 +8,7 @@
 #include <utility>
 
 #define INITIAL_ALLOCATION 1500
-void packetFreeCallback(ENetPacket* pkt) {
+static void packetFreeCallback(ENetPacket* pkt) {
 	delete[] pkt->data;
 }
 
@@ -99,6 +99,7 @@ class Packet {
 		Packet(ENetPacket* pkt) {
 			m_data = (char*)pkt->data;
 			m_size = pkt->dataLength;
+			m_sent = false;
 			m_readonly = true;
 			parsePacket();
 		}
@@ -106,6 +107,7 @@ class Packet {
 		Packet(char* data, int length) {
 			m_data = data;
 			m_size = length;
+			m_sent = false;
 			m_readonly = true;
 			parsePacket();
 		}
