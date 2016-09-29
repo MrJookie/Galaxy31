@@ -39,7 +39,8 @@ namespace Network {
 	// private forwards
 	void parse_packet(ENetPeer* peer, ENetPacket* pkt);
 	//
-	
+	int evt_lag;
+	int evt_disconnected;
 	const int timeout = 5000;
 	void initialize() {
 		if (enet_initialize () != 0) {
@@ -48,7 +49,8 @@ namespace Network {
 		}
 		atexit (enet_deinitialize);
 		
-		Event::Register("lag");
+		evt_lag = Event::Register("lag");
+		evt_disconnected = Event::Register("disconnected");
 	}
 	
 	bool connect(const char* ip, int port) {
@@ -100,6 +102,10 @@ namespace Network {
 				parse_packet(event.peer, event.packet);
 				enet_packet_destroy(event.packet);
 				break;
+			case ENET_EVENT_TYPE_DISCONNECT: 
+				Event::Emit(evt_disconnected);
+				enet_peer_reset(event.peer);
+				break;
 			default:
 				cout << "event: " << event.type << endl;
 			}
@@ -107,10 +113,11 @@ namespace Network {
 	}
 	
 	std::chrono::high_resolution_clock::time_point last_time_state_sent = std::chrono::high_resolution_clock::now();
+	auto send_states_period = std::chrono::milliseconds(15);
 	void SendOurState() {
 		std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
 		
-		if(now - last_time_state_sent > std::chrono::milliseconds(15)) {
+		if(now - last_time_state_sent > send_states_period) {
 			last_time_state_sent = now;
 		} else {
 			return;
@@ -223,6 +230,9 @@ namespace Network {
 		max_packets_delayed = max;
 		min_packets = min;
 	}
+	COMMAND(void, send_states_frequency, (int fq)) {
+		send_states_period = std::chrono::milliseconds( (10000/fq)/10000 );
+	}
 	
 	void Process() {
 		
@@ -334,6 +344,7 @@ namespace Network {
 							chassis = new Ship::Chassis("main_ship", "ship_01_skin.png", "ship_01_skin.png");
 						Ship *s = new Ship({0,0}, 0, *chassis);
 						s->CopyObjectState(o);
+						cout << "id: " << s->GetId() << ", owner: " << s->GetOwner() << endl;
 						GameState::ships[o.GetId()] = std::pair<Ship*, std::queue<Object>>(s, std::queue<Object>());
 					} else {
 						std::queue<Object> &q = GameState::ships[o.GetId()].second;
@@ -354,8 +365,6 @@ namespace Network {
 							const Asset::Texture& texture = GameState::asset.GetTexture("projectile.png");
 							Projectile proj(texture);
 							proj.CopyObjectState(o);
-							// proj.SetAcceleration(o.GetAcceleration());
-							// proj.SetRotation(o.GetRotation());
 							GameState::projectiles.push_back(proj);
 						}
 					}
@@ -366,6 +375,7 @@ namespace Network {
 			case PacketType::authorize: {
 				GameState::user_id = p.get_int("user_id");
 				GameState::user_name = p.get_string("user_name");
+				GameState::player->SetOwner(GameState::user_id);
 				if(p.get_int("status_code") == status_code::login_ok) { //login ok after registration login
 					NetworkChat::connect(p.get_string("chat_ip").c_str(), p.get_int("chat_port")); //connect to chat server
 					NetworkChat::SendChatLogin(GameState::user_id, GameState::user_name);

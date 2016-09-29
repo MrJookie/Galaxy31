@@ -80,9 +80,8 @@ clean:
 	rm -rf build
 	rm -rf release
 	rm -f $(exe)
-	rm -rf /tmp/Galaxy31
-	rm -rf /tmp/Galaxy31_server
-	rm -rf /tmp/Galaxy31_server_chat
+	rm -f Galaxy31_server
+	rm -f Galaxy31_server_chat
 
 make_dirs:
 	@mkdir -p $(build)

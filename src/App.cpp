@@ -257,19 +257,32 @@ void App::init() {
 	*/
 	
 	Command::LoadFromFile("galaxy31.cfg");
+	Command::LoadFromFile("user.cfg");
 	Network::connect(Command::GetString("server_ip").c_str(), SERVER_PORT);
 	
 	Collision::Init();
 	
-	Event::Listen("collision", [](Object* obj1, Object* obj2) {
+	Event::Listen("collision", [&](Object* obj1, Object* obj2) {
+		
 		if(obj2->GetType() == object_type::projectile) {
-			Projectile* p = (Projectile*)obj2;
-			p->Destroy();
-			cout << "COLLISION !!\n";
+			std::cout << "COLLISION !! projectile user_id: " << obj2->GetOwner() << " hit player user_id: " << obj1->GetOwner() << std::endl;
+			((Projectile*)obj2)->Destroy();
+			if(obj1->GetType() == object_type::ship) { 
+				if(obj1 == GameState::player) {
+					Command::Execute("im_hit");
+				} else {
+					Command::Execute("enemy_hit");
+				}
+			}
 		}
+		
 	});
 	
-    
+	Event::Listen("disconnected", [](){
+		cout << "You are disconnected from server" << endl;
+		exit(-1);
+	});
+
 }
 
 void App::main_loop() {
@@ -281,6 +294,7 @@ void App::main_loop() {
 		cout << "timer test each 5 seconds \n";
 	}, 5.0);
 	Event::StopListening(lst);
+	
 	while(m_running) {
         this->loop();
 
@@ -493,10 +507,13 @@ void App::game_loop() {
 	}
 	
 	// add multiplayer enemy ships to m_quadtree
-	for(auto& obj : GameState::ships) {
-		m_quadtree->AddObject(obj.second.first);
+	for(auto& ship : GameState::ships) {
+		m_quadtree->AddObject(ship.second.first);
+		
+		ship.second.first->UpdateHullVertices(GameState::asset.GetTextureHull("ship_01_skin_collision.png").vertices);
+		if(Command::Get("collisionhull"))
+			ship.second.first->RenderCollisionHull();
 	}
-
 	// add clicked ships to m_quadtree
 	for(auto& ship : ships) {
 		m_quadtree->AddObject(ship);
@@ -539,8 +556,8 @@ void App::game_loop() {
 	
 	ship.Draw();
 	
+	ship.UpdateHullVertices(GameState::asset.GetTextureHull("ship_01_skin_collision.png").vertices);
 	if(Command::Get("collisionhull")) {
-		ship.UpdateHullVertices(GameState::asset.GetTextureHull("ship_01_skin_collision.png").vertices);
 		ship.RenderCollisionHull();
 	}
 	

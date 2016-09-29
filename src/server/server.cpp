@@ -318,6 +318,12 @@ void handle_new_client(ENetPeer* peer) {
 
 void remove_client(ENetPeer* peer) {
 	cout << "removing client id: " << players[peer]->id << endl;
+	
+	Packet s;
+	s.put("type", PacketType::player_removed);
+	s.put("user_id", player.id);
+	s.broadcast(host, ENET_PACKET_FLAG_RELIABLE);
+	
 	delete players[peer];
 	players.erase( peer );
 }

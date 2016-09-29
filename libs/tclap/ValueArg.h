@@ -261,7 +261,10 @@ ValueArg<T>::ValueArg(const std::string& flag,
   _default( val ),
   _typeDesc( typeDesc ),
   _constraint( NULL )
-{ }
+{ 
+	if(typeid(std::string) == typeid(T))
+		is_string = true;
+}
 
 template<class T>
 ValueArg<T>::ValueArg(const std::string& flag, 
@@ -296,7 +299,10 @@ ValueArg<T>::ValueArg(const std::string& flag,
   _default( val ),
   _typeDesc( constraint->shortID() ),
   _constraint( constraint )
-{ }
+{
+	if(typeid(std::string) == typeid(T))
+		is_string = true;
+}
 
 template<class T>
 ValueArg<T>::ValueArg(const std::string& flag, 
@@ -313,6 +319,8 @@ ValueArg<T>::ValueArg(const std::string& flag,
   _typeDesc( constraint->shortID() ),
   _constraint( constraint )
 { 
+	if(typeid(std::string) == typeid(T))
+		is_string = true;
     parser.add( this );
 }
 

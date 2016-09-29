@@ -4,6 +4,7 @@
 #include <random>
 #include "Network.hpp"
 #include "EventSystem/Event.hpp"
+#include "commands/commands.hpp"
 Ship::Ship(glm::dvec2 position, double rotation, const Chassis& chassis) {
 	m_type = object_type::ship;
 	m_position = position;
@@ -79,7 +80,11 @@ void Ship::Process() {
 	while(angle_to < -180.0) angle_to += 360.0;
 
 	double angle_speed = 0;
-	const double angle_thresshold = 3.0;
+	
+	m_rotation_speed_coefficient = Command::Get("rotation_speed").d;
+	m_acceleration_speed_coefficient = Command::Get("speed").d;
+	
+	const double angle_thresshold = m_rotation_speed_coefficient * GameState::deltaTime;
 	if(angle_to > angle_thresshold) angle_speed = m_rotation_speed_coefficient;
 	else if(angle_to < -angle_thresshold) angle_speed = -m_rotation_speed_coefficient;
 	else {
@@ -129,7 +134,8 @@ void Ship::Fire() {
 	Projectile projectile(texture, world_coord, glm::dvec2(0));
 	
 	const double acceleration_constant = 300.0;
-	const double speed_constant = 1500.0;
+	double speed_constant = Command::Get("projectile_speed").d;
+	
 	projectile.SetAcceleration(dir * acceleration_constant);
 	projectile.SetSpeed(dir * speed_constant + m_speed);
 	projectile.SetRotation(GetRotation());
