@@ -12,6 +12,7 @@
 #include <utility>
 #include <queue>
 #include <map>
+#include <list>
 
 
 #include "Gui.hpp"
@@ -46,11 +47,13 @@ namespace GameState {
 	extern int objectsDrawn;
 	extern std::string debug_string;
 	
-	extern std::vector<Projectile> projectiles;
+	extern std::list<Projectile> projectiles;
 	extern ng::GuiEngine gui;
 	extern Asset asset;
 	extern Camera camera;
 	extern Ship* player;
+	
+	extern std::map< std::string, std::string > debug_fields;
 	
 	extern std::map< unsigned int, std::pair<Ship*, std::queue<Object>> > ships;
 	

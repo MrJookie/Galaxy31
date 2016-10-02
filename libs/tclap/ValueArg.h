@@ -262,8 +262,7 @@ ValueArg<T>::ValueArg(const std::string& flag,
   _typeDesc( typeDesc ),
   _constraint( NULL )
 { 
-	if(typeid(std::string) == typeid(T))
-		is_string = true;
+	is_string = std::is_same<std::string, T>::value;
 }
 
 template<class T>
@@ -281,8 +280,7 @@ ValueArg<T>::ValueArg(const std::string& flag,
   _typeDesc( typeDesc ),
   _constraint( NULL )
 { 
-	if(typeid(std::string) == typeid(T))
-		is_string = true;
+	is_string = std::is_same<std::string, T>::value;
     parser.add( this );
 }
 
@@ -300,8 +298,7 @@ ValueArg<T>::ValueArg(const std::string& flag,
   _typeDesc( constraint->shortID() ),
   _constraint( constraint )
 {
-	if(typeid(std::string) == typeid(T))
-		is_string = true;
+	is_string = std::is_same<std::string, T>::value;
 }
 
 template<class T>
@@ -319,8 +316,7 @@ ValueArg<T>::ValueArg(const std::string& flag,
   _typeDesc( constraint->shortID() ),
   _constraint( constraint )
 { 
-	if(typeid(std::string) == typeid(T))
-		is_string = true;
+	is_string = std::is_same<std::string, T>::value;
     parser.add( this );
 }
 
@@ -344,7 +340,7 @@ bool ValueArg<T>::processArg(int *i, std::vector<std::string>& args)
 		return false;
 
     std::string flag = args[*i];
-
+	is_string = std::is_same<std::string, T>::value;
     std::string value = "";
     trimFlag( flag, value );
 

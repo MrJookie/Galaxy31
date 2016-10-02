@@ -36,11 +36,15 @@ namespace Network {
 	std::vector<Frame> frames;
 	// ----------
 	
+	const int ping_interval = 50;
+	
 	// private forwards
 	void parse_packet(ENetPeer* peer, ENetPacket* pkt);
+	void display_packets();
 	//
 	int evt_lag;
 	int evt_disconnected;
+	int lst_packets;
 	const int timeout = 5000;
 	void initialize() {
 		if (enet_initialize () != 0) {
@@ -51,7 +55,9 @@ namespace Network {
 		
 		evt_lag = Event::Register("lag");
 		evt_disconnected = Event::Register("disconnected");
+		lst_packets = Event::Listen("timer", display_packets, 1.0);
 	}
+	
 	
 	bool connect(const char* ip, int port) {
 		cout << "Connecting to " << ip << ":" << port << endl;
@@ -79,7 +85,7 @@ namespace Network {
 			cout << "Connection to succeeded." << endl;
 
 			enet_host_flush (client);
-			enet_peer_ping_interval(host, 50);
+			enet_peer_ping_interval(host, ping_interval);
 		} else {
 			enet_peer_reset (peer);
 			
@@ -130,6 +136,7 @@ namespace Network {
 		
 		// send ship state
 		Object* obj = GameState::player;
+		GameState::player->SetOwner(GameState::user_id);
 		obj->UpdateTicks();
 		memcpy(p.allocate("objects",sizeof(Object)), obj, sizeof(Object));
 		
@@ -231,7 +238,7 @@ namespace Network {
 		min_packets = min;
 	}
 	COMMAND(void, send_states_frequency, (int fq)) {
-		send_states_period = std::chrono::milliseconds( (10000/fq)/10000 );
+		send_states_period = std::chrono::milliseconds( 1000/fq );
 	}
 	
 	void Process() {
@@ -263,7 +270,7 @@ namespace Network {
 			auto &queue = p.second;
 			auto &current = p.first;
 			// cout << "id: " << obj.first << ", packets: " << p.second.size() << endl;
-			GameState::debug_string += "Packets: " + std::to_string(queue.size()) + "\n";
+			GameState::debug_fields["Packets[" + std::to_string(obj.first) + "]"] = std::to_string(queue.size());
 			
 			if(wait_for_packets) {
 				if(queue.size() >= max_packets_delayed/2)
@@ -287,7 +294,7 @@ namespace Network {
 			
 			if(!p.second.empty() && queue.front().GetTicks() <= current->GetTicks()) {
 				// std::cout << "copy state\n";
-				// p.first->CopyObjectState(p.second.front());
+				current->CopyObjectState(queue.front());
 				queue.pop();
 			}
 			
@@ -311,15 +318,24 @@ namespace Network {
 	// ------------------ [ PARSING PACKETS ] --------------------------
 	
 	
+	int num_packets = 0;
+	int data_size = 0;
+	void display_packets() {
+		GameState::debug_fields["incoming packets/s"] = std::to_string(num_packets);
+		GameState::debug_fields["incoming B/s"] = std::to_string(data_size);
+		num_packets = 0;
+		data_size = 0;
+	}
 	
 	int max_queue = 10000;
 	Ship::Chassis *chassis = nullptr;
 	void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
+		num_packets++;
 		Packet p(pkt);
+		data_size += pkt->dataLength;
 		switch(p.get_int("type")) {
 			case PacketType::new_client: {
 				cout << "your client id is: " << p.get_int("new_id") << ", challenge: " << p.get_int("challenge") << endl;
-				
 				GameState::player->SetId(p.get_int("new_id"));
 				GameState::account_challenge = p.get_int("challenge"); //move this?
 				GameState::serverPublicKeyStr = p.get_string("public_key"); 
@@ -370,6 +386,7 @@ namespace Network {
 					}
 				}
 				// cout << "ping: " << peer->roundTripTime << endl;
+				GameState::debug_string += "ping: " + std::to_string(peer->roundTripTime) + "\n";
 				break;
 			}
 			case PacketType::authorize: {

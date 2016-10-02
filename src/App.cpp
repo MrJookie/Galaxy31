@@ -71,7 +71,8 @@ namespace Timer {
 
 void App::init() {
 	
-	
+	tick_id = Event::Register("tick");
+	Timer::Init();
     Network::initialize();
     NetworkChat::initialize();
     // Network::connect("89.177.76.215", SERVER_PORT);
@@ -237,6 +238,8 @@ void App::init() {
 		GameState::gui.Activate(0);
 	});
 	
+	
+	
 	init_commands();
 		
 	Ship::Chassis chassis("main_ship", "ship_01_skin.png", "ship_01_skin.png");
@@ -245,8 +248,7 @@ void App::init() {
     m_quadtree = new Quadtree ( -GameState::worldSize.x, GameState::worldSize.x, -GameState::worldSize.y, GameState::worldSize.x, 6 ) ;
 	m_quadtree->Resize();
 	
-    tick_id = Event::Register("tick");
-	Timer::Init();
+   
     /*
     for(int x = 0; x < 20; ++x) {
 		for(int y = 0; y < 20; y++) {
@@ -262,10 +264,14 @@ void App::init() {
 	
 	Collision::Init();
 	
+	// tm_game_chat.SetImage("Assets/Textures/propulsion.png");
+	
 	Event::Listen("collision", [&](Object* obj1, Object* obj2) {
 		
 		if(obj2->GetType() == object_type::projectile) {
-			std::cout << "COLLISION !! projectile user_id: " << obj2->GetOwner() << " hit player user_id: " << obj1->GetOwner() << std::endl;
+			
+			unsigned int user_id = (obj2->GetOwner() == GameState::player->GetId()) ? GameState::player->GetOwner() : GameState::ships[obj2->GetOwner()].first->GetOwner();
+			std::cout << "COLLISION !! projectile user_id: " << user_id << " hit player user_id: " << obj1->GetOwner() << std::endl;
 			((Projectile*)obj2)->Destroy();
 			if(obj1->GetType() == object_type::ship) { 
 				if(obj1 == GameState::player) {
@@ -569,6 +575,9 @@ void App::game_loop() {
 		projectile.Draw();
 	}
 	
+	GameState::asset.RenderSprites();
+	
+	// debug
 	showFPS();
 	std::string debugString(
 		/*
@@ -585,7 +594,11 @@ void App::game_loop() {
 		"FPS: " + std::to_string(m_frames_current) + "\n" +
 		GameState::debug_string
 	);
+	for(auto& d : GameState::debug_fields) {
+		debugString += d.first + ": " + d.second + "\n";
+	}
 	tb_debug->SetText(debugString);
+	
 	
 	// cleanup dead projectiles
 	for(auto it = GameState::projectiles.begin(); it != GameState::projectiles.end(); it++) {
@@ -758,6 +771,10 @@ void App::init_commands() {
 	});
 	
 	
+}
+
+COMMAND(void, set_swap_interval, (int interval)) {
+	SDL_GL_SetSwapInterval(interval);
 }
 
 COMMAND(void, setspeed, (float speed)) {

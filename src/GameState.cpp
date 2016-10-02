@@ -10,13 +10,13 @@ namespace GameState {
 	float zoom;
 	std::string activePage;
 	std::string debug_string;
-	
+	std::map< std::string, std::string > debug_fields;
 	int objectsDrawn = 0;
 	
 	ng::GuiEngine gui;
 	Asset asset;
 	Camera camera(glm::vec3(0.0f, 0.0f, 0.0f));
-	std::vector<Projectile> projectiles;
+	std::list<Projectile> projectiles;
 	Ship* player;
 	
 	std::map< unsigned int, std::pair<Ship*, std::queue<Object>> > ships;

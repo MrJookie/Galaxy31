@@ -1,10 +1,16 @@
 #include "Sprite.hpp"
 #include "GameState.hpp"
 #include <glm/gtc/matrix_transform.hpp>
-
+#include "Asset.hpp"
+#include <iostream>
+using std::cout;
+using std::endl;
+int shader;
+bool Sprite::first_time = true;
 Sprite::Sprite() : m_size(0), m_position(0), m_rotation(0) {
-    
+    added = false;
     if(first_time) {
+		shader = GameState::asset.GetShader("sprite.vs").id;
 		first_time = false;
 		glGenVertexArrays(1, &m_vao);
 		glBindVertexArray(m_vao);
@@ -16,7 +22,7 @@ Sprite::Sprite() : m_size(0), m_position(0), m_rotation(0) {
 	}
 }
 
-bool Sprite::first_time = true;
+
 GLuint Sprite::m_vao;
 GLuint Sprite::m_vbo;
 GLuint Sprite::m_ebo;
@@ -27,10 +33,13 @@ Sprite& Sprite::operator=(Sprite && o) {
     m_position = o.m_position;
     m_textures = o.m_textures;
     o.m_textures.clear();
+    added = false;
 }
 
 Sprite::~Sprite() {
     if(m_textures.size() == 0) return;
+    GameState::asset.RemoveSprite(this);
+    // cout << "removing " << this << endl;
     // glDeleteBuffers(1, &m_vbo);
     // glDeleteBuffers(1, &m_ebo);
     // glDeleteVertexArrays(1, &m_vao);
@@ -51,15 +60,27 @@ void Sprite::DrawSprite(glm::vec2 size, glm::vec2 position, float rotation) {
 	DrawSprite();
 }
 
+void Sprite::RemoveFromDrawing() {
+	added = false;
+	GameState::asset.RemoveSprite(this);
+}
+
 void Sprite::DrawSprite() {
+	if(!added && !m_textures.empty()) {
+		GameState::asset.AddSprite(this);
+		added = true;
+		// cout << "adding " << this << endl;
+	}
+	return;
 	GameState::objectsDrawn++;
 	
     glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_BLEND);
     
-    glUseProgram(GameState::asset.GetShader("sprite.vs").id);
+    glUseProgram(shader);
     glBindVertexArray(m_vao);
 
+	
     glm::mat4 modelMat;
     modelMat = glm::translate(modelMat, glm::vec3(m_position, 0.0f));
 
@@ -69,9 +90,9 @@ void Sprite::DrawSprite() {
 
     modelMat = glm::scale(modelMat, glm::vec3(m_size, 1.0f));
 
-    glUniformMatrix4fv(glGetUniformLocation(GameState::asset.GetShader("sprite.vs").id, "model"), 1, GL_FALSE, glm::value_ptr(modelMat));
-    glUniformMatrix4fv(glGetUniformLocation(GameState::asset.GetShader("sprite.vs").id, "view"), 1, GL_FALSE, glm::value_ptr(GameState::camera.GetViewMatrix()));
-    glUniformMatrix4fv(glGetUniformLocation(GameState::asset.GetShader("sprite.vs").id, "projection"), 1, GL_FALSE, glm::value_ptr(GameState::camera.GetProjection()));
+    glUniformMatrix4fv(glGetUniformLocation(shader, "model"), 1, GL_FALSE, glm::value_ptr(modelMat));
+    glUniformMatrix4fv(glGetUniformLocation(shader, "view"), 1, GL_FALSE, glm::value_ptr(GameState::camera.GetViewMatrix()));
+    glUniformMatrix4fv(glGetUniformLocation(shader, "projection"), 1, GL_FALSE, glm::value_ptr(GameState::camera.GetProjection()));
 
     GLfloat position_and_texcoords[] = {
 		0.0,  1.0,
@@ -100,7 +121,7 @@ void Sprite::DrawSprite() {
 		glBindTexture(GL_TEXTURE_2D, tex);
 	}
 	
-    glUniform1i(glGetUniformLocation(GameState::asset.GetShader("sprite.vs").id, "textureUniform"), 0);
+    glUniform1i(glGetUniformLocation(shader, "textureUniform"), 0);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);

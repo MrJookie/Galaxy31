@@ -3,6 +3,7 @@
 #include "GameState.hpp"
 
 Projectile::Projectile(const Asset::Texture& texture, glm::dvec2 pos, glm::dvec2 speed) : SolidObject(glm::dvec2(0), pos, 0, speed) {
+	SetOwner(GameState::player->GetId());
 	isdead = false;
 	m_sprite.SetTexture(texture);
 	m_size = texture.size;

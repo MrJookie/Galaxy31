@@ -41,8 +41,8 @@ class Object {
 		unsigned int GetId() { return m_id; }
 		void SetId(unsigned int id) { this->m_id = id; }
 		
-		unsigned int GetOwner() { return m_owner; }
-		void SetOwner(unsigned int owner) { this->m_owner = owner; }
+		uint32_t GetOwner() { return m_owner; }
+		void SetOwner(uint32_t owner) { this->m_owner = owner; }
 		
 		object_type GetType() { return m_type; }
 		void SetType(object_type type) { m_type = type; }

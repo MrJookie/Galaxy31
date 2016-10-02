@@ -25,7 +25,11 @@
 #include "commands/tclap_loader.hpp"
 
 #include <sstream>
+
 #include <cassert>
+
+#include "CursesConsole.hpp"
+
 
 using Commands::Arg;
 
@@ -37,7 +41,7 @@ std::mutex host_mutex;
 std::mutex queue_mutex;
 std::string serverPublicKeyStr;
 std::string serverPrivateKeyStr;
-const int timeout = 1;
+static const int c_timeout = 1;
 int nthread = 0;
 bool running = true;
 
@@ -48,6 +52,7 @@ static void remove_client(ENetPeer* peer);
 static void send_states();
 static void server_wait_for_packet();
 static void server_start();
+static void display_packets();
 
 static std::queue<std::pair<ENetPacket*, ENetPeer*>> packets;
 
@@ -89,14 +94,33 @@ TCLAP::ValueArg<std::string> config("c", "cfg", "configuration file", false, "se
 
 auto send_states_frequency = std::chrono::milliseconds(5);
 
+CursesConsole console;
+int delay_info = 0;
 int main(int argc, char* argv[]) {
 	if (enet_initialize () != 0) {
-		std::cout << "An error occurred while initializing ENet." << std::endl;
+		cout << "An error occurred while initializing ENet." << std::endl;
 		return -1;
 	}
 	atexit (enet_deinitialize);
 	
-	// command line
+	console.StartCurses();
+
+	// code completion for console
+	console.SetCodeCompleteHandler( [](std::string cmd, int cursor) {
+
+		std::vector<std::string> vec = Command::Search(cmd, cmd.size()-1, 20);
+		if(vec.size() > 1) {
+			std::string info = "";
+			for(auto& s : vec) {
+				info += (cmd + s) + "     ";
+			}
+			console.SetInfoString(info);
+			delay_info = 3;
+		}
+		return Command::Complete(cmd, cursor);
+	});
+	
+	// command line 
 	cmd.add( chat_ip );
 	cmd.add( chat_port );
 	
@@ -119,7 +143,7 @@ int main(int argc, char* argv[]) {
 		return -1;
 	}
 	
-	std::cout << "-----------------" << std::endl;
+	cout << "-----------------" << std::endl;
 	/////////////////
 	
 	Commands::LoadVariables(cmd);
@@ -129,14 +153,23 @@ int main(int argc, char* argv[]) {
 	server_start();
 	
 	std::this_thread::sleep_for(std::chrono::milliseconds(10));
+	// box(wnd, 0, 0);
 	
+	Command::AddCommand("set_info_string", [&](std::string s) {
+		console.SetInfoString(s);
+		delay_info = 5;
+	});
+	
+	// console input
 	while(running) {
 		std::string cmd;
-		cout << "> ";
-		std::getline(std::cin, cmd);
+		cmd = console.Input();
 		cout << (std::string)Command::Execute(cmd) << endl;
-		// Command::Execute(cmd);
+		std::this_thread::sleep_for(std::chrono::milliseconds(10));
 	}
+	
+	console.StopCurses();
+	
 	
 	if(!config.getValue().empty()) {
 		Command::SaveVarariablesToFile(config.getValue(), true);
@@ -148,8 +181,10 @@ int main(int argc, char* argv[]) {
 void server_wait_for_packet() {
     ENetEvent event;
 	while(1) {
+		// curses::wrefresh(wnd);
+		console.Refresh();
 		std::unique_lock<std::mutex> l(host_mutex);
-		while(enet_host_service(host, &event, timeout) > 0) {
+		while(enet_host_service(host, &event, c_timeout) > 0) {
 			switch(event.type) {
 				case ENET_EVENT_TYPE_CONNECT:
 						handle_new_client(event.peer);
@@ -176,7 +211,8 @@ void server_wait_for_packet() {
 
 RelocatedWork w;
 
-std::chrono::high_resolution_clock::time_point last_status_update = std::chrono::high_resolution_clock::now();
+auto last_status_update = std::chrono::high_resolution_clock::now();
+auto last_info_update = std::chrono::high_resolution_clock::now();
 void server_work() {
 	{
 		std::unique_lock<std::mutex> l(term);
@@ -203,15 +239,20 @@ void server_work() {
 			enet_packet_destroy(packet.first);
 		}
 		
-		std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
+		auto now = std::chrono::high_resolution_clock::now();
+		
 		if(now - last_status_update > send_states_frequency) {
 			std::unique_lock<std::mutex> l(host_mutex);
 			last_status_update = now;
-			
 			send_states();
 		}
 		
-		std::this_thread::sleep_for(std::chrono::milliseconds(5));
+		if(now - last_info_update > std::chrono::seconds(1)) {
+			last_info_update = now;
+			display_packets();
+		}
+		
+		std::this_thread::sleep_for(std::chrono::microseconds(100));
 	} 
 }
 
@@ -260,7 +301,7 @@ void server_start() {
 	// cout << Command::GetString("server_ip") << " : " << Command::Get("server_port") << endl;
     ENetAddress address;
     enet_address_set_host (&address, Command::GetString("server_ip").c_str());
-    address.port = (int)Command::Get("server_port");
+    address.port = Command::Get("server_port").to_int();
     host = enet_host_create(&address, 32, Channel::num_channels,0,0);
     if(host == nullptr) {
         cout << "An error occurred while trying to create an ENet server host." << endl;
@@ -321,7 +362,7 @@ void remove_client(ENetPeer* peer) {
 	
 	Packet s;
 	s.put("type", PacketType::player_removed);
-	s.put("user_id", player.id);
+	s.put("user_id", players[peer]->id);
 	s.broadcast(host, ENET_PACKET_FLAG_RELIABLE);
 	
 	delete players[peer];
@@ -375,12 +416,26 @@ void send_authorize(ENetPeer* peer, status_code status = status_code::unknown, u
 	s.send(peer, Channel::control, ENET_PACKET_FLAG_RELIABLE);
 }
 
+int num_packets = 0;
+int data_size = 0;
+void display_packets() {
+	if(delay_info > 0) { delay_info--; return;}
+	// GameState::debug_fields["incoming packets/s"] = std::to_string(num_packets);
+	// GameState::debug_fields["incoming B/s"] = std::to_string(data_size);
+	console.SetInfoString("incoming packets/s: " + std::to_string(num_packets) + "     " +
+						  "incoming B/s: " + std::to_string(data_size) );
+	num_packets = 0;
+	data_size = 0;
+}
+	
 void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 	if(pkt == nullptr) { cout << "null pkt!!" << endl; return; }
+	num_packets++;
+	
+	data_size += pkt->dataLength;
 	if(players.find(peer) == players.end()) return;
 	
 	Player& player = *players[peer];
-	
 	// cout << "rcv packet: " << pkt->data << endl;
 	
 	
@@ -509,5 +564,5 @@ COMMAND(void, quit, ()) {
 }
 
 COMMAND(void, send_states_frequency, (int ms)) {
-	send_states_frequency = std::chrono::milliseconds(ms);
+	send_states_frequency = std::chrono::milliseconds( 1000 / ms );
 }

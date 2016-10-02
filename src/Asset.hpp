@@ -16,8 +16,9 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#include <set>
 #include <vector>
-
+class Sprite;
 //later pack files and access just by filenames and hardcode filepaths
 
 class Asset {
@@ -57,6 +58,9 @@ class Asset {
 		Mix_Music* GetMusic(std::string fileName);
 		Mix_Chunk* GetSound(std::string fileName);
 		
+		void AddSprite(Sprite *s);
+		void RemoveSprite(Sprite* s);
+		void RenderSprites();
 		
 		void FreeAssets();
 		
@@ -69,6 +73,8 @@ class Asset {
 		std::unordered_map<std::string, Shader> m_shaders;
 		std::unordered_map<std::string, Mix_Music*> m_musics;
 		std::unordered_map<std::string, Mix_Chunk*> m_sounds;
+		
+		std::set<Sprite*> m_sprites;
 		
 };
 

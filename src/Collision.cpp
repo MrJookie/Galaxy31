@@ -26,10 +26,11 @@ namespace Collision {
 			std::vector<Object*> ships;
 			quadtree->QueryRectangle(projectile->GetPosition().x - projectile->GetSize().x/2, projectile->GetPosition().y - projectile->GetSize().y/2, projectile->GetSize().x, projectile->GetSize().y, ships);
 			for(auto& ship : ships) {
-				if(ship->GetType() != object_type::ship) continue;
+				// if(ship->GetType() != object_type::ship) continue;
+				if(ship->GetType() != object_type::ship || projectile->GetOwner() == ship->GetId()) continue;
 				
 				if(((SolidObject*)projectile)->Collides((SolidObject*)ship)) {
-					Event::Emit(collision_evt, &ship, projectile);
+					Event::Emit(collision_evt, ship, projectile);
 					
 					std::cout << "projectile collided a ship" << std::endl;
 				}

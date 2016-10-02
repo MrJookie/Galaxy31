@@ -3,6 +3,10 @@
 #include <sstream>
 #include <iostream>
 #include <map>
+
+#include <glm/glm.hpp>
+#include <glm/gtx/matrix_transform_2d.hpp>
+#include "GameState.hpp"
 Asset::Asset() {}
 
 #define SHADER_PATH "Assets/Shaders/"
@@ -13,6 +17,117 @@ Asset::Asset() {}
 Asset::~Asset() {
 }
 
+void Asset::AddSprite(Sprite *s) {
+	m_sprites.insert(s);
+}
+void Asset::RemoveSprite(Sprite *s) {
+	m_sprites.erase(s);
+}
+GLuint m_vao, m_vbo, m_ebo;
+bool inited = false;
+void Asset::RenderSprites() {
+	
+	GameState::objectsDrawn+=m_sprites.size();
+	
+	if(!inited) {
+		glGenVertexArrays(1, &m_vao);
+		glGenBuffers(1, &m_vbo);
+		glGenBuffers(1, &m_ebo);
+		inited = true;
+		
+		glBindVertexArray(m_vao);
+		GLfloat position_and_texcoords[] = {
+			0.0,  1.0,
+			0.0,  0.0,
+			1.0,  0.0,
+			1.0,  1.0,
+		};
+
+		GLuint indices[] = {
+			0, 1, 3,
+			1, 2, 3,
+		};
+		
+		
+		glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(position_and_texcoords), position_and_texcoords, GL_STATIC_DRAW);
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ebo);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+		glBindVertexArray(0);
+	}
+	GLuint shader = GameState::asset.GetShader("sprite.vs").id;
+	glBindVertexArray(m_vao);
+	
+    glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+    glEnable(GL_BLEND);
+    
+    glUseProgram(shader);
+    glBindVertexArray(m_vao);
+	
+    // glUniformMatrix4fv(glGetUniformLocation(shader, "view"), 1, GL_FALSE, glm::value_ptr(GameState::camera.GetViewMatrix()));
+    // glUniformMatrix4fv(glGetUniformLocation(shader, "projection"), 1, GL_FALSE, glm::value_ptr(GameState::camera.GetProjection()));
+    glm::mat4 mat = GameState::camera.GetProjection() * GameState::camera.GetViewMatrix();
+    glUniformMatrix4fv(glGetUniformLocation(shader, "projection_view_matrix"), 1, GL_FALSE, glm::value_ptr(mat));
+    
+    GLuint model = glGetUniformLocation(shader, "model");
+	GLuint tex_uniform = glGetUniformLocation(shader, "textureUniform");
+    
+    
+    
+    
+    
+    for(auto& o : m_sprites) {
+		Sprite& s = *o;
+		const glm::vec2& size = s.GetSize();
+		const glm::vec2& position = s.GetPosition();
+		const float rotation = s.GetRotation();
+		const std::vector<GLuint>& textures = s.GetTextures();
+		if(textures.empty()) continue;
+		
+		// glm::mat4 modelMat;
+		// modelMat = glm::translate(modelMat, glm::vec3(position + size * 0.5f, 0.0f) );
+		// modelMat = glm::rotate(modelMat, glm::radians(rotation), glm::vec3(0.0f, 0.0f, 1.0f));
+		// modelMat = glm::translate(modelMat, glm::vec3(size * -0.5f, 0.0f));
+		// modelMat = glm::scale(modelMat, glm::vec3(size, 1.0f));
+		glm::mat3 modelMat;
+		modelMat = glm::translate(modelMat, position + size * 0.5f );
+		modelMat = glm::rotate(modelMat, glm::radians(rotation));
+		modelMat = glm::translate(modelMat, size * -0.5f);
+		modelMat = glm::scale(modelMat, size);
+		
+		glUniformMatrix3fv(model, 1, GL_FALSE, glm::value_ptr(modelMat));
+
+		// setting textures in texture units
+		// int i=0;
+		// for(const auto tex : m_textures) {
+			// glActiveTexture(GL_TEXTURE0+(i++));
+			// glBindTexture(GL_TEXTURE_2D, tex);
+		// }
+	
+		
+		glBindTexture(GL_TEXTURE_2D, textures[0]);
+		
+		glUniform1i(tex_uniform, 0);
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+		glDrawElements(GL_TRIANGLE_STRIP, 6, GL_UNSIGNED_INT, 0);
+	}
+	
+    glBindVertexArray(0);
+    glUseProgram(0);
+
+    glDisable(GL_BLEND);
+}
+		
 void Asset::LoadTexture(std::string fileName) {
 	if(!m_textures[fileName].fileName.length() > 0) { //load only if texture fileName is not loaded yet, not calling GetTexture == 0, because it would throw error
 		SDL_Surface* image = IMG_Load((TEXTURE_PATH + fileName).c_str());

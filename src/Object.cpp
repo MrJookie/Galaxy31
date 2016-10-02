@@ -97,6 +97,7 @@ void Object::InterpolateToState(Object &obj, double interpolation) {
 	m_rotation = lerp(m_rotation, obj.m_rotation, interpolation);
 	m_rotation_speed = obj.m_rotation_speed;
 	m_acceleration += (obj.m_acceleration - m_acceleration) * interpolation;
+	m_owner = obj.m_owner;
 }
 
 void Object::CopyObjectState(Object &obj) {

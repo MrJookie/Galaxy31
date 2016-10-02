@@ -59,6 +59,8 @@ void Ship::Draw() {
 		
 		// m_engine_propulsion.SetRotation( this->GetRotation() );
 		m_engine_propulsion.DrawSprite(m_engine_propulsion.GetSize(), m_engine_propulsion.GetPosition(), this->GetRotation());
+	} else {
+		m_engine_propulsion.RemoveFromDrawing();
 	}
 }
 
@@ -133,7 +135,7 @@ void Ship::Fire() {
 	world_coord.y -= texture.size.y*0.5;
 	Projectile projectile(texture, world_coord, glm::dvec2(0));
 	
-	const double acceleration_constant = 300.0;
+	const double acceleration_constant = m_acceleration_speed_coefficient*2;
 	double speed_constant = Command::Get("projectile_speed").d;
 	
 	projectile.SetAcceleration(dir * acceleration_constant);
