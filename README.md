@@ -12,5 +12,7 @@
 * ENet
 * alsa-lib
 * crypto++
-* mingw
+(* mingw)
+* ncurses
+* bullet physics
 
