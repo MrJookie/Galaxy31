@@ -1,6 +1,8 @@
 #include "Quadtree.hpp"
 
-Quadtree::Quadtree(int left, int right, int top, int down, unsigned int maxObjects, Quadtree* parent) {
+static int nodesSum = 0;
+
+Quadtree::Quadtree(int left, int right, int top, int down, unsigned int maxObjects, Quadtree* parent, int level, int maxLevel) {
 	m_left = left;
 	m_right = right;
 	m_top = top;
@@ -8,6 +10,12 @@ Quadtree::Quadtree(int left, int right, int top, int down, unsigned int maxObjec
 	m_maxObjects = maxObjects;
 	m_parent = parent;
 	m_isLeaf = true;
+	
+	m_level = level;
+	m_maxLevel = maxLevel;
+	//nodesSum++;
+	
+	//std::cout << nodesSum << std::endl;
 }
 
 Quadtree::~Quadtree() {}
@@ -72,20 +80,15 @@ void Quadtree::Draw() {
 }
 
 void Quadtree::AddObject(Object* object) {
+	//if(m_level == m_maxLevel) {
 	if(m_isLeaf) {
-		//object->InNode = this;
 		m_objects.push_back(object);
-
-		if(m_objects.size() == m_maxObjects + 1) {
-			this->createLeaves();
-			this->moveObjectsToLeaves();
-		}
-		
-		((SolidObject*)object)->NodePtr = this;
+		((SolidObject*)object)->NodePtr = m_parent;
+		//((SolidObject*)object)->NodePtr = this;
 		
 		return;
 	}
-	
+
 	for(auto& child : m_children) {
 		if(child->contains(object)) {
 			child->AddObject(object);
@@ -93,23 +96,26 @@ void Quadtree::AddObject(Object* object) {
 	}
 }
 
-void Quadtree::Clear() {
-	m_objects.clear();
-
+void Quadtree::Resize() {
+	this->createLeaves();
+	
 	for(auto& child : m_children) {
-		child.reset();
+		child->Resize();
 	}
-	
-	m_children.clear();
-	
-	m_isLeaf = true;
 }
 
-void Quadtree::QueryRectangle(int x, int y, int w, int h, std::unordered_map<Object*, Quadtree*>& returnObjects) {
+void Quadtree::Clear() {
+	m_objects.clear();
+	
+	for(auto& child : m_children) {
+		child->Clear();
+	}
+}
+
+void Quadtree::QueryRectangle(int x, int y, int w, int h, std::vector<Object*>& returnObjects) {
 	if(intersects(x, y, w, h) ) {	
 		for(auto& object : m_objects) {
-			//returnObjects[object] = m_parent;
-			returnObjects[object] = this;
+			returnObjects.push_back(object);
 		}
 		
 		for(auto& child : m_children) {
@@ -118,20 +124,22 @@ void Quadtree::QueryRectangle(int x, int y, int w, int h, std::unordered_map<Obj
 	}
 }
 
-std::vector<Object*> Quadtree::GetObjectsInNode() {
+void Quadtree::GetObjectsInNode(std::vector<Object*>& returnObjects) {
 	if(!m_isLeaf) {
-		std::vector<Object*> objects;
+		//std::vector<Object*> objects;
 		
-		for(auto& child : m_parent->m_children) {
+		for(auto& child : m_children) {
+			//if(intersects->contains(x, y, w, h) //todo
 			for(auto& object : child->m_objects) {
-				objects.push_back(object);
+				returnObjects.push_back(object);
+				//objects.push_back(object);
 			}
 		}
 		
-		return objects;
+		//return;
 	}
 	
-	return m_objects;
+	//return m_objects;
 }
 
 bool Quadtree::contains(Object* object) {
@@ -158,11 +166,15 @@ bool Quadtree::intersects(int x, int y, int w, int h) {
 }
 
 void Quadtree::createLeaves() {
+	if (m_level == m_maxLevel) {
+		return;
+	}
+	
 	m_children.resize(4);
-	m_children[0] = std::make_unique<Quadtree>(m_left, (m_left+m_right)/2, m_top, (m_top+m_down)/2, m_maxObjects, this);
-	m_children[1] = std::make_unique<Quadtree>((m_left+m_right)/2, m_right, m_top, (m_top+m_down)/2, m_maxObjects, this);
-	m_children[2] = std::make_unique<Quadtree>(m_left, (m_left+m_right)/2, (m_top+m_down)/2, m_down, m_maxObjects, this);
-	m_children[3] = std::make_unique<Quadtree>((m_left+m_right)/2, m_right, (m_top+m_down)/2, m_down, m_maxObjects, this);
+	m_children[0] = std::make_unique<Quadtree>(m_left, (m_left+m_right)/2, m_top, (m_top+m_down)/2, m_maxObjects, this, m_level+1, m_maxLevel);
+	m_children[1] = std::make_unique<Quadtree>((m_left+m_right)/2, m_right, m_top, (m_top+m_down)/2, m_maxObjects, this, m_level+1, m_maxLevel);
+	m_children[2] = std::make_unique<Quadtree>(m_left, (m_left+m_right)/2, (m_top+m_down)/2, m_down, m_maxObjects, this, m_level+1, m_maxLevel);
+	m_children[3] = std::make_unique<Quadtree>((m_left+m_right)/2, m_right, (m_top+m_down)/2, m_down, m_maxObjects, this, m_level+1, m_maxLevel);
 	
 	m_isLeaf = false;
 }

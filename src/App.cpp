@@ -100,7 +100,6 @@ void App::init() {
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
     //SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG);
-    
 
     glContext = SDL_GL_CreateContext(window);
     if(glContext == nullptr) {
@@ -149,7 +148,6 @@ void App::init() {
 	
 	tb_debug = (TextBox*)GameState::gui.GetControlById("game_debug");
 	// cv_minimap = (Canvas*)GameState::gui.GetControlById("game_minimap");
-	
 	
 	GameState::set_gui_page("login");
 
@@ -215,7 +213,6 @@ void App::init() {
 	bt_pass_restore_login.SubscribeEvent(Button::event::click, [&](Control* c) {
 		GameState::set_gui_page("login");
 	});
-	
 
 	ng::Terminal &tm_game_chat = *((ng::Terminal*)GameState::gui.GetControlById("game_terminal"));
 
@@ -237,16 +234,13 @@ void App::init() {
 		GameState::gui.Activate(0);
 	});
 	
-	
-	
 	init_commands();
 		
 	Ship::Chassis chassis("main_ship", "ship_01_skin.png", "ship_01_skin.png");
     GameState::player = new Ship(glm::vec2(0, 0), 0.0, chassis);;
     
     m_quadtree = new Quadtree ( -GameState::worldSize.x, GameState::worldSize.x, -GameState::worldSize.y, GameState::worldSize.x, 6 ) ;
-	m_quadtree->Resize();
-	
+	//m_quadtree->Resize();
    
     /*
     for(int x = 0; x < 20; ++x) {

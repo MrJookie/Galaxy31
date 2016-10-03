@@ -9,15 +9,16 @@
 
 class Quadtree {
 	public:
-		Quadtree(int left, int right, int top, int down, unsigned int maxObjects = 2, Quadtree* parent = nullptr);
+		Quadtree(int left, int right, int top, int down, unsigned int maxObjects = 2, Quadtree* parent = nullptr, int level = 1, int maxLevel = 5);
 		~Quadtree();
 				
 		void AddObject(Object* object);
-		void QueryRectangle(int x, int y, int w, int h, std::unordered_map<Object*, Quadtree*>& returnObjects);
-		std::vector<Object*> GetObjectsInNode();
+		void QueryRectangle(int x, int y, int w, int h, std::vector<Object*>& returnObjects);
+		void GetObjectsInNode(std::vector<Object*>& returnObjects);
 		void Draw();
 		void DrawRect(int x, int y, int w, int h, glm::vec4 color);
 		void Clear();
+		void Resize();
 
 	private:
 		int m_left;
@@ -36,6 +37,9 @@ class Quadtree {
 		
 		bool contains(Object* object);
 		bool intersects(int x, int y, int w, int h);
+		
+		int m_level;
+		int m_maxLevel;
 };
 
 #endif
