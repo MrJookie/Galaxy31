@@ -12,6 +12,7 @@
 #include <glm/glm.hpp>
 
 #include "Object.hpp"
+#include "Sprite.hpp"
 
 class Quadtree;
 
@@ -22,6 +23,7 @@ class SolidObject : public Object {
 		~SolidObject() {}
 		
 		virtual void Draw() {};
+		virtual Sprite* GetSprite() = 0;
 		
 		void UpdateHullVertices(std::vector<glm::vec2> hullVertices);
 		void RenderCollisionHull();

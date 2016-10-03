@@ -158,3 +158,7 @@ Ship::Chassis::Chassis(std::string _name, std::string _texture, std::string _ski
 	skin = GameState::asset.GetTexture(_skin).id;
 	sprite.SetSize(tex.size);
 }
+
+Sprite* Ship::GetSprite() {
+	return &m_chassis.sprite;
+}

@@ -26,7 +26,6 @@ void Asset::RemoveSprite(Sprite *s) {
 GLuint m_vao, m_vbo, m_ebo;
 bool inited = false;
 void Asset::RenderSprites() {
-	
 	GameState::objectsDrawn+=m_sprites.size();
 	
 	if(!inited) {

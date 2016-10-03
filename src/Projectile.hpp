@@ -11,8 +11,11 @@ class Projectile : public SolidObject {
 		Projectile(const Projectile& projectile);
 		Projectile(const Asset::Texture& texture, glm::dvec2 pos = glm::dvec2(0), glm::dvec2 speed = glm::dvec2(0));
 		void Draw();
+		void Update();
 		bool IsDead();
 		void Destroy();
+		Sprite* GetSprite();
+		
 	private:
 		bool isdead;
 		Sprite m_sprite;

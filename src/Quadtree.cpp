@@ -13,9 +13,9 @@ Quadtree::Quadtree(int left, int right, int top, int down, unsigned int maxObjec
 	
 	m_level = level;
 	m_maxLevel = maxLevel;
-	nodesSum++;
+	//nodesSum++;
 	
-	std::cout << nodesSum << std::endl;
+	//std::cout << nodesSum << std::endl;
 }
 
 Quadtree::~Quadtree() {}

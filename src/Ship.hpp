@@ -27,6 +27,7 @@ class Ship : public SolidObject {
 		void Draw();
 		void Fire();
 		void Stabilizers();
+		Sprite* GetSprite();
 
 		//move here all account_user info
 		

@@ -126,7 +126,6 @@ void App::init() {
         SDL_SetRelativeMouseMode(SDL_TRUE);
     }
     
-    
     init_audio();
     
     //load all textures here
@@ -504,12 +503,16 @@ void App::game_loop() {
 	
 	Network::SendOurState();
 	
+	// add projectiles to m_quadtree, Update (lifetime) could be move here, now is in 
 	for(auto& projectile : GameState::projectiles) {
 		m_quadtree->AddObject(&projectile);
 		
 		projectile.UpdateHullVertices(GameState::asset.GetTextureHull("projectile_collision.png").vertices);
 		if(Command::Get("collisionhull"))
 			projectile.RenderCollisionHull();
+			
+		projectile.Update(); //update lifetime, has to be separated from Draw(), otherwise quadtree will update lifetime of queried projectiles
+		projectile.GetSprite()->RemoveFromDrawing(); //remove projectile from drawing, new draw will be filled by quadtree on next frame
 	}
 	
 	// add multiplayer enemy ships to m_quadtree
@@ -519,13 +522,14 @@ void App::game_loop() {
 		ship.second.first->UpdateHullVertices(GameState::asset.GetTextureHull("ship_01_skin_collision.png").vertices);
 		if(Command::Get("collisionhull"))
 			ship.second.first->RenderCollisionHull();
+			
+		ship.second.first->GetSprite()->RemoveFromDrawing();
 	}
 	// add clicked ships to m_quadtree
 	for(auto& ship : ships) {
 		m_quadtree->AddObject(ship);
 		
 		ship->UpdateHullVertices(GameState::asset.GetTextureHull("ship_01_skin_collision.png").vertices);
-		
 		if(Command::Get("collisionhull"))
 			ship->RenderCollisionHull();
 	}
@@ -540,8 +544,6 @@ void App::game_loop() {
 		((SolidObject*)object)->Draw();
 	}
 	
-	
-	
 	Collision::Check(m_quadtree);
 	
 	//needs fix
@@ -555,7 +557,7 @@ void App::game_loop() {
 	if(Command::Get("quadtree")) {
 		m_quadtree->Draw();
 	}
-	m_quadtree->Clear();
+
 	if(Command::Get("aabb"))
 		m_quadtree->DrawRect(ship.GetPosition().x - ship.GetSize().x/2, ship.GetPosition().y - ship.GetSize().y/2, ship.GetSize().x, ship.GetSize().y, glm::vec4(0, 1, 0, 1));
 	//
@@ -572,10 +574,12 @@ void App::game_loop() {
 	//tb_game_user_name->SetRect(ship.GetPosition().x - ship.GetSize().x/2, ship.GetPosition().y - ship.GetSize().y/2, 200, 28);
 	
 	for(Projectile& projectile : GameState::projectiles) {
-		projectile.Draw();
+		//projectile.Draw();
 	}
 	
 	GameState::asset.RenderSprites();
+	
+	m_quadtree->Clear();
 	
 	// debug
 	showFPS();
@@ -589,8 +593,9 @@ void App::game_loop() {
 		"Ship:m_position (center): " + std::to_string(ship.GetPosition().x) + "," + std::to_string(ship.GetPosition().y)  + "\n" +
 		"Ship::m_speed: " + std::to_string(glm::length(ship.GetSpeed()))  + "\n" +
 		"GameState::objectsDrawn: " + std::to_string(GameState::objectsDrawn)  + "\n" +
-		"Quadtree::DrawnOnScreen: " + std::to_string((drawObjects.size())) + "\n" +
+		// "Quadtree::DrawnOnScreen: " + std::to_string((drawObjects.size())) + "\n" +
 		// "Quadtree::GetObjects: " + std::to_string((nearObjects.size())) + "\n" +
+		"projectiles fired: " + std::to_string(GameState::projectiles.size()) + "\n" +
 		"FPS: " + std::to_string(m_frames_current) + "\n" +
 		GameState::debug_string
 	);

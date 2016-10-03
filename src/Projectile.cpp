@@ -17,12 +17,20 @@ void Projectile::Destroy() {
 
 void Projectile::Draw() {
 	m_sprite.DrawSprite(m_size, m_position, m_rotation);
+}
+
+void Projectile::Update() {
 	timer -= GameState::deltaTime;
 }
 
 Projectile::Projectile(const Projectile& c) {
 	*this = c;
 }
+
 bool Projectile::IsDead() {
 	return isdead || timer < 0;
+}
+
+Sprite* Projectile::GetSprite() {
+	return &m_sprite;
 }

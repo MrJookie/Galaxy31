@@ -71,7 +71,8 @@ void Sprite::DrawSprite() {
 		added = true;
 		// cout << "adding " << this << endl;
 	}
-	return;
+	//return;
+	/*
 	GameState::objectsDrawn++;
 	
     glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
@@ -135,6 +136,7 @@ void Sprite::DrawSprite() {
     glUseProgram(0);
 
     glDisable(GL_BLEND);
+    */
 }
 
 void Sprite::SetSize(glm::vec2 size) {
