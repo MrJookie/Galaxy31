@@ -11,6 +11,7 @@ link64bit :=    -lSDL2 \
 				-lSDL2_ttf \
 				-lGL \
 				-lGLEW \
+				-lBulletSoftBody -lBulletDynamics -lBulletCollision -lLinearMath \
 				-L$(tmp_link) -lenet
 
 
@@ -20,9 +21,10 @@ link := $(link64bit) -Llibs/GUI -lgui -lcryptopp
 
 arch := -m$(cpu_arch)
 
-includes := -Ilibs 				 \
-			-I/usr/include/SDL2  \
-			-Ilibs/GUI/UI -DUSE_SDL \
+includes := -Ilibs 				 						\
+			-I/usr/include/SDL2  						\
+			-Ilibs/GUI/UI -DUSE_SDL 					\
+			-I/usr/include/bullet/ 						\
 
 hpp :=	\
 		
@@ -31,6 +33,7 @@ cpp := 	\
 		libs/commands/bind.cpp							\
 		libs/EventSystem/Event.cpp						\
 		\
+		src/GLDebugDrawer.cpp							\
 		src/Main.cpp									\
 		src/App.cpp										\
 		src/GameState.cpp								\

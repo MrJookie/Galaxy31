@@ -11,9 +11,6 @@
 #include <sstream>
 #include <algorithm>
 
-
-
-
 using Commands::Arg;
 using ng::Control;
 using ng::Button;
@@ -52,8 +49,6 @@ App::App() {
     this->generate_RSA_keypair();
 }
 
-
-
 App::~App() {
 	GameState::asset.FreeAssets();
     Mix_CloseAudio();
@@ -76,7 +71,6 @@ void App::init() {
     Network::initialize();
     NetworkChat::initialize();
     // Network::connect("89.177.76.215", SERVER_PORT);
-	
     
     if(SDL_Init(SDL_INIT_EVERYTHING) != 0) {
         throw std::string("Failed to initialize SDL: ") + SDL_GetError();
@@ -125,6 +119,7 @@ void App::init() {
         SDL_SetRelativeMouseMode(SDL_TRUE);
     }
     
+    init_physics();
     init_audio();
     
     //load all textures here
@@ -281,7 +276,6 @@ void App::init() {
 		cout << "You are disconnected from server" << endl;
 		exit(-1);
 	});
-
 }
 
 void App::main_loop() {
@@ -301,7 +295,7 @@ void App::main_loop() {
 		Event::Emit(tick_id, GameState::deltaTime);
 		GameState::input_taken = GameState::gui.GetActiveControl() != nullptr;
         while(SDL_PollEvent(&e)) {
-			
+
 
             if(e.type == SDL_QUIT) {
                 m_running = false;
@@ -397,7 +391,6 @@ void App::main_loop() {
         GameState::objectsDrawn = 0;
         
         Network::handle_events(5);
-        
 
 		// draw space background
         glUseProgram(GameState::asset.GetShader("background.vs").id);
@@ -447,14 +440,10 @@ void App::main_loop() {
         if(GameState::activePage == "game") {
 			game_loop();
 		}
-	
         
         GameState::gui.Render();
 
         SDL_GL_SwapWindow(window);
-
-        // this->showFPS();
-        
 
         // SDL_Delay(16);
     }
@@ -465,8 +454,7 @@ void App::game_loop() {
 	GameState::debug_string = "";
 	Ship& ship = *GameState::player;
 	NetworkChat::handle_events(5);
-	
-	
+		
 	Radar::Draw();
 	
 	Collision::WorldBoundary();
@@ -474,6 +462,40 @@ void App::game_loop() {
 	
 	//Network::handle_events(5);
 	ship.Process();
+	
+	m_dynamicsWorld->stepSimulation(GameState::deltaTime);
+	btTransform trans;
+	m_shipBody2->getMotionState()->getWorldTransform(trans);
+	trans.setOrigin(btVector3(ship.GetPosition().x, ship.GetPosition().y, 0));
+	trans.setRotation(btQuaternion(btVector3(0.0, 0.0, 1.0), btRadians(ship.GetRotation())));
+	m_shipBody2->setWorldTransform(trans);
+	
+	m_dynamicsWorld->debugDrawWorld();
+	m_debugDraw->Render(GameState::asset.GetShader("shader1.vs").id, GameState::camera.GetViewMatrix(), GameState::camera.GetProjection());
+	
+	/*
+	int numManifolds = m_dynamicsWorld->getDispatcher()->getNumManifolds();
+	for(int i = 0; i < numManifolds; i++) {
+		btPersistentManifold* contactManifold =  m_dynamicsWorld->getDispatcher()->getManifoldByIndexInternal(i);
+		const btCollisionObject* obA = contactManifold->getBody0();
+		const btCollisionObject* obB = contactManifold->getBody1();
+				
+		Object* obj1 = (Object*)obA->getUserPointer();
+		Object* obj2 = (Object*)obB->getUserPointer();
+		
+		int numContacts = contactManifold->getNumContacts();
+		for(int j = 0; j < numContacts; j++) {
+			btManifoldPoint& pt = contactManifold->getContactPoint(j);
+			if (pt.getDistance() < 0.f) {
+				const btVector3& ptA = pt.getPositionWorldOnA();
+				const btVector3& ptB = pt.getPositionWorldOnB();
+				const btVector3& normalOnB = pt.m_normalWorldOnB;
+				
+				//std::cout << "contact" << std::endl;
+			}
+		}
+	}
+	*/
 	
 	for(auto it = GameState::projectiles.begin(); it != GameState::projectiles.end(); it++) {
 		it->Process();
@@ -562,7 +584,6 @@ void App::game_loop() {
 	if(Command::Get("collisionhull")) {
 		ship.RenderCollisionHull();
 	}
-	
 	
 	tb_game_user_name->SetText(std::to_string(GameState::user_id) + " | " + GameState::user_name);
 	//tb_game_user_name->SetRect(ship.GetPosition().x - ship.GetSize().x/2, ship.GetPosition().y - ship.GetSize().y/2, 200, 28);
@@ -696,6 +717,134 @@ void App::generate_RSA_keypair() {
 	privateKey.Save(CryptoPP::HexEncoder(new CryptoPP::StringSink(GameState::clientPrivateKeyStr)).Ref());
 }
 
+void App::init_physics() {
+	m_broadphase = new btDbvtBroadphase();
+
+	m_collisionConfiguration = new btDefaultCollisionConfiguration();
+	m_dispatcher = new btCollisionDispatcher(m_collisionConfiguration);
+	
+	m_simplex = new btVoronoiSimplexSolver();
+	m_pdSolver = new btMinkowskiPenetrationDepthSolver();
+	m_convexAlgo2d = new btConvex2dConvex2dAlgorithm::CreateFunc(m_simplex, m_pdSolver);
+	
+	m_dispatcher->registerCollisionCreateFunc(CONVEX_2D_SHAPE_PROXYTYPE,CONVEX_2D_SHAPE_PROXYTYPE, m_convexAlgo2d);
+	m_dispatcher->registerCollisionCreateFunc(BOX_2D_SHAPE_PROXYTYPE,CONVEX_2D_SHAPE_PROXYTYPE, m_convexAlgo2d);
+	m_dispatcher->registerCollisionCreateFunc(CONVEX_2D_SHAPE_PROXYTYPE,BOX_2D_SHAPE_PROXYTYPE, m_convexAlgo2d);
+	m_dispatcher->registerCollisionCreateFunc(BOX_2D_SHAPE_PROXYTYPE,BOX_2D_SHAPE_PROXYTYPE, new btBox2dBox2dCollisionAlgorithm::CreateFunc());
+
+	m_solver = new btSequentialImpulseConstraintSolver;
+	//m_solver = m_sol; //edit? btConstraintSolver* m_sol;
+
+	m_dynamicsWorld = new btDiscreteDynamicsWorld(m_dispatcher, m_broadphase, m_solver, m_collisionConfiguration);
+
+	m_dynamicsWorld->setGravity(btVector3(0, 0, 0));
+	
+	m_debugDraw = new GLDebugDrawer(this->getWindowSize().x, this->getWindowSize().y);
+	m_debugDraw->setDebugMode(btIDebugDraw::DBG_DrawWireframe);
+	m_dynamicsWorld->setDebugDrawer(m_debugDraw);
+	
+	//move later to specific methods like createRigidBody()
+	btCollisionShape* groundShape = new btBoxShape(btVector3(btScalar(5000), btScalar(200), btScalar(150)));
+
+	btTransform groundTransform;
+	groundTransform.setIdentity();
+	groundTransform.setOrigin(btVector3(200, 400, 0));
+
+	btScalar massGround(1.);
+
+	//rigidbody is dynamic if and only if mass is non zero, otherwise static
+	bool isDynamicGround = (massGround != 0.f);
+
+	btVector3 localInertiaGround(0, 0, 0);
+	if (isDynamicGround)
+		groundShape->calculateLocalInertia(massGround, localInertiaGround);
+
+	//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
+	btDefaultMotionState* myMotionStateGround = new btDefaultMotionState(groundTransform);
+	btRigidBody::btRigidBodyConstructionInfo rbInfoGround(massGround, myMotionStateGround, groundShape, localInertiaGround);
+	m_groundBody = new btRigidBody(rbInfoGround);
+	
+	m_groundBody->setCcdMotionThreshold(10000);
+	m_groundBody->setCcdSweptSphereRadius(10000);
+	
+	m_dynamicsWorld->addRigidBody(m_groundBody);
+	//groundBody->setUserPointer();
+	
+	//m_groundBody->setActivationState(DISABLE_DEACTIVATION);
+	m_groundBody->setLinearFactor(btVector3(1, 1, 0));
+	m_groundBody->setAngularFactor(btVector3(0, 0, 1));
+	
+	
+	//obj1
+	btVector3 points3[30] = {
+		btVector3(-36, -18, 0),
+		btVector3(-43, -25, 0),
+		btVector3(-42, -79, 0),
+		btVector3(-33, -101, 0),
+		btVector3(-9, -138, 0),
+		btVector3(7, -138, 0),
+		btVector3(31, -101, 0),
+		btVector3(40, -79, 0),
+		btVector3(41, -25, 0),
+		btVector3(34, -18, 0),
+		btVector3(35, 0, 0),
+		btVector3(80, 40, 0),
+		btVector3(81, 111, 0),
+		btVector3(69, 111, 0),
+		btVector3(52, 96, 0),
+		btVector3(47, 111, 0),
+		btVector3(29, 115, 0),
+		btVector3(22, 137, 0),
+		btVector3(-24, 137, 0),
+		btVector3(-31, 115, 0),
+		btVector3(-49, 111, 0),
+		btVector3(-54, 96, 0),
+		btVector3(-71, 111, 0),
+		btVector3(-83, 111, 0),
+		btVector3(-82, 40, 0),
+		btVector3(-37, 0, 0),
+		btVector3(-138, -138, 0),
+		btVector3(-124, -138, 0),
+		btVector3(-124, -59, 0),
+		btVector3(-138, -59, 0),
+	};
+	btConvexShape* childShape1 = new btConvexHullShape(&points3[0].getX(), 26);
+	btConvexShape* colShape2= new btConvex2dShape(childShape1);
+	colShape2->setMargin(btScalar(0.03));
+
+	btTransform startTransform;
+	startTransform.setIdentity();
+
+	btScalar	mass(1.0f);
+
+	//rigidbody is dynamic if and only if mass is non zero, otherwise static
+	bool isDynamic = (mass != 0.f);
+
+	btVector3 localInertia(0, 0, 0);
+	if (isDynamic)
+		colShape2->calculateLocalInertia(mass, localInertia);
+
+	startTransform.setOrigin(btVector3(0, 0, 0));
+
+	//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
+	btDefaultMotionState* myMotionState = new btDefaultMotionState(startTransform);
+	btRigidBody::btRigidBodyConstructionInfo rbInfo(0, 0, 0);
+	rbInfo = btRigidBody::btRigidBodyConstructionInfo(mass, myMotionState, childShape1, localInertia);
+	m_shipBody2 = new btRigidBody(rbInfo);
+	//body->setContactProcessingThreshold(colShape->getContactBreakingThreshold());
+	
+	m_shipBody2->setCcdMotionThreshold(10000);
+	m_shipBody2->setCcdSweptSphereRadius(10000);
+	
+	m_dynamicsWorld->addRigidBody(m_shipBody2);
+	
+	m_shipBody2->setUserPointer(&GameState::player);
+	
+	m_shipBody2->setActivationState(DISABLE_DEACTIVATION);
+	m_shipBody2->setLinearFactor(btVector3(1, 1, 0));
+	m_shipBody2->setAngularFactor(btVector3(0, 0, 1));
+}
+
 void App::init_audio() {
 	if(!Mix_Init(MIX_INIT_OGG)) {
 		throw std::string("Failed to initialize SDL_mixer");
@@ -768,8 +917,6 @@ void App::init_commands() {
 		NetworkChat::SendChatMessage("", msg);
 		cout << "say: " << msg << endl;
 	});
-	
-	
 }
 
 COMMAND(void, set_swap_interval, (int interval)) {

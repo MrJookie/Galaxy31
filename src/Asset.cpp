@@ -212,6 +212,8 @@ void Asset::LoadTextureHull(std::string fileName) {
 		
 		for(auto& v : vertices) {
 			orderedVertices.push_back(v.second);
+			
+			//std::cout << "btVector3(" << v.second.x - 276/2 << ", " << v.second.y - 276/2 << ", 0)," << std::endl;
 		}
 		
 		m_textures_hull[fileName].fileName = fileName;
