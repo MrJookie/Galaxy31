@@ -57,7 +57,7 @@ void GLDebugDrawer::drawLine(const btVector3& from, const btVector3& to, const b
 	int xB = to.getX();
 	int yB = to.getY();
 	
-	//std::cout << from.getX() << " : " << from.getY() << " : " << from.getZ() << " : " << to.getX() << " --- " << to.getY() << " --- " << to.getZ() << std::endl;
+	std::cout << from.getX() << " : " << from.getY() << " : " << from.getZ() << " : " << to.getX() << " --- " << to.getY() << " --- " << to.getZ() << std::endl;
     
 	m_vertices.push_back(glm::vec2(from.getX(), from.getY()));
 	m_vertices.push_back(glm::vec2(to.getX(), to.getY()));

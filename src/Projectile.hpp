@@ -20,6 +20,8 @@ class Projectile : public SolidObject {
 		bool isdead;
 		Sprite m_sprite;
 		double timer;
+		
+		glm::vec2 m_last_position;
 };
 
 #endif

@@ -1,5 +1,5 @@
-#ifndef GL_DEBUG_DRAWER_H
-#define GL_DEBUG_DRAWER_H
+#ifndef GL_DEBUG_DRAWER_HPP
+#define GL_DEBUG_DRAWER_HPP
 
 #include <LinearMath/btIDebugDraw.h>
 

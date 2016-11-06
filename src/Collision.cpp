@@ -29,7 +29,7 @@ namespace Collision {
 				// if(ship->GetType() != object_type::ship) continue;
 				if(ship->GetType() != object_type::ship || projectile->GetOwner() == ship->GetId()) continue;
 				
-				if(((SolidObject*)projectile)->Collides((SolidObject*)ship)) {
+				if(((SolidObject*)projectile)->Collides((SolidObject*)ship) || ((SolidObject*)projectile)->CollidesProjectileRay((SolidObject*)ship)) {
 					Event::Emit(collision_evt, ship, projectile);
 					
 					std::cout << "projectile collided a ship" << std::endl;

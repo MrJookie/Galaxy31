@@ -17,9 +17,18 @@ void SolidObject::UpdateHullVertices(std::vector<glm::vec2> hullVertices) {
 	m_hullVertices = transformedVerts;
 }
 
+void SolidObject::UpdateProjectileRay(std::vector<glm::vec2> rayVertices) {
+	m_projectileRayVertices = rayVertices;
+}
+
 std::vector<glm::vec2> SolidObject::GetCollisionHull() {
 	return m_hullVertices;
 }
+
+std::vector<glm::vec2> SolidObject::GetProjectileRay() {
+	return m_projectileRayVertices;
+}
+
 bool SolidObject::DoObjectsIntersect(SolidObject* obj) {
 	return !(m_position.x > obj->m_position.x + obj->m_size.x
         || m_position.x+m_size.x < obj->m_position.x
@@ -94,6 +103,46 @@ void SolidObject::RenderCollisionHull() {
     glDeleteVertexArrays(1, &vao);
 }
 
+void SolidObject::RenderProjectileRay(std::vector<glm::vec2> startEndPoints) {
+	GLuint vao, vbo[2];
+	glGenVertexArrays(1, &vao);
+	
+    glBindVertexArray(vao);
+    glGenBuffers(2, vbo);
+    
+	glUseProgram(GameState::asset.GetShader("shader1.vs").id);
+
+    glm::mat4 modelMat(1.0f);
+
+    glUniformMatrix4fv(glGetUniformLocation(GameState::asset.GetShader("shader1.vs").id, "model"), 1, GL_FALSE, glm::value_ptr(modelMat));
+    glUniformMatrix4fv(glGetUniformLocation(GameState::asset.GetShader("shader1.vs").id, "view"), 1, GL_FALSE, glm::value_ptr(GameState::camera.GetViewMatrix()));
+    glUniformMatrix4fv(glGetUniformLocation(GameState::asset.GetShader("shader1.vs").id, "projection"), 1, GL_FALSE, glm::value_ptr(GameState::camera.GetProjection()));
+
+	std::vector<glm::vec4> colors;
+	for(int i = 0; i < startEndPoints.size(); ++i) {
+		colors.push_back(CollidesProjectileRayColor);
+	}
+   
+	glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec2) * startEndPoints.size(), &startEndPoints[0], GL_STATIC_DRAW);
+	glEnableVertexAttribArray(0);    
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
+	
+	glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec4) * colors.size(), &colors[0], GL_STATIC_DRAW);
+	glEnableVertexAttribArray(1);    
+	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
+
+	glDrawArrays(GL_LINE_LOOP, 0, startEndPoints.size());
+
+	glBindVertexArray(0);
+	glUseProgram(0);
+	
+    glDeleteBuffers(2, vbo);
+
+    glDeleteVertexArrays(1, &vao);
+}
+
 bool SolidObject::Collides(SolidObject* obj) {
 	// check whether object's AABB intersect
 	if(this->DoObjectsIntersect(obj)) {
@@ -117,6 +166,29 @@ bool SolidObject::Collides(SolidObject* obj) {
 			}
 		}
 	}
+	
+	return false;
+}
+
+bool SolidObject::CollidesProjectileRay(SolidObject* obj) {
+	// check whether object's AABB intersect
+		std::vector<glm::vec2> hullVerticesA = this->GetProjectileRay();
+		std::vector<glm::vec2> hullVerticesB = obj->GetCollisionHull();
+		int vertsNumA = hullVerticesA.size();
+		int vertsNumB = hullVerticesB.size();
+				
+		if(vertsNumA > 0 && vertsNumB > 0) {
+			for(int b = 0; b < vertsNumB - 1; ++b) {
+				if(this->DoLinesIntersect(hullVerticesA[0], hullVerticesA[1], hullVerticesB[b], hullVerticesB[b+1])) {
+					return true;
+				}					
+			}
+			
+			//connect last vertex with first one
+			if(this->DoLinesIntersect(hullVerticesA[0], hullVerticesA[1], hullVerticesB[vertsNumB-1], hullVerticesB[0])) {
+				return true;
+			}
+		}
 	
 	return false;
 }
