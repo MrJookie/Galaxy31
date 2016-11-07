@@ -29,7 +29,7 @@ std::vector<glm::vec2> SolidObject::GetProjectileRay() {
 	return m_projectileRayVertices;
 }
 
-bool SolidObject::DoObjectsIntersect(SolidObject* obj) {
+bool SolidObject::DoObjectsAABBIntersect(SolidObject* obj) {
 	return !(m_position.x > obj->m_position.x + obj->m_size.x
         || m_position.x+m_size.x < obj->m_position.x
         || m_position.y > obj->m_position.y + obj->m_size.y
@@ -103,7 +103,7 @@ void SolidObject::RenderCollisionHull() {
     glDeleteVertexArrays(1, &vao);
 }
 
-void SolidObject::RenderProjectileRay(std::vector<glm::vec2> startEndPoints) {
+void SolidObject::RenderProjectileRay() {
 	GLuint vao, vbo[2];
 	glGenVertexArrays(1, &vao);
 	
@@ -119,12 +119,12 @@ void SolidObject::RenderProjectileRay(std::vector<glm::vec2> startEndPoints) {
     glUniformMatrix4fv(glGetUniformLocation(GameState::asset.GetShader("shader1.vs").id, "projection"), 1, GL_FALSE, glm::value_ptr(GameState::camera.GetProjection()));
 
 	std::vector<glm::vec4> colors;
-	for(int i = 0; i < startEndPoints.size(); ++i) {
+	for(int i = 0; i < m_projectileRayVertices.size(); ++i) {
 		colors.push_back(CollidesProjectileRayColor);
 	}
    
 	glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec2) * startEndPoints.size(), &startEndPoints[0], GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec2) * m_projectileRayVertices.size(), &m_projectileRayVertices[0], GL_STATIC_DRAW);
 	glEnableVertexAttribArray(0);    
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
 	
@@ -133,7 +133,7 @@ void SolidObject::RenderProjectileRay(std::vector<glm::vec2> startEndPoints) {
 	glEnableVertexAttribArray(1);    
 	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
 
-	glDrawArrays(GL_LINE_LOOP, 0, startEndPoints.size());
+	glDrawArrays(GL_LINE_LOOP, 0, m_projectileRayVertices.size());
 
 	glBindVertexArray(0);
 	glUseProgram(0);
@@ -145,7 +145,7 @@ void SolidObject::RenderProjectileRay(std::vector<glm::vec2> startEndPoints) {
 
 bool SolidObject::Collides(SolidObject* obj) {
 	// check whether object's AABB intersect
-	if(this->DoObjectsIntersect(obj)) {
+	if(this->DoObjectsAABBIntersect(obj)) {
 		std::vector<glm::vec2> hullVerticesA = this->GetCollisionHull();
 		std::vector<glm::vec2> hullVerticesB = obj->GetCollisionHull();
 		int vertsNumA = hullVerticesA.size();

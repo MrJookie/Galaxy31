@@ -256,9 +256,8 @@ void App::init() {
 	Event::Listen("collision", [&](Object* obj1, Object* obj2) {
 		
 		if(obj2->GetType() == object_type::projectile) {
-			
 			unsigned int user_id = (obj2->GetOwner() == GameState::player->GetId()) ? GameState::player->GetOwner() : GameState::ships[obj2->GetOwner()].first->GetOwner();
-			std::cout << "COLLISION !! projectile user_id: " << user_id << " hit player user_id: " << obj1->GetOwner() << std::endl;
+			std::cout << "COLLISION !! projectile user_id: " << user_id << " hit ship player user_id: " << obj1->GetOwner() << std::endl;
 			((Projectile*)obj2)->Destroy();
 			if(obj1->GetType() == object_type::ship) { 
 				if(obj1 == GameState::player) {
@@ -267,6 +266,11 @@ void App::init() {
 					Command::Execute("enemy_hit");
 				}
 			}
+		}
+		
+		if(obj2->GetType() == object_type::ship) {
+			//unsigned int user_id = (obj2->GetOwner() == GameState::player->GetId()) ? GameState::player->GetOwner() : GameState::ships[obj2->GetOwner()].first->GetOwner();
+			std::cout << "COLLISION !! ship user_id: " << obj1->GetOwner() << " hit ship player user_id: " << obj2->GetOwner() << std::endl;
 		}
 		
 	});
@@ -487,13 +491,15 @@ void App::game_loop() {
 	// add projectiles to m_quadtree, Update (lifetime) could be move here, now is in 
 	for(auto& projectile : GameState::projectiles) {
 		m_quadtree->AddObject(&projectile);
-		
-		projectile.UpdateHullVertices(GameState::asset.GetTextureHull("projectile_collision.png").vertices);
-		if(Command::Get("collisionhull"))
-			projectile.RenderCollisionHull();
 			
 		projectile.Update(); //update lifetime, has to be separated from Draw(), otherwise quadtree will update lifetime of queried projectiles
 		projectile.GetSprite()->RemoveFromDrawing(); //remove projectile from drawing, new draw will be filled by quadtree on next frame
+		
+		projectile.UpdateHullVertices(GameState::asset.GetTextureHull("projectile_collision.png").vertices);
+		if(Command::Get("collisionhull")) {
+			projectile.RenderCollisionHull();
+			projectile.RenderProjectileRay();
+		}
 	}
 	
 	// add multiplayer enemy ships to m_quadtree
@@ -506,6 +512,9 @@ void App::game_loop() {
 			
 		ship.second.first->GetSprite()->RemoveFromDrawing();
 	}
+	
+	/*
+	//check place_ship
 	// add clicked ships to m_quadtree
 	for(auto& ship : ships) {
 		m_quadtree->AddObject(ship);
@@ -514,6 +523,7 @@ void App::game_loop() {
 		if(Command::Get("collisionhull"))
 			ship->RenderCollisionHull();
 	}
+	*/
 	
 	// add my ship to quadtree
 	m_quadtree->AddObject(&ship);
@@ -543,8 +553,6 @@ void App::game_loop() {
 		m_quadtree->DrawRect(ship.GetPosition().x - ship.GetSize().x/2, ship.GetPosition().y - ship.GetSize().y/2, ship.GetSize().x, ship.GetSize().y, glm::vec4(0, 1, 0, 1));
 	//
 	
-	ship.Draw();
-	
 	ship.UpdateHullVertices(GameState::asset.GetTextureHull("ship_01_skin_collision.png").vertices);
 	if(Command::Get("collisionhull")) {
 		ship.RenderCollisionHull();
@@ -553,10 +561,13 @@ void App::game_loop() {
 	tb_game_user_name->SetText(std::to_string(GameState::user_id) + " | " + GameState::user_name);
 	//tb_game_user_name->SetRect(ship.GetPosition().x - ship.GetSize().x/2, ship.GetPosition().y - ship.GetSize().y/2, 200, 28);
 	
+	/*
 	for(Projectile& projectile : GameState::projectiles) {
-		//projectile.Draw();
+		projectile.Draw();
 	}
+	*/
 	
+	//ship.Draw(); //is handled by RenderSprites
 	GameState::asset.RenderSprites();
 	
 	m_quadtree->Clear();
