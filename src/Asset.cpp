@@ -69,10 +69,10 @@ void Asset::RenderSprites() {
 	
     //glUniformMatrix4fv(glGetUniformLocation(shader, "view"), 1, GL_FALSE, glm::value_ptr(GameState::camera.GetViewMatrix()));
     //glUniformMatrix4fv(glGetUniformLocation(shader, "projection"), 1, GL_FALSE, glm::value_ptr(GameState::camera.GetProjection()));
-    glm::mat4 mat = GameState::camera.GetProjection() * GameState::camera.GetViewMatrix();
-    glUniformMatrix4fv(glGetUniformLocation(shader, "projection_view_matrix"), 1, GL_FALSE, glm::value_ptr(mat));
+    glm::mat4 projectionViewMat = GameState::camera.GetProjection() * GameState::camera.GetViewMatrix();
+    //glUniformMatrix4fv(glGetUniformLocation(shader, "projection_view_matrix"), 1, GL_FALSE, glm::value_ptr(projectionViewMat));
     
-    GLuint model = glGetUniformLocation(shader, "model");
+    //GLuint model = glGetUniformLocation(shader, "model");
 	GLuint tex_uniform = glGetUniformLocation(shader, "textureUniform");
         
     for(auto& o : m_sprites) {
@@ -82,7 +82,7 @@ void Asset::RenderSprites() {
 		const float rotation = s.GetRotation();
 		const std::vector<GLuint>& textures = s.GetTextures();
 		if(textures.empty()) continue;
-		
+
 		glm::mat4 modelMat;
 		modelMat = glm::translate(modelMat, glm::vec3(position + size * 0.5f, 0.0f) );
 		modelMat = glm::rotate(modelMat, glm::radians(rotation), glm::vec3(0.0f, 0.0f, 1.0f));
@@ -97,8 +97,11 @@ void Asset::RenderSprites() {
 		modelMat = glm::scale(modelMat, size);
 		*/
 		
-		glUniformMatrix4fv(model, 1, GL_FALSE, glm::value_ptr(modelMat));
+		//glUniformMatrix4fv(model, 1, GL_FALSE, glm::value_ptr(modelMat));
 		//glUniformMatrix3fv(model, 1, GL_FALSE, glm::value_ptr(modelMat));
+		
+		glm::mat4 mvp = projectionViewMat * modelMat;
+		glUniformMatrix4fv(glGetUniformLocation(shader, "mvp"), 1, GL_FALSE, glm::value_ptr(mvp));
 
 		// setting textures in texture units
 		// int i=0;
@@ -106,7 +109,6 @@ void Asset::RenderSprites() {
 			// glActiveTexture(GL_TEXTURE0+(i++));
 			// glBindTexture(GL_TEXTURE_2D, tex);
 		// }
-	
 		
 		glBindTexture(GL_TEXTURE_2D, textures[0]);
 		

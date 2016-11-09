@@ -531,6 +531,8 @@ void App::game_loop() {
 	std::vector<Object*> drawObjects;
 	m_quadtree->QueryRectangle(ship.GetPosition().x - GameState::windowSize.x/2*GameState::zoom, ship.GetPosition().y - GameState::windowSize.y/2*GameState::zoom, GameState::windowSize.x*GameState::zoom, GameState::windowSize.y*GameState::zoom, drawObjects);
 	for(auto& object : drawObjects) {
+		//if((SolidObject*)object == (SolidObject*)&ship) continue;
+		
 		((SolidObject*)object)->Draw();
 	}
 	
@@ -566,7 +568,7 @@ void App::game_loop() {
 	}
 	*/
 	
-	ship.Draw(); //is handled by drawObjects quadtree
+	//ship.Draw(); //is handled by drawObjects quadtree
 	GameState::asset.RenderSprites();
 	
 	m_quadtree->Clear();

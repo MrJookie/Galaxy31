@@ -83,14 +83,13 @@ namespace Collision {
 							((SolidObject*)&ship)->Accelerate( ((SolidObject*)&ship)->GetSpeed() * 10.0 * double(GameState::deltaTime) );
 						}
 						*/
+						//std::cout << num_contacts << std::endl;
 						
 						//((SolidObject*)&ship)->SetSpeed(-((SolidObject*)&ship)->GetSpeed() * 0.01);
 						
-						Event::Emit(collision_evt, object, (Object*)&ship);
+						Event::Emit(collision_evt, (Object*)&ship, object);
 						
 						//std::cout << "ship collided a ship" << std::endl;
-						
-						std::cout << num_contacts << std::endl;
 					}
 					
 					num_contacts++;
