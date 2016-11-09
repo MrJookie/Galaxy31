@@ -86,9 +86,9 @@ void App::init() {
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
 
     SDL_GL_SetAttribute(SDL_GL_ACCELERATED_VISUAL, 1);
-    SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 5);
-    SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 5);
-    SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 5);
+    SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);
+    SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);
+    SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
@@ -299,7 +299,6 @@ void App::main_loop() {
 		GameState::input_taken = GameState::gui.GetActiveControl() != nullptr;
         while(SDL_PollEvent(&e)) {
 
-
             if(e.type == SDL_QUIT) {
                 m_running = false;
             } else if(e.type == SDL_KEYDOWN) {
@@ -313,7 +312,6 @@ void App::main_loop() {
 						case SDLK_SLASH:
 							tm_game_chat.Focus();
 							break;
-						
 					}
 				}
             } else if(e.type == SDL_MOUSEBUTTONDOWN && GameState::gui.GetSelectedControl() == nullptr) {
@@ -480,7 +478,7 @@ void App::game_loop() {
 		}
 	}
 
-	GameState::camera.SetPosition( glm::vec3(ship.GetPosition().x, ship.GetPosition().y, 0) );
+	GameState::camera.SetPosition( glm::vec3(ship.GetPosition(), 0) );
 	glm::mat4 projection = glm::ortho(-(float)this->getWindowSize().x*this->getZoom()*0.5, (float)this->getWindowSize().x*this->getZoom()*0.5, (float)this->getWindowSize().y*this->getZoom()*0.5, -(float)this->getWindowSize().y*this->getZoom()*0.5);
 	glm::mat4 view = GameState::camera.GetViewMatrix();
 	GameState::camera.SetProjection(projection);
@@ -506,13 +504,14 @@ void App::game_loop() {
 	for(auto& ship : GameState::ships) {
 		m_quadtree->AddObject(ship.second.first);
 		
+		//ship.second.first->Draw();
+		ship.second.first->GetSprite()->RemoveFromDrawing();
+		
 		ship.second.first->UpdateHullVertices(GameState::asset.GetTextureHull("ship_01_skin_collision.png").vertices);
 		if(Command::Get("collisionhull"))
 			ship.second.first->RenderCollisionHull();
-			
-		ship.second.first->GetSprite()->RemoveFromDrawing();
 	}
-	
+		
 	/*
 	//check place_ship
 	// add clicked ships to m_quadtree
@@ -549,9 +548,9 @@ void App::game_loop() {
 		m_quadtree->Draw();
 	}
 
-	if(Command::Get("aabb"))
+	if(Command::Get("aabb")) {
 		m_quadtree->DrawRect(ship.GetPosition().x - ship.GetSize().x/2, ship.GetPosition().y - ship.GetSize().y/2, ship.GetSize().x, ship.GetSize().y, glm::vec4(0, 1, 0, 1));
-	//
+	}
 	
 	ship.UpdateHullVertices(GameState::asset.GetTextureHull("ship_01_skin_collision.png").vertices);
 	if(Command::Get("collisionhull")) {
@@ -567,7 +566,7 @@ void App::game_loop() {
 	}
 	*/
 	
-	//ship.Draw(); //is handled by RenderSprites
+	ship.Draw(); //is handled by drawObjects quadtree
 	GameState::asset.RenderSprites();
 	
 	m_quadtree->Clear();

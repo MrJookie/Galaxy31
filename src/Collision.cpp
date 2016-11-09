@@ -10,6 +10,8 @@ using std::cout;
 using std::endl;
 namespace Collision {
 	
+	int num_contacts = 0;
+	
 	int collision_evt;
 	void Init() {
 		collision_evt = Event::Register("collision");
@@ -40,12 +42,13 @@ namespace Collision {
 	
 	void CheckShips(Quadtree* quadtree) {
 		Ship& ship = *GameState::player;
+		
 		ship.CollisionHullColor = glm::vec4(1.0, 0.0, 1.0, 1.0);
 		std::vector<Object*> nearObjects;
 		quadtree->QueryRectangle(ship.GetPosition().x - ship.GetSize().x/2, ship.GetPosition().y - ship.GetSize().y/2, ship.GetSize().x, ship.GetSize().y, nearObjects);
 		for(auto& object : nearObjects) {
 			if(object->GetType() != object_type::ship) continue;
-			if((SolidObject*)&ship == (SolidObject*)object) continue;
+			if((SolidObject*)object == (SolidObject*)&ship) continue;
 
 			if(Command::Get("aabb"))
 				quadtree->DrawRect(object->GetPosition().x - object->GetSize().x/2, object->GetPosition().y - object->GetSize().y/2, object->GetSize().x, object->GetSize().y, glm::vec4(1, 1, 1, 1));
@@ -54,40 +57,62 @@ namespace Collision {
 			
 			//if(((SolidObject*)object)->NodePtr == nullptr) continue;
 			
+			if(((SolidObject*)&ship)->Collides((SolidObject*)object)) {
+					((SolidObject*)&ship)->CollisionHullColor = glm::vec4(0.0, 1.0, 0.0, 1.0);
+					
+					glm::vec2 myShipPosition = ((SolidObject*)&ship)->GetPosition();
+					glm::vec2 enemyShipPosition = ((SolidObject*)object)->GetPosition();
+					
+					//spawn
+					if(myShipPosition.x == enemyShipPosition.x && myShipPosition.y == enemyShipPosition.y) {
+						return;
+					} else {
+						glm::vec2 reflectDirection = glm::normalize(glm::dvec2(myShipPosition.x - enemyShipPosition.x, myShipPosition.y - enemyShipPosition.y));
+					
+						//float dist = glm::length(glm::dvec2(enemyShipPosition.x - myShipPosition.x, enemyShipPosition.y - myShipPosition.y));
+						
+						float speedLen = glm::length( ((SolidObject*)&ship)->GetSpeed() );
+						float rayLen = speedLen > 10.0f ? std::min(speedLen, 1000.0f) : 10.0f;
+						
+						((SolidObject*)&ship)->SetSpeed(glm::dvec2( ((SolidObject*)&ship)->GetSpeed().x*0.1 + reflectDirection.x * rayLen, ((SolidObject*)&ship)->GetSpeed().y*0.1 + reflectDirection.y * rayLen));
+						
+						/*
+						//colliding for too long, prevention against penetration
+						if(num_contacts > 10) {
+							((SolidObject*)&ship)->SetAcceleration(reflectDirection);
+							((SolidObject*)&ship)->Accelerate( ((SolidObject*)&ship)->GetSpeed() * 10.0 * double(GameState::deltaTime) );
+						}
+						*/
+						
+						//((SolidObject*)&ship)->SetSpeed(-((SolidObject*)&ship)->GetSpeed() * 0.01);
+						
+						Event::Emit(collision_evt, object, (Object*)&ship);
+						
+						//std::cout << "ship collided a ship" << std::endl;
+						
+						std::cout << num_contacts << std::endl;
+					}
+					
+					num_contacts++;
+				} else {
+					num_contacts = 0;
+				}
+
+			/*
 			std::vector<Object*> objcts;
 			//((SolidObject*)object)->NodePtr->GetObjectsInNode(objcts);
 			quadtree->QueryRectangle(object->GetPosition().x - object->GetSize().x/2, object->GetPosition().y - object->GetSize().y/2, object->GetSize().x, object->GetSize().y, objcts);
 			for(auto& object2 : objcts) {
 				if(object2->GetType() != object_type::ship) continue;
 				if(object == object2) continue;
+				if((SolidObject*)&ship != (SolidObject*)object2) continue;
 				
 				if(Command::Get("aabb"))
 					quadtree->DrawRect(object2->GetPosition().x - object2->GetSize().x/2, object2->GetPosition().y - object2->GetSize().y/2, object2->GetSize().x, object2->GetSize().y, glm::vec4(0, 0, 1, 1));
 			
-				if(((SolidObject*)object2)->Collides((SolidObject*)object)) {
-					Event::Emit(collision_evt, object2, object);
-					((SolidObject*)object2)->CollisionHullColor = glm::vec4(0.0, 1.0, 0.0, 1.0);
-										
-					glm::vec2 myShipPosition = ((SolidObject*)object2)->GetPosition();
-					glm::vec2 enemyShipPosition = ((SolidObject*)object)->GetPosition();
-					
-					glm::vec2 shipDirection = glm::normalize(-glm::dvec2(enemyShipPosition.x - myShipPosition.x, enemyShipPosition.y - myShipPosition.y));
-					
-					//float dist = glm::length(glm::dvec2(enemyShipPosition.x - myShipPosition.x, enemyShipPosition.y - myShipPosition.y));
-					
-					float speedLen = glm::length( ((SolidObject*)object2)->GetSpeed() );
-					float rayLen = speedLen > 0.0 ? std::min(speedLen, 1000.0f) : 10.0;
-					
-					((SolidObject*)object2)->SetSpeed(glm::vec2( ((SolidObject*)object2)->GetSpeed().x*0.1 + shipDirection.x * rayLen, ((SolidObject*)object2)->GetSpeed().y*0.1 + shipDirection.y * rayLen));
-					
-					//((SolidObject*)object2)->SetPosition(glm::vec2(myShipPosition.x + shipDirection.x * rayLen, myShipPosition.y + shipDirection.y * rayLen));
-					//((SolidObject*)object2)->SetSpeed(-((SolidObject*)object2)->GetSpeed() * 0.01);
-					
-					Event::Emit(collision_evt, object, object2);
-					
-					//std::cout << "ship collided a ship" << std::endl;
-				}
+				
 			}
+			*/
 		}
 	}
 	

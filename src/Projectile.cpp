@@ -7,7 +7,7 @@ Projectile::Projectile(const Asset::Texture& texture, glm::dvec2 pos, glm::dvec2
 	isdead = false;
 	m_sprite.SetTexture(texture);
 	m_size = texture.size;
-	timer = 3;
+	timer = 20;
 	m_type = object_type::projectile;
 	m_last_position = glm::vec2(pos);
 }
@@ -23,7 +23,8 @@ void Projectile::Draw() {
 void Projectile::Update() {
 	timer -= GameState::deltaTime;
 	
-	float rayLen = glm::length(this->GetSpeed()) * 0.05;
+	//ray in front of every bullet to avoid fast bullets passing through objects
+	float rayLen = glm::length(this->GetSpeed()) * 0.03;
 	glm::vec2 projectileDirection = glm::normalize(glm::dvec2(m_acceleration));
 	
 	std::vector<glm::vec2> rayLine;

@@ -67,18 +67,14 @@ void Asset::RenderSprites() {
     glUseProgram(shader);
     glBindVertexArray(m_vao);
 	
-    // glUniformMatrix4fv(glGetUniformLocation(shader, "view"), 1, GL_FALSE, glm::value_ptr(GameState::camera.GetViewMatrix()));
-    // glUniformMatrix4fv(glGetUniformLocation(shader, "projection"), 1, GL_FALSE, glm::value_ptr(GameState::camera.GetProjection()));
+    //glUniformMatrix4fv(glGetUniformLocation(shader, "view"), 1, GL_FALSE, glm::value_ptr(GameState::camera.GetViewMatrix()));
+    //glUniformMatrix4fv(glGetUniformLocation(shader, "projection"), 1, GL_FALSE, glm::value_ptr(GameState::camera.GetProjection()));
     glm::mat4 mat = GameState::camera.GetProjection() * GameState::camera.GetViewMatrix();
     glUniformMatrix4fv(glGetUniformLocation(shader, "projection_view_matrix"), 1, GL_FALSE, glm::value_ptr(mat));
     
     GLuint model = glGetUniformLocation(shader, "model");
 	GLuint tex_uniform = glGetUniformLocation(shader, "textureUniform");
-    
-    
-    
-    
-    
+        
     for(auto& o : m_sprites) {
 		Sprite& s = *o;
 		const glm::vec2& size = s.GetSize();
@@ -87,18 +83,22 @@ void Asset::RenderSprites() {
 		const std::vector<GLuint>& textures = s.GetTextures();
 		if(textures.empty()) continue;
 		
-		// glm::mat4 modelMat;
-		// modelMat = glm::translate(modelMat, glm::vec3(position + size * 0.5f, 0.0f) );
-		// modelMat = glm::rotate(modelMat, glm::radians(rotation), glm::vec3(0.0f, 0.0f, 1.0f));
-		// modelMat = glm::translate(modelMat, glm::vec3(size * -0.5f, 0.0f));
-		// modelMat = glm::scale(modelMat, glm::vec3(size, 1.0f));
+		glm::mat4 modelMat;
+		modelMat = glm::translate(modelMat, glm::vec3(position + size * 0.5f, 0.0f) );
+		modelMat = glm::rotate(modelMat, glm::radians(rotation), glm::vec3(0.0f, 0.0f, 1.0f));
+		modelMat = glm::translate(modelMat, glm::vec3(size * -0.5f, 0.0f));
+		modelMat = glm::scale(modelMat, glm::vec3(size, 1.0f));
+		
+		/*
 		glm::mat3 modelMat;
 		modelMat = glm::translate(modelMat, position + size * 0.5f );
 		modelMat = glm::rotate(modelMat, glm::radians(rotation));
 		modelMat = glm::translate(modelMat, size * -0.5f);
 		modelMat = glm::scale(modelMat, size);
+		*/
 		
-		glUniformMatrix3fv(model, 1, GL_FALSE, glm::value_ptr(modelMat));
+		glUniformMatrix4fv(model, 1, GL_FALSE, glm::value_ptr(modelMat));
+		//glUniformMatrix3fv(model, 1, GL_FALSE, glm::value_ptr(modelMat));
 
 		// setting textures in texture units
 		// int i=0;
