@@ -7,15 +7,10 @@
 #include <glm/glm.hpp>
 #include <glm/gtx/matrix_transform_2d.hpp>
 #include "GameState.hpp"
+
 Asset::Asset() {}
 
-#define SHADER_PATH "Assets/Shaders/"
-#define TEXTURE_PATH "Assets/Textures/"
-#define MUSIC_PATH "Assets/Music/"
-#define SOUND_PATH "Assets/Sound/"
-
-Asset::~Asset() {
-}
+Asset::~Asset() {}
 
 void Asset::AddSprite(Sprite *s) {
 	m_sprites.insert(s);
@@ -46,7 +41,6 @@ void Asset::RenderSprites() {
 			0, 1, 3,
 			1, 2, 3,
 		};
-		
 		
 		glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
 		glBufferData(GL_ARRAY_BUFFER, sizeof(position_and_texcoords), position_and_texcoords, GL_STATIC_DRAW);

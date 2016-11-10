@@ -31,9 +31,6 @@ namespace GameState {
 	std::string clientPrivateKeyStr;
 	std::array<unsigned char, 17> server_chatAESkey;
 	
-	
-	
-	
 	void set_gui_page(std::string page) {
 		activePage = page;
 		if(activePage == "login") {

@@ -65,11 +65,11 @@
 		</anchor>
 		
 		<anchor pos="R,B">
-			<canvas rect="0,0,250,250" interactible="false" id="game_minimap" grid="false" color="#FF0021FF" pixelsize="4" aligntogrid="false" grid_color="#FF220000" backgroundcolor="#00000000" bordercolor="#FF1228D1" hoverbordercolor="#FF1228D1" readonly="true" />
+			<canvas id="game_minimap" rect="0,0,250,250" interactible="false" grid="false" color="#FF0021FF" pixelsize="4" aligntogrid="false" grid_color="#FF220000" backgroundcolor="#00000000" bordercolor="#001228D1" hoverbordercolor="#FF1228D1" readonly="true" />
 		</anchor>
 		
 		<anchor pos="L,B">
-			<terminal rect="0,0,400,150" id="game_terminal" textwrap="true" log_colors="true" placeholder="Type message" log_bordercolor="#00000000" log_backgroundcolor="#00000000" cursor_blinking_rate="30" log_hoverbordercolor="#00000000" />
+			<terminal id="game_terminal" rect="0,0,400,150" textwrap="true" log_colors="true" placeholder="Type message" log_bordercolor="#00000000" log_backgroundcolor="#00000000" cursor_blinking_rate="30" log_hoverbordercolor="#00000000" />
 		</anchor>
 	</widget>
 </gui>

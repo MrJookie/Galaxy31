@@ -14,7 +14,6 @@
 #include <map>
 #include <list>
 
-
 #include "Gui.hpp"
 #include "Control.hpp"
 #include "controls/Button.hpp"
@@ -33,6 +32,11 @@
 #include "controls/Terminal.hpp"
 #include "controls/Form.hpp"
 #include "common/SDL/Drawing.hpp"
+
+#define SHADER_PATH "Assets/Shaders/"
+#define TEXTURE_PATH "Assets/Textures/"
+#define MUSIC_PATH "Assets/Music/"
+#define SOUND_PATH "Assets/Sound/"
 
 namespace GameState {
 	extern glm::vec2 windowSize;
