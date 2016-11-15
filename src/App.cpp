@@ -559,7 +559,8 @@ void App::game_loop() {
 		ship.RenderCollisionHull();
 	}
 	
-	tb_game_user_name->SetText(std::to_string(GameState::user_id) + " | " + GameState::user_name);
+	tb_game_user_name->SetImage(std::string(TEXTURE_PATH) + std::string("hud_1.png"));
+	tb_game_user_name->SetText(std::to_string(GameState::user_id) + " | " + GameState::user_name + std::string("\nlel"));
 	//tb_game_user_name->SetRect(ship.GetPosition().x - ship.GetSize().x/2, ship.GetPosition().y - ship.GetSize().y/2, 200, 28);
 	
 	/*

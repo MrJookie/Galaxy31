@@ -5,6 +5,7 @@ namespace GameState {
 	glm::vec2 screenMousePosition;
 	glm::vec2 worldMousePosition;
 	glm::vec2 worldSize(100000.0f, 100000.0f);
+	glm::vec2 radarPerimeter(30000.0f, 30000.0f); //perimeter could be set larger on mountable upgrade
 	double deltaTime;
 	double timeElapsed;
 	float zoom;

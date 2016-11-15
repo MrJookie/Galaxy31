@@ -15,10 +15,10 @@
 #define AES_KEY_SIZE 16 //bytes (CryptoPP::AES::DEFAULT_KEYLENGTH)
 #define AES_MAX_MESSAGE_LEN 128
 
-#define SERVER_IP "89.177.76.215"
+#define SERVER_IP "127.0.0.1"
 #define SERVER_PORT 17694
 
-#define CHAT_SERVER_IP "89.177.76.215"
+#define CHAT_SERVER_IP "127.0.0.1"
 #define CHAT_SERVER_PORT 17792
 
 enum Channel {

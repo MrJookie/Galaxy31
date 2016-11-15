@@ -6,6 +6,7 @@
 namespace Radar {
 
 ng::Canvas* cv_minimap = 0;
+ng::Canvas* cv_minimap_ship = 0;
 
 void Draw() {
 	bool relativeRadar = true;
@@ -17,7 +18,11 @@ void Draw() {
 	if(!cv_minimap)
 		cv_minimap = (ng::Canvas*)GameState::gui.GetControlById("game_minimap");
 	cv_minimap->Clear(0);
-	cv_minimap->SetImage(std::string(TEXTURE_PATH) + std::string("radar.png")); // load via asset manager?
+	cv_minimap->SetImage(std::string(TEXTURE_PATH) + std::string("hud_radar.png")); // load via asset manager?
+	
+	if(!cv_minimap_ship)
+		cv_minimap_ship = (ng::Canvas*)GameState::gui.GetControlById("game_minimap_ship");
+	cv_minimap_ship->SetImage(std::string(TEXTURE_PATH) + std::string("hud_radar_ship.png"));
 	
 	int pointX;
 	int pointY;
@@ -43,13 +48,11 @@ void Draw() {
 		if(relativeRadar) {
 			glm::dvec2 relativePosition = glm::dvec2(enemyShip->GetPosition().x - ship.GetPosition().x, enemyShip->GetPosition().y - ship.GetPosition().y);
 			
-			//perimeter could be set larger on mountable upgrade
-			glm::vec2 perimeterSize(10000.0f, 10000.0f);
 			float enemyDistance = glm::length(relativePosition);
-			if(enemyDistance < perimeterSize.x) {
-				pointX = (relativePosition.x / (2 * perimeterSize.x) * (cv_minimap->GetRect().w-4)) + (cv_minimap->GetRect().w-4)/2.0f;
-				pointY = (relativePosition.y / (2 * perimeterSize.y) * (cv_minimap->GetRect().h-4)) + (cv_minimap->GetRect().h-4)/2.0f;
-				
+			if(enemyDistance < GameState::radarPerimeter.x) { //radius
+				pointX = (relativePosition.x / (2 * GameState::radarPerimeter.x) * (cv_minimap->GetRect().w-4)) + (cv_minimap->GetRect().w-4)/2.0f;
+				pointY = (relativePosition.y / (2 * GameState::radarPerimeter.y) * (cv_minimap->GetRect().h-4)) + (cv_minimap->GetRect().h-4)/2.0f;
+			//if(cv_minimap->GetPixel().a != 0x00) { // if pixel is not transparent (get from SetImage)
 				cv_minimap->SetPixelColor(0xFFFF0000);
 				cv_minimap->PutPixel(pointX, pointY);
 			}

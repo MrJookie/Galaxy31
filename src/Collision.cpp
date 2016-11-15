@@ -79,11 +79,9 @@ namespace Collision {
 						/*
 						//colliding for too long, prevention against penetration
 						if(num_contacts > 10) {
-							((SolidObject*)&ship)->SetAcceleration(reflectDirection);
-							((SolidObject*)&ship)->Accelerate( ((SolidObject*)&ship)->GetSpeed() * 10.0 * double(GameState::deltaTime) );
+							((SolidObject*)&ship)->SetAcceleration(-reflectDirection);
 						}
 						*/
-						//std::cout << num_contacts << std::endl;
 						
 						//((SolidObject*)&ship)->SetSpeed(-((SolidObject*)&ship)->GetSpeed() * 0.01);
 						
