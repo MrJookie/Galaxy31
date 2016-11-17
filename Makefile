@@ -45,7 +45,7 @@ cpp := 	\
 		src/Quadtree.cpp								\
 		src/Collision.cpp								\
 		src/Timer.cpp									\
-		src/Radar.cpp									\
+		src/HUD.cpp										\
 		\
 
 release := release

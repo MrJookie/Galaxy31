@@ -7,7 +7,7 @@
 #include "server/network.hpp"
 #include "EventSystem/Event.hpp"
 #include "Collision.hpp"
-#include "Radar.hpp"
+#include "HUD.hpp"
 #include <sstream>
 #include <algorithm>
 
@@ -28,6 +28,7 @@ std::vector<Ship*> ships;
 ng::Canvas *cv_minimap;
 ng::TextBox *tb_debug;
 TextBox* tb_game_user_name;
+TextBox* tb_game_tab;
 int tick_id;
 
 App::App() {
@@ -44,7 +45,6 @@ App::App() {
 
     m_chrono_start = std::chrono::high_resolution_clock::now();
     m_chrono_elapsed = 0;
-    
    
     this->generate_RSA_keypair();
 }
@@ -187,6 +187,10 @@ void App::init() {
 	});
 	
 	tb_game_user_name = (TextBox*)GameState::gui.GetControlById("game_user_name");
+	tb_game_tab = (TextBox*)GameState::gui.GetControlById("game_tab");
+	
+	tb_game_user_name->SetImage(std::string(TEXTURE_PATH) + std::string("hud_1.png"));
+	tb_game_tab->SetImage(std::string(TEXTURE_PATH) + std::string("hud_1.png"));
 	
 	Button &bt_login_register = *((Button*)GameState::gui.GetControlById("login_register"));
 	bt_login_register.SubscribeEvent(Button::event::click, [&](Control* c) {
@@ -311,7 +315,10 @@ void App::main_loop() {
 						break;
 						case SDLK_SLASH:
 							tm_game_chat.Focus();
-							break;
+						break;
+						case SDLK_TAB:
+							tb_game_tab->IsVisible() ? tb_game_tab->SetVisible(false) : tb_game_tab->SetVisible(true);
+						break;
 					}
 				}
             } else if(e.type == SDL_MOUSEBUTTONDOWN && GameState::gui.GetSelectedControl() == nullptr) {
@@ -456,7 +463,7 @@ void App::game_loop() {
 	Ship& ship = *GameState::player;
 	NetworkChat::handle_events(5);
 		
-	Radar::Draw();
+	HUD::Draw();
 	
 	Collision::WorldBoundary();
 	//
@@ -559,8 +566,7 @@ void App::game_loop() {
 		ship.RenderCollisionHull();
 	}
 	
-	tb_game_user_name->SetImage(std::string(TEXTURE_PATH) + std::string("hud_1.png"));
-	tb_game_user_name->SetText(std::to_string(GameState::user_id) + " | " + GameState::user_name + std::string("\nlel"));
+	tb_game_user_name->SetText(std::to_string(GameState::user_id) + " | " + GameState::user_name);
 	//tb_game_user_name->SetRect(ship.GetPosition().x - ship.GetSize().x/2, ship.GetPosition().y - ship.GetSize().y/2, 200, 28);
 	
 	/*
@@ -582,8 +588,8 @@ void App::game_loop() {
 		"App:m_screenMousePosition: " + std::to_string(this->getScreenMousePosition().x) + "," + std::to_string(this->getScreenMousePosition().y)  + "\n" +
 		*/
 		
-		"App:m_worldMousePosition: " + std::to_string(this->getWorldMousePosition().x) + "," + std::to_string(this->getWorldMousePosition().y)  + "\n" +
-		"Ship:m_position (center): " + std::to_string(ship.GetPosition().x) + "," + std::to_string(ship.GetPosition().y)  + "\n" +
+		"App:mousePos: " + std::to_string(this->getWorldMousePosition().x) + "," + std::to_string(this->getWorldMousePosition().y)  + "\n" +
+		"ShipPosCenter: " + std::to_string(ship.GetPosition().x) + "," + std::to_string(ship.GetPosition().y)  + "\n" +
 		"Ship::m_speed: " + std::to_string(glm::length(ship.GetSpeed()))  + "\n" +
 		"GameState::objectsDrawn: " + std::to_string(GameState::objectsDrawn)  + "\n" +
 		// "Quadtree::DrawnOnScreen: " + std::to_string((drawObjects.size())) + "\n" +

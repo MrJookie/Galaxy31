@@ -135,10 +135,9 @@ glm::vec3 Camera::GetPosition() const {
 //    return m_view;
 //}
 
-glm::mat4 Camera::GetProjection() const {
+glm::mat4 Camera::GetProjectionMatrix() const {
     return m_projection;
 }
-
 
 void Camera::ToggleLockY() {
     if(m_lock_y) {
@@ -340,4 +339,22 @@ glm::vec3 Camera::threePlanesIntersectionPoint(glm::vec4 a, glm::vec4 b, glm::ve
     glm::vec3 numerator = glm::vec3(v1.x + v2.x + v3.x, v1.y + v2.y + v3.y, v1.z + v2.z + v3.z);
 
     return numerator / denominator;
+}
+
+glm::vec2 Camera::worldToScreen(glm::vec4 worldSpaceObject, glm::vec2 windowSize, glm::mat4 view, glm::mat4 projection) {
+	glm::vec4 worldToScreen = projection * view * worldSpaceObject;
+	glm::vec2 screenSpacePosition((worldToScreen.x + 1.0) / 2.0 * windowSize.x, (1.0 - worldToScreen.y) / 2.0 * windowSize.y);
+	
+	return screenSpacePosition;
+}
+
+//didnt test, but should be just inverse of worldToScreen
+glm::vec4 Camera::screenToWorld(glm::vec2 screenSpaceObject, glm::vec2 windowSize, glm::mat4 view, glm::mat4 projection) {
+	float x =  2.0 * screenSpaceObject.x / windowSize.x - 1.0;
+	float y = -2.0 * screenSpaceObject.y / windowSize.y + 1.0;
+	
+	glm::mat4 viewProjectionInverse = glm::inverse(projection * view);
+	glm::vec4 worldSpacePosition(x, y, 0.0f, 1.0f);
+	
+	return viewProjectionInverse * worldSpacePosition;
 }

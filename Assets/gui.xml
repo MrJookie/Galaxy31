@@ -53,17 +53,17 @@
 	
 	<widget rect="0,0,100%,100%" id="game">
 		<anchor pos="L,T">
-			<textbox id="game_user_name" multiline="true" interactible="false" terminal_mode="false" rect="0,0,265,29" value="My ship" readonly="true" backgroundcolor="#00111111" bordercolor="#0000FF000" hoverbordercolor="#00000000" />
+			<textbox id="game_user_name" multiline="false" interactible="false" terminal_mode="false" rect="0,0,265,29" value="user_name" readonly="true" backgroundcolor="#00000000" bordercolor="#00000000" hoverbordercolor="#00000000" />
 		</anchor>
 		
-		<anchor pos="L,T+50%-270">
-			<textbox id="game_players_online" multiline="true" terminal_mode="false" rect="0,0,200,400" value="Players online" interactible="false" />
+		<anchor pos="M,T">
+			<textbox id="game_bar_basic" multiline="false" interactible="false" terminal_mode="false" rect="0,0,372,40" value=" " readonly="true" backgroundcolor="#00000000" bordercolor="#00000000" hoverbordercolor="#00000000" />
 		</anchor>
 		
 		<anchor pos="R,T">
-			<widget rect="0,0,400,200">
-			<textbox id="game_debug" multiline="true" terminal_mode="false" rect="0,0,400,200" value="debug" interactible="false" />
-			<widgetmover rect="0,0,100,20" zindex="50"></widgetmover>
+			<widget rect="0,0,300,200">
+				<textbox id="game_debug" multiline="true" terminal_mode="false" rect="0,0,300,200" value="debug" interactible="false" />
+				<widgetmover rect="0,0,100,20" zindex="50"></widgetmover>
 			</widget>
 		</anchor>
 		
@@ -75,5 +75,12 @@
 		<anchor pos="L,B">
 			<terminal id="game_terminal" rect="0,0,400,150" textwrap="true" log_colors="true" placeholder="Type message" log_bordercolor="#00000000" log_backgroundcolor="#00000000" cursor_blinking_rate="30" log_hoverbordercolor="#00000000" />
 		</anchor>
+		
+		<anchor pos="L+50%-40%,T+50%-250">
+			<textbox id="game_tab" multiline="true" terminal_mode="false" rect="0,0,80%,500" value="Players online | Inventory" interactible="false" backgroundcolor="#AA111111" visible="false" />
+		</anchor>
+		
+		<textbox id="game_ship_armor" multiline="false" interactible="false" terminal_mode="false" rect="0,0,265,29" value="user_name" readonly="true" backgroundcolor="#00000000" bordercolor="#00000000" hoverbordercolor="#00000000" />
+		<textbox id="game_ship_armor_enemy" multiline="false" interactible="false" terminal_mode="false" rect="0,0,265,29" value="user_name_enemy" readonly="true" backgroundcolor="#00000000" bordercolor="#00000000" hoverbordercolor="#00000000" />
 	</widget>
 </gui>

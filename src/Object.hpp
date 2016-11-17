@@ -3,6 +3,7 @@
 
 #include <glm/glm.hpp>
 #include <vector>
+#include <array>
 
 enum class object_type {
 	unknown,
@@ -51,7 +52,9 @@ class Object {
 		uint32_t SetTicks(uint32_t tick) { m_ticks = tick; }
 		uint32_t AddTicks(uint32_t tick) { m_ticks += tick; }
 		void UpdateTicks();
-
+		
+		std::array<char, 11> name;
+		
 	protected:
 		object_type m_type;
 		uint32_t m_id;

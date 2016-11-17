@@ -42,7 +42,7 @@ class Camera {
 		glm::mat4 GetViewMatrix() const;
 		glm::vec3 GetPosition() const;
 		//glm::mat4 GetView();
-		glm::mat4 GetProjection() const;
+		glm::mat4 GetProjectionMatrix() const;
 		
 		void ToggleLockY();
 		
@@ -53,7 +53,9 @@ class Camera {
 		bool AABBIntersectsFrustum(glm::vec3& mins, glm::vec3& maxs);
 		void PrintFrustumVerticesPositions();
 		void DrawFrustum(glm::mat4 model, glm::mat4 view, glm::mat4 projection, GLuint shader);
-		
+		glm::vec2 worldToScreen(glm::vec4 worldSpaceObject, glm::vec2 windowSize, glm::mat4 view, glm::mat4 projection);
+		glm::vec4 screenToWorld(glm::vec2 screenSpaceObject, glm::vec2 windowSize, glm::mat4 view, glm::mat4 projection);
+			
 		glm::vec3 m_frustum_vertices[8];
 		
 		// added 10.07.16

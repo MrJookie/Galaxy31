@@ -62,8 +62,8 @@ void Asset::RenderSprites() {
     glBindVertexArray(m_vao);
 	
     //glUniformMatrix4fv(glGetUniformLocation(shader, "view"), 1, GL_FALSE, glm::value_ptr(GameState::camera.GetViewMatrix()));
-    //glUniformMatrix4fv(glGetUniformLocation(shader, "projection"), 1, GL_FALSE, glm::value_ptr(GameState::camera.GetProjection()));
-    glm::mat4 projectionViewMat = GameState::camera.GetProjection() * GameState::camera.GetViewMatrix();
+    //glUniformMatrix4fv(glGetUniformLocation(shader, "projection"), 1, GL_FALSE, glm::value_ptr(GameState::camera.GetProjectionMatrix()));
+    glm::mat4 projectionViewMat = GameState::camera.GetProjectionMatrix() * GameState::camera.GetViewMatrix();
     //glUniformMatrix4fv(glGetUniformLocation(shader, "projection_view_matrix"), 1, GL_FALSE, glm::value_ptr(projectionViewMat));
     
     //GLuint model = glGetUniformLocation(shader, "model");

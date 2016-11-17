@@ -66,6 +66,8 @@ struct Player {
 	int challenge;
 	std::string ip_address;
 	std::vector<Object> obj;
+	//data
+	std::string user_name;
 };
 
 // local data (statics)
@@ -136,8 +138,6 @@ int main(int argc, char* argv[]) {
 	cmd.add( config );
 	try {
 		cmd.parse( argc, argv );
-		
-		
 	} catch (TCLAP::ArgException &e) {
 		std::cerr << "error: " << e.error() << " for arg " << e.argId() << std::endl;
 		return -1;
@@ -293,8 +293,6 @@ void generate_RSA_keypair() {
 		privateKey.Save(CryptoPP::HexEncoder(new CryptoPP::StringSink(serverPrivateKeyStr)).Ref());
 	} catch(...) {}
 }
-
-
 	
 void server_start() {
 	generate_RSA_keypair();
@@ -353,6 +351,7 @@ void handle_new_client(ENetPeer* peer) {
 	player->user_id = 0;
 	player->challenge = challenge;
 	player->ip_address = ipAddress;
+	player->user_name = "";
 	players[peer] = player;
 	//cout << "challenge: " << challenge << endl;
 }
@@ -385,6 +384,7 @@ void send_states() {
 		for(auto& o : p.second->obj) {
 			obj[i] = o;
 			obj[i].SetId(p.second->id);
+			std::strcpy(obj[i].name.data(), p.second->user_name.data());
 			assert(i < num_objects);
 			i++;
 		}
@@ -478,6 +478,7 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 								std::string user_name(loggedUser["username"]);
 								
 								players[peer]->user_id = user_id;
+								players[peer]->user_name = user_name;
 
 								send_authorize(peer, status_code::login_ok, user_id, user_name);
 							}
@@ -527,6 +528,7 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 								std::string user_name(loggedUser["username"]);
 								
 								players[peer]->user_id = user_id;
+								players[peer]->user_name = user_name;
 								
 								send_authorize(peer, status_code::login_ok, user_id, user_name);
 							}
