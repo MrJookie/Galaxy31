@@ -91,16 +91,22 @@ void ShipBillboards() {
 	
 	for(auto& enemyObj : GameState::ships) {
 		auto& enemyShip = enemyObj.second.first;
-		
-		//dynamically create
-		if(!tb_game_ship_armor_enemy)
+
+		//dynamically create and dealloc?
+		if(!tb_game_ship_armor_enemy) {
 			tb_game_ship_armor_enemy = (ng::TextBox*)GameState::gui.GetControlById("game_ship_armor_enemy");
-		
+			/*
+			tb_game_ship_armor_enemy = (ng::TextBox*)GameState::gui.ControlManager::CreateControl("game_ship_armor_enemy");
+			
+			GameState::gui.AddControl(tb_game_ship_armor_enemy);
+			*/
+			
+			tb_game_ship_armor_enemy->SetText(enemyShip->name.data());
+		}
 		glm::vec4 enemyShipWorldSpace(enemyShip->GetPosition().x, enemyShip->GetPosition().y, 0.0f, 1.0f);
 		glm::vec2 enemyShipScreenSpace = GameState::camera.worldToScreen(enemyShipWorldSpace, GameState::windowSize, GameState::camera.GetViewMatrix(), GameState::camera.GetProjectionMatrix());
 			
 		tb_game_ship_armor_enemy->SetPosition(enemyShipScreenSpace.x, enemyShipScreenSpace.y);
-		tb_game_ship_armor_enemy->SetText(enemyShip->name.data());
 	}
 }
 
