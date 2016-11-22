@@ -40,6 +40,7 @@ cpp := 	\
 		src/Camera.cpp									\
 		src/Sprite.cpp									\
 		src/Ship.cpp									\
+		src/Asteroid.cpp								\
 		src/Projectile.cpp								\
 		src/Network.cpp									\
 		src/Quadtree.cpp								\

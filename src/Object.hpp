@@ -9,7 +9,8 @@ enum class object_type {
 	unknown,
 	projectile,
 	ship,
-	solidobject
+	solidobject,
+	asteroid
 };
 
 class Object {

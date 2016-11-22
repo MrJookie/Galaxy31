@@ -7,9 +7,9 @@ namespace HUD {
 
 ng::Canvas* cv_minimap = 0;
 ng::Canvas* cv_minimap_ship = 0;
-ng::TextBox* tb_game_bar_basic = 0;
-ng::TextBox* tb_game_ship_armor = 0;
-ng::TextBox* tb_game_ship_armor_enemy = 0; //dynamically create
+ng::Label* lb_game_bar_basic = 0;
+ng::Label* tb_game_ship_armor = 0;
+ng::Label* tb_game_ship_armor_enemy = 0; //dynamically create
 
 void Radar() {
 	bool relativeRadar = true;
@@ -70,18 +70,20 @@ void Radar() {
 }
 
 void BarResources() {
-	if(!tb_game_bar_basic)
-		tb_game_bar_basic = (ng::TextBox*)GameState::gui.GetControlById("game_bar_basic");
-	tb_game_bar_basic->SetImage(std::string(TEXTURE_PATH) + std::string("hud_bar_basic.png"));
+	if(!lb_game_bar_basic)
+		lb_game_bar_basic = (ng::Label*)GameState::gui.GetControlById("game_bar_basic");
+	lb_game_bar_basic->SetImage(std::string(TEXTURE_PATH) + std::string("hud_bar_basic.png"));
 }
 
 void ShipBillboards() {
 	Ship& ship = *GameState::player;
 	
 	if(!tb_game_ship_armor)
-		tb_game_ship_armor = (ng::TextBox*)GameState::gui.GetControlById("game_ship_armor");
+		tb_game_ship_armor = (ng::Label*)GameState::gui.GetControlById("game_ship_armor");
 	
-	glm::vec4 myShipWorldSpace(ship.GetPosition().x, ship.GetPosition().y, 0.0f, 1.0f);
+	float offset = GameState::zoom*25.0f;
+	
+	glm::vec4 myShipWorldSpace(ship.GetPosition().x - ship.GetSize().x/2.0, ship.GetPosition().y - ship.GetSize().y/2.0 - offset, 0.0f, 1.0f);
 	glm::vec2 myShipScreenSpace = GameState::camera.worldToScreen(myShipWorldSpace, GameState::windowSize, GameState::camera.GetViewMatrix(), GameState::camera.GetProjectionMatrix());
 			
 	tb_game_ship_armor->SetPosition(myShipScreenSpace.x, myShipScreenSpace.y);
@@ -94,16 +96,17 @@ void ShipBillboards() {
 
 		//dynamically create and dealloc?
 		if(!tb_game_ship_armor_enemy) {
-			tb_game_ship_armor_enemy = (ng::TextBox*)GameState::gui.GetControlById("game_ship_armor_enemy");
+			tb_game_ship_armor_enemy = (ng::Label*)GameState::gui.GetControlById("game_ship_armor_enemy");
 			/*
-			tb_game_ship_armor_enemy = (ng::TextBox*)GameState::gui.ControlManager::CreateControl("game_ship_armor_enemy");
+			tb_game_ship_armor_enemy = (ng::Label*)GameState::gui.ControlManager::CreateControl("game_ship_armor_enemy");
 			
 			GameState::gui.AddControl(tb_game_ship_armor_enemy);
 			*/
 			
 			tb_game_ship_armor_enemy->SetText(enemyShip->name.data());
 		}
-		glm::vec4 enemyShipWorldSpace(enemyShip->GetPosition().x, enemyShip->GetPosition().y, 0.0f, 1.0f);
+		
+		glm::vec4 enemyShipWorldSpace(enemyShip->GetPosition().x - enemyShip->GetSize().x/2.0, enemyShip->GetPosition().y - enemyShip->GetSize().y/2.0 - offset, 0.0f, 1.0f);
 		glm::vec2 enemyShipScreenSpace = GameState::camera.worldToScreen(enemyShipWorldSpace, GameState::windowSize, GameState::camera.GetViewMatrix(), GameState::camera.GetProjectionMatrix());
 			
 		tb_game_ship_armor_enemy->SetPosition(enemyShipScreenSpace.x, enemyShipScreenSpace.y);

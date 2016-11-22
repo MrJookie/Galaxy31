@@ -17,11 +17,12 @@ namespace GameState {
 	ng::GuiEngine gui;
 	Asset asset;
 	Camera camera(glm::vec3(0.0f, 0.0f, 0.0f));
-	std::list<Projectile> projectiles;
+	
 	Ship* player;
-	
 	std::map< unsigned int, std::pair<Ship*, std::queue<Object>> > ships;
-	
+	std::list<Projectile> projectiles;
+	std::list<Asteroid> asteroids;
+
 	bool input_taken;
 	//move to Ship
 	int account_challenge;

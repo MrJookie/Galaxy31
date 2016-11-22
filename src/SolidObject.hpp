@@ -37,6 +37,7 @@ class SolidObject : public Object {
 		glm::vec4 CollidesProjectileRayColor = glm::vec4(1.0, 1.0, 1.0, 1.0);
 		
 		bool DoObjectsAABBIntersect(SolidObject* obj);
+		bool DoesObjectIntersectMouse(int x, int y);
 		bool DoLinesIntersect(glm::vec2 p1, glm::vec2 p2, glm::vec2 p3, glm::vec2 p4);
 		bool Collides(SolidObject* obj);
 		

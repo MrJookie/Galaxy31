@@ -8,6 +8,7 @@
 //#include "SolidObject.hpp"
 #include "Projectile.hpp"
 #include "Ship.hpp"
+#include "Asteroid.hpp"
 #include <vector>
 #include <utility>
 #include <queue>
@@ -49,18 +50,19 @@ namespace GameState {
 	extern float zoom;
 	extern std::string activePage;
 	extern bool input_taken;
+	
 	extern int objectsDrawn;
 	extern std::string debug_string;
+	extern std::map< std::string, std::string > debug_fields;
 	
-	extern std::list<Projectile> projectiles;
 	extern ng::GuiEngine gui;
 	extern Asset asset;
 	extern Camera camera;
+	
 	extern Ship* player;
-	
-	extern std::map< std::string, std::string > debug_fields;
-	
 	extern std::map< unsigned int, std::pair<Ship*, std::queue<Object>> > ships;
+	extern std::list<Projectile> projectiles;
+	extern std::list<Asteroid> asteroids;
 	
 	void set_gui_page(std::string page);
 	

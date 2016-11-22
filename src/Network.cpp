@@ -360,7 +360,7 @@ namespace Network {
 							chassis = new Ship::Chassis("main_ship", "ship_01_skin.png", "ship_01_skin.png");
 						Ship *s = new Ship({0,0}, 0, *chassis);
 						s->CopyObjectState(o);
-						cout << "id: " << s->GetId() << ", owner: " << s->GetOwner() << endl;
+						//cout << "id: " << s->GetId() << ", owner: " << s->GetOwner() << endl;
 						GameState::ships[o.GetId()] = std::pair<Ship*, std::queue<Object>>(s, std::queue<Object>());
 					} else {
 						std::queue<Object> &q = GameState::ships[o.GetId()].second;

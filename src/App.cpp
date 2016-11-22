@@ -24,6 +24,7 @@ bool toggleWireframe = false;
 int skipMouseResolution = 0;
 bool wait_for_packets = false;
 bool isFiring = false;
+bool selectObject = false;
 std::vector<Ship*> ships;
 ng::Canvas *cv_minimap;
 ng::TextBox *tb_debug;
@@ -129,6 +130,7 @@ void App::init() {
     GameState::asset.LoadTextureHull("projectile_collision.png");
     
     GameState::asset.LoadTexture("propulsion.png");
+    GameState::asset.LoadTexture("asteroids/1.png");
 
     GameState::asset.LoadShader("background.vs", "background.fs");
     GameState::asset.LoadShader("sprite.vs", "sprite.fs");
@@ -190,7 +192,7 @@ void App::init() {
 	tb_game_tab = (TextBox*)GameState::gui.GetControlById("game_tab");
 	
 	tb_game_user_name->SetImage(std::string(TEXTURE_PATH) + std::string("hud_1.png"));
-	tb_game_tab->SetImage(std::string(TEXTURE_PATH) + std::string("hud_1.png"));
+	tb_game_tab->SetImage(std::string(TEXTURE_PATH) + std::string("hud_1.png"), true);
 	
 	Button &bt_login_register = *((Button*)GameState::gui.GetControlById("login_register"));
 	bt_login_register.SubscribeEvent(Button::event::click, [&](Control* c) {
@@ -236,6 +238,29 @@ void App::init() {
 		
 	Ship::Chassis chassis("main_ship", "ship_01_skin.png", "ship_01_skin.png");
     GameState::player = new Ship(glm::vec2(0, 0), 0.0, chassis);;
+    
+    //move to Network.cpp, get all asteroids from server
+    const Asset::Texture& texture = GameState::asset.GetTexture("asteroids/1.png");
+    Asteroid asteroid(texture, glm::vec2(0, 0), 50.0f, 10.0f);
+    asteroid.SetOwner(0);
+	GameState::asteroids.push_back(asteroid);
+	
+	const Asset::Texture& texture2 = GameState::asset.GetTexture("asteroids/7.png");
+    Asteroid asteroid2(texture2, glm::vec2(-300, -300));
+    asteroid2.SetOwner(0);
+	GameState::asteroids.push_back(asteroid2);
+	
+	const Asset::Texture& texture3 = GameState::asset.GetTexture("asteroids/6.png");
+    Asteroid asteroid3(texture3, glm::vec2(1000, -300));
+    asteroid3.SetOwner(0);
+	GameState::asteroids.push_back(asteroid3);
+	
+	const Asset::Texture& texture4 = GameState::asset.GetTexture("asteroids/2.jpg");
+    Asteroid asteroid4(texture4, glm::vec2(-3000, -300));
+    asteroid4.SetOwner(0);
+	GameState::asteroids.push_back(asteroid4);
+	
+	////////////////////////////////////////////////////
     
     m_quadtree = new Quadtree ( -GameState::worldSize.x, GameState::worldSize.x, -GameState::worldSize.y, GameState::worldSize.x, 6 ) ;
 	//m_quadtree->Resize();
@@ -323,6 +348,8 @@ void App::main_loop() {
 				}
             } else if(e.type == SDL_MOUSEBUTTONDOWN && GameState::gui.GetSelectedControl() == nullptr) {
 				
+				selectObject = false;
+				
 				if(e.button.button == SDL_BUTTON_LEFT) {
 					if(Command::Get("place_ship")) {
 						Ship* ship = new Ship(this->getWorldMousePosition(), 0.0, chassis);
@@ -332,6 +359,10 @@ void App::main_loop() {
 					isFiring = true;
 				} else {
 					ship.Stabilizers();
+				}
+				
+				if(e.button.button == SDL_BUTTON_RIGHT) {
+					selectObject = true;
 				}
             } else if(e.type == SDL_MOUSEBUTTONUP && GameState::gui.GetSelectedControl() == nullptr) {
 				if(e.button.button == SDL_BUTTON_LEFT) {
@@ -475,6 +506,10 @@ void App::game_loop() {
 		it->Process();
 	}
 	
+	for(auto it = GameState::asteroids.begin(); it != GameState::asteroids.end(); it++) {
+		it->Process();
+	}
+	
 	Network::Process();
 	
 	if(isFiring) {
@@ -517,6 +552,27 @@ void App::game_loop() {
 		ship.second.first->UpdateHullVertices(GameState::asset.GetTextureHull("ship_01_skin_collision.png").vertices);
 		if(Command::Get("collisionhull"))
 			ship.second.first->RenderCollisionHull();
+			
+		if(Command::Get("aabb")) {
+			m_quadtree->DrawRect(ship.second.first->GetPosition().x - ship.second.first->GetSize().x/2, ship.second.first->GetPosition().y - ship.second.first->GetSize().y/2, ship.second.first->GetSize().x, ship.second.first->GetSize().y, glm::vec4(0, 1, 0, 1));
+		}
+	}
+
+	for(auto& asteroid : GameState::asteroids) {
+		m_quadtree->AddObject(&asteroid);
+		
+		asteroid.Update();
+		asteroid.GetSprite()->RemoveFromDrawing();
+		
+		/*
+		asteroid->UpdateHullVertices(GameState::asset.GetTextureHull("asteroid_01_skin_collision.png").vertices);
+		if(Command::Get("collisionhull"))
+			asteroid->RenderCollisionHull();
+		*/
+		
+		if(Command::Get("aabb")) {
+			m_quadtree->DrawRect(asteroid.GetPosition().x - asteroid.GetSize().x/2, asteroid.GetPosition().y - asteroid.GetSize().y/2, asteroid.GetSize().x, asteroid.GetSize().y, glm::vec4(0, 1, 0, 1));
+		}
 	}
 		
 	/*
@@ -577,6 +633,18 @@ void App::game_loop() {
 	
 	//ship.Draw(); //is handled by drawObjects quadtree
 	GameState::asset.RenderSprites();
+	
+	for(auto& object : drawObjects) {
+		//if object was clicked, draw overlay
+		//if(selectObject) {
+			//edit, check whether point is inside collision hull, not AABB => accuracy
+			if( ((SolidObject*)object)->DoesObjectIntersectMouse(GameState::worldMousePosition.x, GameState::worldMousePosition.y) ) {
+				std::cout << "object_owner: " << object->GetOwner() << std::endl;
+				
+				this->DrawObjectSelection(object->GetPosition().x - object->GetSize().x/2, object->GetPosition().y - object->GetSize().y/2, object->GetSize().x, object->GetSize().y, glm::vec4(0, 1, 1, 1));
+			}
+		//}
+	}
 	
 	m_quadtree->Clear();
 	
@@ -787,4 +855,93 @@ void App::on_exit() {
 	m_bind.SaveKeys("galaxy31.cfg");
 	Command::SaveVarariablesToFile("galaxy31.cfg",false);
 	Network::SendGoodBye();
+}
+
+
+//edit
+void App::DrawObjectSelection(int x, int y, int w, int h, glm::vec4 color) {
+	GLuint vao, vbo[2];
+	glGenVertexArrays(1, &vao);
+	
+    glBindVertexArray(vao);
+    glGenBuffers(2, vbo);
+    
+	glUseProgram(GameState::asset.GetShader("shader1.vs").id);
+
+    glm::mat4 modelMat;
+    modelMat = glm::translate(modelMat, glm::vec3(glm::ivec2(x,y), 0.0f));
+    modelMat = glm::scale(modelMat, glm::vec3(glm::ivec2(w,h), 1.0f));
+
+    glUniformMatrix4fv(glGetUniformLocation(GameState::asset.GetShader("shader1.vs").id, "model"), 1, GL_FALSE, glm::value_ptr(modelMat));
+    glUniformMatrix4fv(glGetUniformLocation(GameState::asset.GetShader("shader1.vs").id, "view"), 1, GL_FALSE, glm::value_ptr(GameState::camera.GetViewMatrix()));
+    glUniformMatrix4fv(glGetUniformLocation(GameState::asset.GetShader("shader1.vs").id, "projection"), 1, GL_FALSE, glm::value_ptr(GameState::camera.GetProjectionMatrix()));
+    
+    
+    //set size in pixels, do not stretch by the texture
+    GLfloat positions[] = {
+		 //top left
+		 0.0f, 0.0f,
+		 0.0f, 0.1f,
+		 0.0f, 0.0f,
+		 0.1f, 0.0f,
+
+		 //bottom left
+		 0.0f, 1.0f,
+		 0.0f, 0.9f,
+		 0.0f, 1.0f,
+		 0.1f, 1.0f,
+		
+		 //bottom right
+		 1.0f, 1.0f,
+		 1.0f, 0.9f,
+		 1.0f, 1.0f,
+		 0.9f, 1.0f,
+		 
+		 //top right
+		 1.0f, 0.0f,
+		 1.0f, 0.1f,
+		 1.0f, 0.0f,
+		 0.9f, 0.0f,
+	};
+
+	GLfloat colors[] = {
+		 color.r, color.g, color.b, color.a,
+		 color.r, color.g, color.b, color.a,
+		 color.r, color.g, color.b, color.a,
+		 color.r, color.g, color.b, color.a,
+		 
+		 color.r, color.g, color.b, color.a,
+		 color.r, color.g, color.b, color.a,
+		 color.r, color.g, color.b, color.a,
+		 color.r, color.g, color.b, color.a,
+		 
+		 color.r, color.g, color.b, color.a,
+		 color.r, color.g, color.b, color.a,
+		 color.r, color.g, color.b, color.a,
+		 color.r, color.g, color.b, color.a,
+		 
+		 color.r, color.g, color.b, color.a,
+		 color.r, color.g, color.b, color.a,
+		 color.r, color.g, color.b, color.a,
+		 color.r, color.g, color.b, color.a,
+	};
+   
+	glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(positions), positions, GL_STATIC_DRAW);
+	glEnableVertexAttribArray(0);    
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
+	
+	glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(colors), colors, GL_STATIC_DRAW);
+	glEnableVertexAttribArray(1);    
+	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 0, (GLvoid*)0);
+
+	glDrawArrays(GL_LINES, 0, 16);
+
+	glBindVertexArray(0);
+	glUseProgram(0);
+	
+	glDeleteBuffers(2, vbo);
+
+    glDeleteVertexArrays(1, &vao);
 }

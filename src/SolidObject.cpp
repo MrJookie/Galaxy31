@@ -36,6 +36,13 @@ bool SolidObject::DoObjectsAABBIntersect(SolidObject* obj) {
         || m_position.y + m_size.y < obj->m_position.y);
 }
 
+bool SolidObject::DoesObjectIntersectMouse(int x, int y) {
+	return !(m_position.x > x + 1
+        || m_position.x+m_size.x < x
+        || m_position.y > y + 1
+        || m_position.y + m_size.y < y);
+}
+
 bool SolidObject::DoLinesIntersect(glm::vec2 p1, glm::vec2 p2, glm::vec2 p3, glm::vec2 p4) {
 	float x1 = p1.x, x2 = p2.x, x3 = p3.x, x4 = p4.x;
 	float y1 = p1.y, y2 = p2.y, y3 = p3.y, y4 = p4.y;

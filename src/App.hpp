@@ -68,6 +68,8 @@ class App {
         Bind m_bind;
         SDL_Window* window;
         SDL_GLContext glContext;
+        
+        void DrawObjectSelection(int x, int y, int w, int h, glm::vec4 color);
 };
 
 #endif
