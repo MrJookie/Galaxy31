@@ -1,12 +1,12 @@
 <gui>
 	<theme>
-		<button font="Assets/Fonts/DroidSansMono.ttf,13" backgroundcolor="#331228D1" bordercolor="#FF1228D1" hoverbordercolor="#FF12AAAA" downcolor="#FF12AAAA" upcolor="#FFFFFFFF" />
-		<textbox font="Assets/Fonts/DroidSansMono.ttf,13" backgroundcolor="#00000000" bordercolor="#FF1228D1" hoverbordercolor="#FF12AAAA" multiline="false" />
+		<button font="Assets/Fonts/Ubuntu-R.ttf,14" backgroundcolor="#331228D1" bordercolor="#FF1228D1" hoverbordercolor="#FF12AAAA" downcolor="#FF12AAAA" upcolor="#FFFFFFFF" />
+		<textbox font="Assets/Fonts/Ubuntu-R.ttf,14" backgroundcolor="#00000000" bordercolor="#FF1228D1" hoverbordercolor="#FF12AAAA" multiline="false" />
 		<terminal>
-			<textbox backgroundcolor="#505000" font="Assets/Fonts/DroidSansMono.ttf,13" backgroundcolor="#33777777" bordercolor="#FF1228D1" hoverbordercolor="#FF1228D1" max_length="100" />
+			<textbox font="Assets/Fonts/Ubuntu-R.ttf,15" backgroundcolor="#505000" backgroundcolor="#33777777" bordercolor="#FF1228D1" hoverbordercolor="#FF1228D1" max_length="100" />
 		</terminal>
 		<widget bordercolor="#00000000"></widget>
-		<label bordercolor="#00000000"></label>
+		<label font="Assets/Fonts/Ubuntu-R.ttf,14" bordercolor="#00000000"></label>
 	</theme>
 	<anchor pos="M,M">
 		<widget rect="0,0,200,256" id="login">
@@ -55,17 +55,24 @@
 	
 	<widget rect="0,0,100%,100%" id="game">
 		<anchor pos="L,T">
-			<textbox id="game_user_name" multiline="false" interactible="false" rect="0,0,265,29" value="user_name" readonly="true" backgroundcolor="#00000000" bordercolor="#00000000" hoverbordercolor="#00000000" />
+			<label id="game_user_name" rect="0,0,265,29"></label>
 		</anchor>
 		
 		<anchor pos="M,T">
 			<!--<textbox id="game_bar_basic" multiline="false" interactible="false" rect="0,0,372,40" value="" readonly="true" backgroundcolor="#00000000" bordercolor="#00000000" hoverbordercolor="#00000000" />-->
-			<label id="game_bar_basic" rect="0,0,372,40" font="/usr/share/fonts/TTF/Ubuntu-B.ttf,16" value="1734" color="#FF00FF00"></label>
+			<label id="game_bar_basic" rect="0,0,372,40"></label>
+			
+			<!-- add align right -->
+			<label id="game_bar_basic_money" rect="-130,0,80,30" value="999999" color="#FF00FF00" bordercolor="#00FF0000"></label>
+			<label id="game_bar_basic_level" rect="100,0,372,40" font="Assets/Fonts/Ubuntu-R.ttf,21" value="L07" color="#FFFFFFFF"></label>
+			<label id="game_bar_basic_level_percentage" rect="144,7,372,40" value="45%" color="#FFFFFFFF"></label>
+			<label id="game_bar_basic_energy" rect="215,0,372,40" value="energy" color="#FFFFFFFF"></label>
+			<label id="game_bar_basic_energy" rect="296,0,372,40" value="uranium" color="#FFFFFFFF"></label>
 		</anchor>
 		
 		<anchor pos="R,T">
 			<widget rect="0,0,300,200">
-				<textbox id="game_debug" multiline="true" rect="0,0,300,200" value="debug" interactible="false" />
+				<textbox id="game_debug" multiline="true" rect="0,0,300,200" value="debug" interactible="false" font="Assets/Fonts/DroidSansMono.ttf,13" />
 				<widgetmover rect="0,0,100,20" zindex="50"></widgetmover>
 			</widget>
 		</anchor>

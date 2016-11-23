@@ -18,14 +18,17 @@ void Radar() {
 	}
 	
 	Ship& ship = *GameState::player;
-	if(!cv_minimap)
+	if(!cv_minimap) {
 		cv_minimap = (ng::Canvas*)GameState::gui.GetControlById("game_minimap");
-	cv_minimap->Clear(0);
-	cv_minimap->SetImage(std::string(TEXTURE_PATH) + std::string("hud_radar.png")); // load via asset manager?
+		cv_minimap->SetImage(std::string(TEXTURE_PATH) + std::string("hud_radar.png")); // load via asset manager?
+	}
 	
-	if(!cv_minimap_ship)
+	cv_minimap->Clear(0);
+
+	if(!cv_minimap_ship) {
 		cv_minimap_ship = (ng::Canvas*)GameState::gui.GetControlById("game_minimap_ship");
-	cv_minimap_ship->SetImage(std::string(TEXTURE_PATH) + std::string("hud_radar_ship.png"));
+		cv_minimap_ship->SetImage(std::string(TEXTURE_PATH) + std::string("hud_radar_ship.png"));
+	}
 	
 	int pointX;
 	int pointY;
@@ -70,24 +73,27 @@ void Radar() {
 }
 
 void BarResources() {
-	if(!lb_game_bar_basic)
+	if(!lb_game_bar_basic) {
 		lb_game_bar_basic = (ng::Label*)GameState::gui.GetControlById("game_bar_basic");
-	lb_game_bar_basic->SetImage(std::string(TEXTURE_PATH) + std::string("hud_bar_basic.png"));
+		lb_game_bar_basic->SetImage(std::string(TEXTURE_PATH) + std::string("hud_bar_basic.png"));
+	}
 }
 
 void ShipBillboards() {
 	Ship& ship = *GameState::player;
 	
-	if(!tb_game_ship_armor)
+	if(!tb_game_ship_armor) {
 		tb_game_ship_armor = (ng::Label*)GameState::gui.GetControlById("game_ship_armor");
+		tb_game_ship_armor->SetText(GameState::user_name);
+	}
 	
 	float offset = GameState::zoom*25.0f;
 	
-	glm::vec4 myShipWorldSpace(ship.GetPosition().x - ship.GetSize().x/2.0, ship.GetPosition().y - ship.GetSize().y/2.0 - offset, 0.0f, 1.0f);
-	glm::vec2 myShipScreenSpace = GameState::camera.worldToScreen(myShipWorldSpace, GameState::windowSize, GameState::camera.GetViewMatrix(), GameState::camera.GetProjectionMatrix());
+	glm::ivec4 myShipWorldSpace(ship.GetPosition().x - ship.GetSize().x/2.0, ship.GetPosition().y - ship.GetSize().y/2.0 - offset, 0.0f, 1.0f);
+	glm::ivec2 myShipScreenSpace = GameState::camera.worldToScreen(myShipWorldSpace, GameState::windowSize, GameState::camera.GetViewMatrix(), GameState::camera.GetProjectionMatrix());
 			
 	tb_game_ship_armor->SetPosition(myShipScreenSpace.x, myShipScreenSpace.y);
-	tb_game_ship_armor->SetText(GameState::user_name);
+	
 	//or just +offsets
 	//tb_game_ship_armor->SetPosition(GameState::windowSize.x/2.0f, GameState::windowSize.y/2.0f);
 	
@@ -106,8 +112,8 @@ void ShipBillboards() {
 			tb_game_ship_armor_enemy->SetText(enemyShip->name.data());
 		}
 		
-		glm::vec4 enemyShipWorldSpace(enemyShip->GetPosition().x - enemyShip->GetSize().x/2.0, enemyShip->GetPosition().y - enemyShip->GetSize().y/2.0 - offset, 0.0f, 1.0f);
-		glm::vec2 enemyShipScreenSpace = GameState::camera.worldToScreen(enemyShipWorldSpace, GameState::windowSize, GameState::camera.GetViewMatrix(), GameState::camera.GetProjectionMatrix());
+		glm::ivec4 enemyShipWorldSpace(enemyShip->GetPosition().x - enemyShip->GetSize().x/2.0, enemyShip->GetPosition().y - enemyShip->GetSize().y/2.0 - offset, 0.0f, 1.0f);
+		glm::ivec2 enemyShipScreenSpace = GameState::camera.worldToScreen(enemyShipWorldSpace, GameState::windowSize, GameState::camera.GetViewMatrix(), GameState::camera.GetProjectionMatrix());
 			
 		tb_game_ship_armor_enemy->SetPosition(enemyShipScreenSpace.x, enemyShipScreenSpace.y);
 	}

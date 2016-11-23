@@ -15,7 +15,7 @@ using Commands::Arg;
 using ng::Control;
 using ng::Button;
 using ng::TextBox;
-// using ng::TextBox;
+using ng::Label;
 
 bool toggleMouseRelative = false;
 bool toggleFullscreen = false;
@@ -28,8 +28,8 @@ bool selectObject = false;
 std::vector<Ship*> ships;
 ng::Canvas *cv_minimap;
 ng::TextBox *tb_debug;
-TextBox* tb_game_user_name;
-TextBox* tb_game_tab;
+ng::Label* lb_game_user_name;
+ng::TextBox* tb_game_tab;
 int tick_id;
 
 App::App() {
@@ -111,7 +111,6 @@ void App::init() {
     printf("Renderer: %s\n", glGetString(GL_RENDERER));
     printf("Version:  %s\n", glGetString(GL_VERSION));
     printf("GLSL:  %s\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
-
    
     SDL_SetHintWithPriority(SDL_HINT_MOUSE_RELATIVE_MODE_WARP, "1", SDL_HINT_OVERRIDE);
     //SDL_SetWindowGrab(window, SDL_TRUE);
@@ -119,6 +118,10 @@ void App::init() {
     if(toggleMouseRelative) {
         SDL_SetRelativeMouseMode(SDL_TRUE);
     }
+    
+	if(SDL_GetDesktopDisplayMode(0, &desktopDisplayMode) != 0) {
+		throw std::string("SDL_GetDesktopDisplayMode failed: ") + SDL_GetError();;
+	}
     
     init_audio();
     
@@ -130,7 +133,7 @@ void App::init() {
     GameState::asset.LoadTextureHull("projectile_collision.png");
     
     GameState::asset.LoadTexture("propulsion.png");
-    GameState::asset.LoadTexture("asteroids/1.png");
+    GameState::asset.LoadTexture("1.png");
 
     GameState::asset.LoadShader("background.vs", "background.fs");
     GameState::asset.LoadShader("sprite.vs", "sprite.fs");
@@ -188,10 +191,10 @@ void App::init() {
 		}
 	});
 	
-	tb_game_user_name = (TextBox*)GameState::gui.GetControlById("game_user_name");
+	lb_game_user_name = (Label*)GameState::gui.GetControlById("game_user_name");
 	tb_game_tab = (TextBox*)GameState::gui.GetControlById("game_tab");
 	
-	tb_game_user_name->SetImage(std::string(TEXTURE_PATH) + std::string("hud_1.png"));
+	lb_game_user_name->SetImage(std::string(TEXTURE_PATH) + std::string("hud_1.png"));
 	tb_game_tab->SetImage(std::string(TEXTURE_PATH) + std::string("hud_1.png"), true);
 	
 	Button &bt_login_register = *((Button*)GameState::gui.GetControlById("login_register"));
@@ -240,22 +243,23 @@ void App::init() {
     GameState::player = new Ship(glm::vec2(0, 0), 0.0, chassis);;
     
     //move to Network.cpp, get all asteroids from server
-    const Asset::Texture& texture = GameState::asset.GetTexture("asteroids/1.png");
+    const Asset::Texture& texture = GameState::asset.GetTexture("1.png");
     Asteroid asteroid(texture, glm::vec2(0, 0), 50.0f, 10.0f);
     asteroid.SetOwner(0);
 	GameState::asteroids.push_back(asteroid);
 	
-	const Asset::Texture& texture2 = GameState::asset.GetTexture("asteroids/7.png");
+	const Asset::Texture& texture2 = GameState::asset.GetTexture("7.png");
     Asteroid asteroid2(texture2, glm::vec2(-300, -300));
     asteroid2.SetOwner(0);
 	GameState::asteroids.push_back(asteroid2);
 	
-	const Asset::Texture& texture3 = GameState::asset.GetTexture("asteroids/6.png");
+	//wtf mem usage? wtf be careful of file format
+	const Asset::Texture& texture3 = GameState::asset.GetTexture("6.png");
     Asteroid asteroid3(texture3, glm::vec2(1000, -300));
     asteroid3.SetOwner(0);
 	GameState::asteroids.push_back(asteroid3);
 	
-	const Asset::Texture& texture4 = GameState::asset.GetTexture("asteroids/2.jpg");
+	const Asset::Texture& texture4 = GameState::asset.GetTexture("2.jpg");
     Asteroid asteroid4(texture4, glm::vec2(-3000, -300));
     asteroid4.SetOwner(0);
 	GameState::asteroids.push_back(asteroid4);
@@ -557,18 +561,16 @@ void App::game_loop() {
 			m_quadtree->DrawRect(ship.second.first->GetPosition().x - ship.second.first->GetSize().x/2, ship.second.first->GetPosition().y - ship.second.first->GetSize().y/2, ship.second.first->GetSize().x, ship.second.first->GetSize().y, glm::vec4(0, 1, 0, 1));
 		}
 	}
-
+	
 	for(auto& asteroid : GameState::asteroids) {
 		m_quadtree->AddObject(&asteroid);
 		
 		asteroid.Update();
 		asteroid.GetSprite()->RemoveFromDrawing();
 		
-		/*
-		asteroid->UpdateHullVertices(GameState::asset.GetTextureHull("asteroid_01_skin_collision.png").vertices);
-		if(Command::Get("collisionhull"))
-			asteroid->RenderCollisionHull();
-		*/
+		//asteroid->UpdateHullVertices(GameState::asset.GetTextureHull("asteroid_01_skin_collision.png").vertices);
+		//if(Command::Get("collisionhull"))
+		//	asteroid->RenderCollisionHull();
 		
 		if(Command::Get("aabb")) {
 			m_quadtree->DrawRect(asteroid.GetPosition().x - asteroid.GetSize().x/2, asteroid.GetPosition().y - asteroid.GetSize().y/2, asteroid.GetSize().x, asteroid.GetSize().y, glm::vec4(0, 1, 0, 1));
@@ -622,8 +624,8 @@ void App::game_loop() {
 		ship.RenderCollisionHull();
 	}
 	
-	tb_game_user_name->SetText(std::to_string(GameState::user_id) + " | " + GameState::user_name);
-	//tb_game_user_name->SetRect(ship.GetPosition().x - ship.GetSize().x/2, ship.GetPosition().y - ship.GetSize().y/2, 200, 28);
+	//update to set just once
+	lb_game_user_name->SetText(std::to_string(GameState::user_id) + " | " + GameState::user_name);
 	
 	/*
 	for(Projectile& projectile : GameState::projectiles) {
@@ -634,17 +636,25 @@ void App::game_loop() {
 	//ship.Draw(); //is handled by drawObjects quadtree
 	GameState::asset.RenderSprites();
 	
+	Object* hoveredObject = 0;
+	//edit to select most-top object
 	for(auto& object : drawObjects) {
+		if(object->GetType() == object_type::projectile) continue;
 		//if object was clicked, draw overlay
 		//if(selectObject) {
 			//edit, check whether point is inside collision hull, not AABB => accuracy
 			if( ((SolidObject*)object)->DoesObjectIntersectMouse(GameState::worldMousePosition.x, GameState::worldMousePosition.y) ) {
-				std::cout << "object_owner: " << object->GetOwner() << std::endl;
-				
-				this->DrawObjectSelection(object->GetPosition().x - object->GetSize().x/2, object->GetPosition().y - object->GetSize().y/2, object->GetSize().x, object->GetSize().y, glm::vec4(0, 1, 1, 1));
+				//std::cout << "object_owner: " << object->GetOwner() << std::endl;
+				hoveredObject = object;
+				break;
 			}
 		//}
 	}
+	
+	if(hoveredObject != nullptr) {
+		this->DrawObjectSelection(hoveredObject->GetPosition().x - hoveredObject->GetSize().x/2.0, hoveredObject->GetPosition().y - hoveredObject->GetSize().y/2.0, hoveredObject->GetSize().x, hoveredObject->GetSize().y, glm::vec4(0, 1, 1, 1));
+	}
+	
 	
 	m_quadtree->Clear();
 	
@@ -812,6 +822,17 @@ void App::init_commands() {
 
 			skipMouseResolution = 4;
 		}
+		
+		//put mouse to the center of screen
+		SDL_WarpMouseGlobal(desktopDisplayMode.w/2, desktopDisplayMode.h/2);
+		
+		/*
+		//doenst work?
+		int x, y;
+		SDL_GetWindowPosition(window, &x, &y);
+		
+		std::cout << x << "----" << y << std::endl;
+		*/
 	});
 	
 	Command::AddCommand("wireframe", [&]() {
@@ -876,32 +897,34 @@ void App::DrawObjectSelection(int x, int y, int w, int h, glm::vec4 color) {
     glUniformMatrix4fv(glGetUniformLocation(GameState::asset.GetShader("shader1.vs").id, "view"), 1, GL_FALSE, glm::value_ptr(GameState::camera.GetViewMatrix()));
     glUniformMatrix4fv(glGetUniformLocation(GameState::asset.GetShader("shader1.vs").id, "projection"), 1, GL_FALSE, glm::value_ptr(GameState::camera.GetProjectionMatrix()));
     
-    
-    //set size in pixels, do not stretch by the texture
-    GLfloat positions[] = {
-		 //top left
-		 0.0f, 0.0f,
-		 0.0f, 0.1f,
-		 0.0f, 0.0f,
-		 0.1f, 0.0f,
+    //limit line size to 40px due to zoom, zooming will be limited later, so it will be fit
+    float offsetX = std::min(20.0f * GameState::zoom, 40.0f) / w;
+    float offsetY = std::min(20.0f * GameState::zoom, 40.0f) / h;
 
-		 //bottom left
-		 0.0f, 1.0f,
-		 0.0f, 0.9f,
-		 0.0f, 1.0f,
-		 0.1f, 1.0f,
-		
-		 //bottom right
-		 1.0f, 1.0f,
-		 1.0f, 0.9f,
-		 1.0f, 1.0f,
-		 0.9f, 1.0f,
-		 
-		 //top right
-		 1.0f, 0.0f,
-		 1.0f, 0.1f,
-		 1.0f, 0.0f,
-		 0.9f, 0.0f,
+    GLfloat positions[] = {
+		//top left
+		0.0f, 0.0f,
+		0.0f, 0.0f + offsetY,
+		0.0f, 0.0f,
+		0.0f + offsetX, 0.0f,
+
+		//bottom left
+		0.0f, 1.0f,
+		0.0f, 1.0f - offsetY,
+		0.0f, 1.0f,
+		0.0f + offsetX, 1.0f,
+
+		//bottom right
+		1.0f, 1.0f,
+		1.0f, 1.0f - offsetY,
+		1.0f, 1.0f,
+		1.0f - offsetX, 1.0f,
+
+		//top right
+		1.0f, 0.0f,
+		1.0f, 0.0f + offsetY,
+		1.0f, 0.0f,
+		1.0f - offsetX, 0.0f,
 	};
 
 	GLfloat colors[] = {
