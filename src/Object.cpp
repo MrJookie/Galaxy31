@@ -35,7 +35,7 @@ glm::dvec2 Object::GetSize() const {
 }
 
 glm::dvec2 Object::GetPosition() const {
-    return glm::dvec2( m_position.x + 0.5 * m_size.x, m_position.y + 0.5 * m_size.y );
+    return glm::ivec2( m_position.x + 0.5 * m_size.x, m_position.y + 0.5 * m_size.y );
 }
 
 double Object::GetRotation() const {

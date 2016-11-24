@@ -24,13 +24,15 @@ bool toggleWireframe = false;
 int skipMouseResolution = 0;
 bool wait_for_packets = false;
 bool isFiring = false;
-bool selectObject = false;
 std::vector<Ship*> ships;
 ng::Canvas *cv_minimap;
 ng::TextBox *tb_debug;
 ng::Label* lb_game_user_name;
 ng::TextBox* tb_game_tab;
 int tick_id;
+
+Object* hoveredObject = 0;
+Object* selectedObject = 0;
 
 App::App() {
 	m_initialWindowSize = glm::vec2(1024, 768);
@@ -134,7 +136,7 @@ void App::init() {
     
     GameState::asset.LoadTexture("propulsion.png");
     GameState::asset.LoadTexture("1.png");
-    GameState::asset.LoadTexture("skin.jpg");
+    GameState::asset.LoadTexture("skin.png");
 
     GameState::asset.LoadShader("background.vs", "background.fs");
     GameState::asset.LoadShader("sprite.vs", "sprite.fs");
@@ -241,7 +243,7 @@ void App::init() {
 	
 	init_commands();
 		
-	Ship::Chassis chassis("main_ship", "ship_01_skin.png", "skin.jpg");
+	Ship::Chassis chassis("main_ship", "ship_01_skin.png", "skin.png");
     GameState::player = new Ship(glm::vec2(0, 0), 0.0, chassis);;
     
     //move to Network.cpp, get all asteroids from server
@@ -353,22 +355,18 @@ void App::main_loop() {
 					}
 				}
             } else if(e.type == SDL_MOUSEBUTTONDOWN && GameState::gui.GetSelectedControl() == nullptr) {
-				
-				selectObject = false;
-				
 				if(e.button.button == SDL_BUTTON_LEFT) {
 					if(Command::Get("place_ship")) {
 						Ship* ship = new Ship(this->getWorldMousePosition(), 0.0, chassis);
 						ships.push_back(ship);
 					}
 					
-					isFiring = true;
+					selectedObject = hoveredObject;
+					if(!selectedObject) {
+						isFiring = true;
+					}
 				} else {
 					ship.Stabilizers();
-				}
-				
-				if(e.button.button == SDL_BUTTON_RIGHT) {
-					selectObject = true;
 				}
             } else if(e.type == SDL_MOUSEBUTTONUP && GameState::gui.GetSelectedControl() == nullptr) {
 				if(e.button.button == SDL_BUTTON_LEFT) {
@@ -379,7 +377,6 @@ void App::main_loop() {
             } else if(e.type == SDL_MOUSEWHEEL) {
 				this->setZoom((this->getZoom() - e.wheel.y) > 30 ? this->getZoom() : std::max(this->getZoom() - e.wheel.y, 1.0f));
             }
-            
             
             // code completion
             if(e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_TAB && tm_game_chat.IsSelected() && tm_game_chat.GetText()[0] == '/') {
@@ -497,6 +494,7 @@ void App::main_loop() {
 
 auto firing_tp = std::chrono::steady_clock::now();
 void App::game_loop() {
+	hoveredObject = 0;
 	GameState::debug_string = "";
 	Ship& ship = *GameState::player;
 	NetworkChat::handle_events(5);
@@ -639,25 +637,24 @@ void App::game_loop() {
 	//ship.Draw(); //is handled by drawObjects quadtree
 	GameState::asset.RenderSprites();
 	
-	Object* hoveredObject = 0;
 	//edit to select most-top object
 	for(auto& object : drawObjects) {
 		if(object->GetType() == object_type::projectile) continue;
-		//if object was clicked, draw overlay
-		//if(selectObject) {
-			//edit, check whether point is inside collision hull, not AABB => accuracy
-			if( ((SolidObject*)object)->DoesObjectIntersectMouse(GameState::worldMousePosition.x, GameState::worldMousePosition.y) ) {
-				//std::cout << "object_owner: " << object->GetOwner() << std::endl;
-				hoveredObject = object;
-				break;
-			}
-		//}
+		//edit, check whether point is inside collision hull, not AABB => accuracy
+		if( ((SolidObject*)object)->DoesObjectIntersectMouse(GameState::worldMousePosition.x, GameState::worldMousePosition.y) ) {
+			//std::cout << "object_owner: " << object->GetOwner() << std::endl;
+			hoveredObject = object;
+			break;
+		}
 	}
 	
 	if(hoveredObject != nullptr) {
 		this->DrawObjectSelection(hoveredObject->GetPosition().x - hoveredObject->GetSize().x/2.0, hoveredObject->GetPosition().y - hoveredObject->GetSize().y/2.0, hoveredObject->GetSize().x, hoveredObject->GetSize().y, glm::vec4(0, 1, 1, 1));
 	}
 	
+	if(selectedObject != nullptr) {
+		this->DrawObjectSelection(selectedObject->GetPosition().x - selectedObject->GetSize().x/2.0, selectedObject->GetPosition().y - selectedObject->GetSize().y/2.0, selectedObject->GetSize().x, selectedObject->GetSize().y, glm::vec4(1, 0, 1, 1));
+	}
 	
 	m_quadtree->Clear();
 	
