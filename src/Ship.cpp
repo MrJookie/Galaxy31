@@ -16,6 +16,7 @@ Ship::Ship(glm::dvec2 position, double rotation, const Chassis& chassis) {
 	m_chassis.sprite.SetPosition(m_position);
 	m_chassis.sprite.SetRotation(m_rotation);
 	m_chassis.sprite.AddTexture(m_chassis.texture);
+	m_chassis.sprite.AddTexture(m_chassis.skin);
 	m_size = m_chassis.sprite.GetSize();
 	m_stabilizers_on = false;
 	m_rotation_speed_coefficient = 180;
@@ -150,6 +151,7 @@ void Ship::Stabilizers() {
 	m_stabilizers_on = !m_stabilizers_on;
 }
 
+//change std::string _texture, std::string _skin to GameState::asset.GetTexture(), will be obtained from database and downloaded
 Ship::Chassis::Chassis() {}
 Ship::Chassis::Chassis(std::string _name, std::string _texture, std::string _skin) {
 	name = _name;

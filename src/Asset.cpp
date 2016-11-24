@@ -55,8 +55,9 @@ void Asset::RenderSprites() {
 	GLuint shader = GameState::asset.GetShader("sprite.vs").id;
 	glBindVertexArray(m_vao);
 	
-    glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
-    glEnable(GL_BLEND);
+	glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    //glBlendEquation(GL_FUNC_ADD);
     
     glUseProgram(shader);
     glBindVertexArray(m_vao);
@@ -68,6 +69,7 @@ void Asset::RenderSprites() {
     
     //GLuint model = glGetUniformLocation(shader, "model");
 	GLuint tex_uniform = glGetUniformLocation(shader, "textureUniform");
+	GLuint texSkin_uniform = glGetUniformLocation(shader, "textureSkinUniform");
         
     for(auto& o : m_sprites) {
 		Sprite& s = *o;
@@ -104,9 +106,20 @@ void Asset::RenderSprites() {
 			// glBindTexture(GL_TEXTURE_2D, tex);
 		// }
 		
-		glBindTexture(GL_TEXTURE_2D, textures[0]);
-		
 		glUniform1i(tex_uniform, 0);
+		glActiveTexture(GL_TEXTURE0 + 0);
+		glBindTexture(GL_TEXTURE_2D, textures[0]);
+		bool hasSkin = false;
+		
+		//has skin
+		if(glIsTexture(textures[1])) {
+			glUniform1i(texSkin_uniform, 1);
+			glActiveTexture(GL_TEXTURE0 + 1);
+			glBindTexture(GL_TEXTURE_2D, textures[1]);
+			hasSkin = true;
+		}
+		
+		glUniform1i(glGetUniformLocation(shader, "hasSkin"), hasSkin);
 
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);

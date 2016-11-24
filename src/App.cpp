@@ -134,9 +134,11 @@ void App::init() {
     
     GameState::asset.LoadTexture("propulsion.png");
     GameState::asset.LoadTexture("1.png");
+    GameState::asset.LoadTexture("skin.jpg");
 
     GameState::asset.LoadShader("background.vs", "background.fs");
     GameState::asset.LoadShader("sprite.vs", "sprite.fs");
+    GameState::asset.LoadShader("sprite_skin.vs", "sprite_skin.fs");
     GameState::asset.LoadShader("shader1.vs", "shader1.fs");
     
     //gui
@@ -239,7 +241,7 @@ void App::init() {
 	
 	init_commands();
 		
-	Ship::Chassis chassis("main_ship", "ship_01_skin.png", "ship_01_skin.png");
+	Ship::Chassis chassis("main_ship", "ship_01_skin.png", "skin.jpg");
     GameState::player = new Ship(glm::vec2(0, 0), 0.0, chassis);;
     
     //move to Network.cpp, get all asteroids from server
@@ -468,6 +470,7 @@ void App::main_loop() {
         glUniform2f(glGetUniformLocation(GameState::asset.GetShader("background.vs").id, "shipPosition"), ship.GetPosition().x, -ship.GetPosition().y);
         glUniform2f(glGetUniformLocation(GameState::asset.GetShader("background.vs").id, "windowSize"), this->getWindowSize().x, this->getWindowSize().y);
         glUniform1f(glGetUniformLocation(GameState::asset.GetShader("background.vs").id, "time"), this->getTimeElapsed());
+        glUniform1f(glGetUniformLocation(GameState::asset.GetShader("background.vs").id, "zoom"), GameState::zoom);
 
         glDrawElements(GL_TRIANGLE_STRIP, 6, GL_UNSIGNED_INT, 0);
         
@@ -823,16 +826,18 @@ void App::init_commands() {
 			skipMouseResolution = 4;
 		}
 		
-		//put mouse to the center of screen
-		SDL_WarpMouseGlobal(desktopDisplayMode.w/2, desktopDisplayMode.h/2);
-		
+		//doenst work? http://forums.libsdl.org/viewtopic.php?t=9899&sid=0c6cf97b3791991ba61f169498385a70
 		/*
-		//doenst work?
 		int x, y;
 		SDL_GetWindowPosition(window, &x, &y);
-		
 		std::cout << x << "----" << y << std::endl;
 		*/
+		
+		//SDL_WINDOWPOS_CENTERED centers startup window, but after window is moved and fullscreen is toggled, recenter it again, so mouse is warped in the window, because SDL_GetWindowPosition doesnt work
+		SDL_SetWindowPosition(window, desktopDisplayMode.w/2 - this->getWindowSize().x/2, desktopDisplayMode.h/2 - this->getWindowSize().y/2);
+		
+		//put mouse to the center of screen
+		SDL_WarpMouseGlobal(desktopDisplayMode.w/2, desktopDisplayMode.h/2);
 	});
 	
 	Command::AddCommand("wireframe", [&]() {
