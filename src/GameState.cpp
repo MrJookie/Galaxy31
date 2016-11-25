@@ -19,6 +19,9 @@ namespace GameState {
 	Camera camera(glm::vec3(0.0f, 0.0f, 0.0f));
 	
 	Ship* player;
+	int resource_money;
+	int resource_uranium;
+	int resource_energy;
 	std::map< unsigned int, std::pair<Ship*, std::queue<Object>> > ships;
 	std::list<Projectile> projectiles;
 	std::list<Asteroid> asteroids;

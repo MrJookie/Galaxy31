@@ -140,12 +140,11 @@ void App::init() {
 
     GameState::asset.LoadShader("background.vs", "background.fs");
     GameState::asset.LoadShader("sprite.vs", "sprite.fs");
-    GameState::asset.LoadShader("sprite_skin.vs", "sprite_skin.fs");
     GameState::asset.LoadShader("shader1.vs", "shader1.fs");
     
     //gui
     GameState::gui = ng::GuiEngine(this->getWindowSize().x, this->getWindowSize().y);
-	GameState::gui.SetDefaultFont("Assets/Fonts/DroidSansMono.ttf");
+	GameState::gui.SetDefaultFont("Assets/Fonts/Ubuntu-R.ttf");
 	GameState::gui.LoadXml("Assets/gui.xml");
 	GameState::gui.ApplyAnchoring();
 	
@@ -257,16 +256,6 @@ void App::init() {
     asteroid2.SetOwner(0);
 	GameState::asteroids.push_back(asteroid2);
 	
-	//wtf mem usage? wtf be careful of file format
-	const Asset::Texture& texture3 = GameState::asset.GetTexture("6.png");
-    Asteroid asteroid3(texture3, glm::vec2(1000, -300));
-    asteroid3.SetOwner(0);
-	GameState::asteroids.push_back(asteroid3);
-	
-	const Asset::Texture& texture4 = GameState::asset.GetTexture("2.jpg");
-    Asteroid asteroid4(texture4, glm::vec2(-3000, -300));
-    asteroid4.SetOwner(0);
-	GameState::asteroids.push_back(asteroid4);
 	
 	////////////////////////////////////////////////////
     
@@ -362,7 +351,11 @@ void App::main_loop() {
 					}
 					
 					selectedObject = hoveredObject;
-					if(!selectedObject) {
+					if(selectedObject) {
+						if(selectedObject->GetType() == object_type::ship) {
+							isFiring = true;
+						}
+					} else {
 						isFiring = true;
 					}
 				} else {
@@ -469,7 +462,7 @@ void App::main_loop() {
         glUniform1f(glGetUniformLocation(GameState::asset.GetShader("background.vs").id, "time"), this->getTimeElapsed());
         glUniform1f(glGetUniformLocation(GameState::asset.GetShader("background.vs").id, "zoom"), GameState::zoom);
 
-        glDrawElements(GL_TRIANGLE_STRIP, 6, GL_UNSIGNED_INT, 0);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         
         glDeleteBuffers(1, &VBO);
         glDeleteBuffers(1, &EBO);
@@ -525,7 +518,7 @@ void App::game_loop() {
 		}
 	}
 
-	GameState::camera.SetPosition( glm::vec3(ship.GetPosition(), 0) );
+	GameState::camera.SetPosition( glm::vec3(ship.GetPosition(), 0.0f) );
 	glm::mat4 projection = glm::ortho(-(float)this->getWindowSize().x*this->getZoom()*0.5, (float)this->getWindowSize().x*this->getZoom()*0.5, (float)this->getWindowSize().y*this->getZoom()*0.5, -(float)this->getWindowSize().y*this->getZoom()*0.5);
 	glm::mat4 view = GameState::camera.GetViewMatrix();
 	GameState::camera.SetProjection(projection);

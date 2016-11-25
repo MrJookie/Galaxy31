@@ -127,13 +127,15 @@ void Asset::RenderSprites() {
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-		glDrawElements(GL_TRIANGLE_STRIP, 6, GL_UNSIGNED_INT, 0);
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 	}
 	
     glBindVertexArray(0);
     glUseProgram(0);
 
     glDisable(GL_BLEND);
+    
+    //glDisable(GL_TEXTURE_2D);
 }
 		
 void Asset::LoadTexture(std::string fileName) {

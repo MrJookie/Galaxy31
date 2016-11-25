@@ -392,6 +392,11 @@ namespace Network {
 			case PacketType::authorize: {
 				GameState::user_id = p.get_int("user_id");
 				GameState::user_name = p.get_string("user_name");
+				GameState::resource_money = p.get_int("resource_money");
+				
+				ng::Label* lb_bar_basic_money = (ng::Label*)GameState::gui.GetControlById("game_bar_basic_money"); //move this?
+				lb_bar_basic_money->SetText(std::to_string(GameState::resource_money));
+				
 				GameState::player->SetOwner(GameState::user_id);
 				if(p.get_int("status_code") == status_code::login_ok) { //login ok after registration login
 					NetworkChat::connect(p.get_string("chat_ip").c_str(), p.get_int("chat_port")); //connect to chat server

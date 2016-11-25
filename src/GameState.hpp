@@ -60,6 +60,10 @@ namespace GameState {
 	extern Camera camera;
 	
 	extern Ship* player;
+	extern int resource_money;
+	extern int resource_uranium;
+	extern int resource_energy;
+	//extern int level_exp; //set scale, 0-99 = lvl1, 100-1000 = lvl2 and so on, so if user has 150exp we know its lvl1 +50exp out of 1000 to next lvl (level details should be hardcoded)
 	extern std::map< unsigned int, std::pair<Ship*, std::queue<Object>> > ships;
 	extern std::list<Projectile> projectiles;
 	extern std::list<Asteroid> asteroids;

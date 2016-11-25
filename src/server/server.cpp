@@ -68,6 +68,7 @@ struct Player {
 	std::vector<Object> obj;
 	//data
 	std::string user_name;
+	int resource_money;
 };
 
 // local data (statics)
@@ -403,12 +404,13 @@ void send_states() {
 	s.broadcast(host, Channel::data, 0);
 }
 
-void send_authorize(ENetPeer* peer, status_code status = status_code::unknown, unsigned int id = 0, std::string user_name = "") {
+void send_authorize(ENetPeer* peer, status_code status = status_code::unknown, unsigned int id = 0, std::string user_name = "", int resource_money = 0) {
 	Packet s;
 	s.put("type", PacketType::authorize);
 	s.put("user_id", id);
 	s.put("status_code", status);
 	s.put("user_name", user_name);
+	s.put("resource_money", resource_money);
 	if(status == status_code::login_ok) {
 		s.put("chat_ip", Command::GetString("chat_ip"));
 		s.put("chat_port", (int)Command::Get("chat_port"));
@@ -476,11 +478,13 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 							[=](mysqlpp::Row loggedUser) {
 								unsigned int user_id = loggedUser["id"];
 								std::string user_name(loggedUser["username"]);
+								int resource_money(loggedUser["resource_money"]);
 								
 								players[peer]->user_id = user_id;
 								players[peer]->user_name = user_name;
+								players[peer]->resource_money = resource_money;
 
-								send_authorize(peer, status_code::login_ok, user_id, user_name);
+								send_authorize(peer, status_code::login_ok, user_id, user_name, resource_money);
 							}
 						);
 					//send account banned status if login_account_id = 0?
@@ -526,11 +530,13 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 							[=](mysqlpp::Row loggedUser) {
 								unsigned int user_id = loggedUser["id"];
 								std::string user_name(loggedUser["username"]);
+								int resource_money(loggedUser["resource_money"]);
 								
 								players[peer]->user_id = user_id;
 								players[peer]->user_name = user_name;
+								players[peer]->resource_money = resource_money;
 								
-								send_authorize(peer, status_code::login_ok, user_id, user_name);
+								send_authorize(peer, status_code::login_ok, user_id, user_name, resource_money);
 							}
 						);
 					} else {
