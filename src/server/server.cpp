@@ -480,7 +480,7 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 				}
 			}
 			std::unique_lock<std::mutex> l(host_mutex);
-			players[peer]->resource_money = p.get_int("resource_money");
+			player.resource_money = p.get_int("resource_money");
 			player.obj.push_back( *((Object*)p.get_pair("objects").first) );
 			// cout << "receiving states from " << player.id << "\n";
 			break;
