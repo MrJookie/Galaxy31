@@ -1,3 +1,5 @@
+#include "commands/commands.hpp"
+
 namespace Commands {
 	
 	COMMAND(std::string, concat, (std::vector<Arg> args)) {
@@ -22,4 +24,5 @@ namespace Commands {
 	void Init() {
 
 	}
+	
 }

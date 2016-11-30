@@ -284,14 +284,19 @@ void App::init() {
 		if(obj2->GetType() == object_type::projectile) {
 			unsigned int user_id = (obj2->GetOwner() == GameState::player->GetId()) ? GameState::player->GetOwner() : GameState::ships[obj2->GetOwner()].first->GetOwner();
 			std::cout << "COLLISION !! projectile user_id: " << user_id << " hit ship player user_id: " << obj1->GetOwner() << std::endl;
-			((Projectile*)obj2)->Destroy();
+			
 			if(obj1->GetType() == object_type::ship) { 
 				if(obj1 == GameState::player) {
-					Command::Execute("im_hit");
+					Command::Execute( 
+						std::string("im_hit \"") + 
+						GameState::ships[obj2->GetOwner()].first->name.data() + 
+						"\""
+					);
 				} else {
 					Command::Execute("enemy_hit");
 				}
 			}
+			((Projectile*)obj2)->Destroy();
 		}
 		
 		if(obj2->GetType() == object_type::ship) {

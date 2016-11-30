@@ -549,6 +549,7 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 		}
 		case PacketType::goodbye: {
 			std::unique_lock<std::mutex> l(host_mutex);
+			remove_client(peer);
 			enet_peer_reset(peer);
 			
 			Packet s;

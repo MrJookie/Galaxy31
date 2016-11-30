@@ -1,4 +1,7 @@
 <gui>
+	<config>
+		<option name="tooltip_delay" value="10"/>
+	</config>
 	<theme>
 		<button font="Assets/Fonts/Ubuntu-R.ttf,14" backgroundcolor="#331228D1" bordercolor="#FF1228D1" hoverbordercolor="#FF12AAAA" downcolor="#FF12AAAA" upcolor="#FFFFFFFF" />
 		<textbox font="Assets/Fonts/Ubuntu-R.ttf,14" backgroundcolor="#00000000" bordercolor="#FF1228D1" hoverbordercolor="#FF12AAAA" multiline="false" />

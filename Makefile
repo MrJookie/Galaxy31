@@ -47,6 +47,7 @@ cpp := 	\
 		src/Collision.cpp								\
 		src/Timer.cpp									\
 		src/HUD.cpp										\
+		src/Commands.cpp									\
 		\
 
 release := release
