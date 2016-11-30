@@ -132,6 +132,7 @@ namespace Network {
 		
 		Packet p;
 		p.put("type", PacketType::update_objects);
+		p.put("resource_money", GameState::resource_money);
 		p.put("num_objects", 1);
 		
 		// send ship state

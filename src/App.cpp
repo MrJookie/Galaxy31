@@ -16,6 +16,8 @@ using ng::Control;
 using ng::Button;
 using ng::TextBox;
 using ng::Label;
+using ng::Widget;
+using ng::ComboBox;
 
 bool toggleMouseRelative = false;
 bool toggleFullscreen = false;
@@ -25,10 +27,12 @@ int skipMouseResolution = 0;
 bool wait_for_packets = false;
 bool isFiring = false;
 std::vector<Ship*> ships;
-ng::Canvas *cv_minimap;
-ng::TextBox *tb_debug;
+ng::Canvas* cv_minimap;
+ng::TextBox* tb_debug;
 ng::Label* lb_game_user_name;
 ng::TextBox* tb_game_tab;
+ng::Widget* wt_options;
+ng::ComboBox* cb_resolutions;
 int tick_id;
 
 Object* hoveredObject = 0;
@@ -78,6 +82,13 @@ void App::init() {
     if(SDL_Init(SDL_INIT_EVERYTHING) != 0) {
         throw std::string("Failed to initialize SDL: ") + SDL_GetError();
     }
+    
+    if(SDL_GetDesktopDisplayMode(0, &desktopDisplayMode) != 0) {
+		throw std::string("SDL_GetDesktopDisplayMode failed: ") + SDL_GetError();;
+	}
+	
+	//use this later and fix fullscreen toggle
+	//this->setWindowSize(glm::vec2(desktopDisplayMode.w, desktopDisplayMode.h));
 
     window = SDL_CreateWindow("Galaxy31", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, this->getWindowSize().x, this->getWindowSize().y, SDL_WINDOW_OPENGL);
     if(window == nullptr) {
@@ -120,11 +131,7 @@ void App::init() {
     if(toggleMouseRelative) {
         SDL_SetRelativeMouseMode(SDL_TRUE);
     }
-    
-	if(SDL_GetDesktopDisplayMode(0, &desktopDisplayMode) != 0) {
-		throw std::string("SDL_GetDesktopDisplayMode failed: ") + SDL_GetError();;
-	}
-    
+
     init_audio();
     
     //load all textures here
@@ -149,7 +156,6 @@ void App::init() {
 	GameState::gui.ApplyAnchoring();
 	
 	tb_debug = (TextBox*)GameState::gui.GetControlById("game_debug");
-	// cv_minimap = (Canvas*)GameState::gui.GetControlById("game_minimap");
 	
 	GameState::set_gui_page("login");
 
@@ -194,8 +200,41 @@ void App::init() {
 		}
 	});
 	
+	
+	
+	cb_resolutions = (ComboBox*)GameState::gui.GetControlById("options_resolutions");
+	    
+    static int display_in_use = 0; /* Only using first display */
+
+    int display_mode_count;
+
+    SDL_Log("SDL_GetNumVideoDisplays(): %i", SDL_GetNumVideoDisplays());
+
+    display_mode_count = SDL_GetNumDisplayModes(display_in_use);
+    if (display_mode_count < 1) {
+        SDL_Log("SDL_GetNumDisplayModes failed: %s", SDL_GetError());
+        throw std::string("error");
+    }
+    SDL_Log("SDL_GetNumDisplayModes: %i", display_mode_count);
+
+    for (int i = 0; i < display_mode_count; ++i) {
+		SDL_DisplayMode mode;
+        if (SDL_GetDisplayMode(display_in_use, i, &mode) != 0) {
+            SDL_Log("SDL_GetDisplayMode failed: %s", SDL_GetError());
+            throw std::string("error");
+        }
+        Uint32 f = mode.format;
+
+        SDL_Log("Mode %i\tbpp %i\t%s\t%i x %i", i, SDL_BITSPERPIXEL(f), SDL_GetPixelFormatName(f), mode.w, mode.h);
+        
+        cb_resolutions->AddItem(std::to_string(i) + ". " + std::to_string(mode.w) + "x" + std::to_string(mode.h) + "x" + std::to_string(SDL_BITSPERPIXEL(f)));
+    }
+
+
+	
 	lb_game_user_name = (Label*)GameState::gui.GetControlById("game_user_name");
 	tb_game_tab = (TextBox*)GameState::gui.GetControlById("game_tab");
+	wt_options = (Widget*)GameState::gui.GetControlById("options");
 	
 	lb_game_user_name->SetImage(std::string(TEXTURE_PATH) + std::string("hud_1.png"));
 	tb_game_tab->SetImage(std::string(TEXTURE_PATH) + std::string("hud_1.png"), true);
@@ -283,7 +322,7 @@ void App::init() {
 		
 		if(obj2->GetType() == object_type::projectile) {
 			unsigned int user_id = (obj2->GetOwner() == GameState::player->GetId()) ? GameState::player->GetOwner() : GameState::ships[obj2->GetOwner()].first->GetOwner();
-			std::cout << "COLLISION !! projectile user_id: " << user_id << " hit ship player user_id: " << obj1->GetOwner() << std::endl;
+			//std::cout << "COLLISION !! projectile user_id: " << user_id << " hit ship player user_id: " << obj1->GetOwner() << std::endl;
 			((Projectile*)obj2)->Destroy();
 			if(obj1->GetType() == object_type::ship) { 
 				if(obj1 == GameState::player) {
@@ -296,7 +335,7 @@ void App::init() {
 		
 		if(obj2->GetType() == object_type::ship) {
 			//unsigned int user_id = (obj2->GetOwner() == GameState::player->GetId()) ? GameState::player->GetOwner() : GameState::ships[obj2->GetOwner()].first->GetOwner();
-			std::cout << "COLLISION !! ship user_id: " << obj1->GetOwner() << " hit ship player user_id: " << obj2->GetOwner() << std::endl;
+			//std::cout << "COLLISION !! ship user_id: " << obj1->GetOwner() << " hit ship player user_id: " << obj2->GetOwner() << std::endl;
 		}
 		
 	});
@@ -339,7 +378,22 @@ void App::main_loop() {
 							tm_game_chat.Focus();
 						break;
 						case SDLK_TAB:
-							tb_game_tab->IsVisible() ? tb_game_tab->SetVisible(false) : tb_game_tab->SetVisible(true);
+							//tb_game_tab->IsVisible() ? tb_game_tab->SetVisible(false) : tb_game_tab->SetVisible(true);
+							
+							if(wt_options->IsVisible()) {
+								GameState::set_gui_page(GameState::activePage);
+								
+								wt_options->SetVisible(false);
+							} else {
+								GameState::gui.GetControlById("login")->SetVisible(false);
+								GameState::gui.GetControlById("register")->SetVisible(false);
+								GameState::gui.GetControlById("pass_restore")->SetVisible(false);
+								//gui.GetControlById("lobby")->SetVisible(false);
+								GameState::gui.GetControlById("game")->SetVisible(false);
+								GameState::gui.GetControlById("options")->SetVisible(false);
+								
+								wt_options->SetVisible(true); 
+							}
 						break;
 					}
 				}
