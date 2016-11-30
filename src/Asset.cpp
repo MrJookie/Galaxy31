@@ -112,7 +112,7 @@ void Asset::RenderSprites() {
 		bool hasSkin = false;
 		
 		//has skin
-		if(glIsTexture(textures[1])) {
+		if(textures.size() > 1 && glIsTexture(textures[1])) {
 			glUniform1i(texSkin_uniform, 1);
 			glActiveTexture(GL_TEXTURE0 + 1);
 			glBindTexture(GL_TEXTURE_2D, textures[1]);
@@ -120,10 +120,9 @@ void Asset::RenderSprites() {
 		}
 		
 		glUniform1i(glGetUniformLocation(shader, "hasSkin"), hasSkin);
-
+		
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 

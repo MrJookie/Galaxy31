@@ -10,6 +10,7 @@
 		</terminal>
 		<widget bordercolor="#00000000"></widget>
 		<label font="Assets/Fonts/Ubuntu-R.ttf,14" bordercolor="#00000000"></label>
+		<combobox font="Assets/Fonts/Ubuntu-R.ttf,15"></combobox>
 	</theme>
 	<anchor pos="M,M">
 		<widget rect="0,0,200,256" id="login">
@@ -66,7 +67,7 @@
 			<label id="game_bar_basic" rect="0,0,372,40"></label>
 			
 			<!-- add align right -->
-			<label id="game_bar_basic_money" rect="-130,0,80,30" value="999999" color="#FF00FF00" bordercolor="#00FF0000"></label>
+			<label id="game_bar_basic_money" rect="-130,0,80,30" value="999999" color="#FF00FF00" bordercolor="#FFFF0000"></label>
 			<label id="game_bar_basic_level" rect="100,0,372,40" font="Assets/Fonts/Ubuntu-R.ttf,21" value="L07" color="#FFFFFFFF"></label>
 			<label id="game_bar_basic_level_percentage" rect="144,7,372,40" value="45%" color="#FFFFFFFF"></label>
 			<label id="game_bar_basic_energy" rect="215,0,372,40" value="energy" color="#FFFFFFFF"></label>
@@ -90,18 +91,18 @@
 		</anchor>
 		
 		<label id="game_ship_armor" rect="0,0,265,29" value=""></label>
-		<label id="game_ship_armor_enemy" rect="0,0,265,29" value=""></label>
 		
 		<anchor pos="L+50%-40%,T+50%-250">
 			<textbox id="game_tab" multiline="true" rect="0,0,80%,500" value="Players online | Inventory" interactible="false" backgroundcolor="#AA111111" visible="false" />
 		</anchor>
-		
-		<!--
-		<label rect="0,0,150,80" font="/usr/share/fonts/TTF/Ubuntu-B.ttf,10" value="hehehe test1
-	test2
-test3^g
-hehehehe
-fddgdf"></label>
-		-->
 	</widget>
+	
+	<anchor pos="M,M">
+		<widget rect="0,0,200,256" id="options">
+			<anchor pos="rL,T">
+
+				<combobox id="options_resolutions" rect="0,0,200,30" value="0"></combobox>
+			</anchor>
+		</widget>
+	</anchor>
 </gui>

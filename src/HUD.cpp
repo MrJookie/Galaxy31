@@ -102,12 +102,11 @@ void ShipBillboards() {
 
 		//dynamically create and dealloc?
 		if(!lb_game_ship_armor_enemy) {
-			lb_game_ship_armor_enemy = (ng::Label*)GameState::gui.GetControlById("game_ship_armor_enemy");
-			/*
-			lb_game_ship_armor_enemy = (ng::Label*)GameState::gui.ControlManager::CreateControl("game_ship_armor_enemy");
-			
-			GameState::gui.AddControl(tb_game_ship_armor_enemy);
-			*/
+			//lb_game_ship_armor_enemy = (ng::Label*)GameState::gui.GetControlById("game_ship_armor_enemy");
+			lb_game_ship_armor_enemy = (ng::Label*)GameState::gui.CreateControl("label");
+			lb_game_ship_armor_enemy->SetId("ship_armor_enemy");
+			lb_game_ship_armor_enemy->SetStyle("rect", "0,0,265,29");
+			GameState::gui.AddControl(lb_game_ship_armor_enemy);
 			
 			lb_game_ship_armor_enemy->SetText(enemyShip->name.data());
 		}

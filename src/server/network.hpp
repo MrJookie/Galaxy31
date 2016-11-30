@@ -46,7 +46,6 @@ enum PacketType {
 	chat_login,
 	chat_login_response,
 	chat_message,
-	goodbye,
 	player_removed
 };
 

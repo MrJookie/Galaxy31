@@ -39,6 +39,7 @@ using std::endl;
 std::mutex term;
 std::mutex host_mutex;
 std::mutex queue_mutex;
+//std::mutex players_mutex;
 std::string serverPublicKeyStr;
 std::string serverPrivateKeyStr;
 static const int c_timeout = 1;
@@ -53,6 +54,7 @@ static void send_states();
 static void server_wait_for_packet();
 static void server_start();
 static void display_packets();
+static void flush_to_db(ENetPeer* peer = nullptr);
 
 static std::queue<std::pair<ENetPacket*, ENetPeer*>> packets;
 
@@ -68,6 +70,7 @@ struct Player {
 	std::vector<Object> obj;
 	//data
 	std::string user_name;
+	//flush to database periodically
 	int resource_money;
 };
 
@@ -173,7 +176,7 @@ int main(int argc, char* argv[]) {
 	
 	
 	if(!config.getValue().empty()) {
-		Command::SaveVarariablesToFile(config.getValue(), true);
+	//	Command::SaveVarariablesToFile(config.getValue(), true);
 	}
 	
 	return 0;
@@ -193,7 +196,7 @@ void server_wait_for_packet() {
 				case ENET_EVENT_TYPE_RECEIVE:
 						packets.emplace(event.packet, event.peer);
 					break;
-				case ENET_EVENT_TYPE_DISCONNECT: 
+				case ENET_EVENT_TYPE_DISCONNECT:
 						remove_client(event.peer);
 						enet_peer_reset(event.peer);
 					break;
@@ -214,6 +217,7 @@ RelocatedWork w;
 
 auto last_status_update = std::chrono::high_resolution_clock::now();
 auto last_info_update = std::chrono::high_resolution_clock::now();
+auto last_db_flush = std::chrono::high_resolution_clock::now();
 void server_work() {
 	{
 		std::unique_lock<std::mutex> l(term);
@@ -251,6 +255,13 @@ void server_work() {
 		if(now - last_info_update > std::chrono::seconds(1)) {
 			last_info_update = now;
 			display_packets();
+		}
+		
+		if(now - last_db_flush > std::chrono::seconds(5)) {
+			//players_mutex?
+			std::unique_lock<std::mutex> l(host_mutex);
+			last_db_flush = now;
+			flush_to_db();
 		}
 		
 		std::this_thread::sleep_for(std::chrono::microseconds(100));
@@ -366,7 +377,21 @@ void remove_client(ENetPeer* peer) {
 	s.broadcast(host, ENET_PACKET_FLAG_RELIABLE);
 	
 	delete players[peer];
-	players.erase( peer );
+	players.erase(peer);
+}
+
+void flush_to_db(ENetPeer* peer) {
+	if(peer) { //flush one specific player (on disconnect ideally
+		if(players[peer]->user_id > 0) { //if peer logged on, not only connected
+			std::cout << "flushing player's " << players[peer]->user_name << " money: " << players[peer]->resource_money << std::endl;
+		}
+	} else { //flush all players in the list
+		for(const auto& p : players) {
+			if(p.second->user_id > 0) { //if peer logged on, not only connected
+				std::cout << "flushing player's " << p.second->user_name << " money: " << p.second->resource_money << std::endl;
+			}
+		}
+	}
 }
 
 void send_states() {
@@ -440,11 +465,9 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 	Player& player = *players[peer];
 	// cout << "rcv packet: " << pkt->data << endl;
 	
-	
 	Packet p(pkt);
 	switch(p.get_int("type")) {
 		case PacketType::update_objects: {
-			
 			int num_objects = p.get_int("num_objects");
 			if(num_objects != 1) return;
 			
@@ -457,9 +480,9 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 				}
 			}
 			std::unique_lock<std::mutex> l(host_mutex);
+			players[peer]->resource_money = p.get_int("resource_money");
 			player.obj.push_back( *((Object*)p.get_pair("objects").first) );
 			// cout << "receiving states from " << player.id << "\n";
-			
 			break;
 		}
 		case PacketType::authenticate: {
@@ -545,17 +568,6 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 				}
 			);
 
-			break;
-		}
-		case PacketType::goodbye: {
-			std::unique_lock<std::mutex> l(host_mutex);
-			remove_client(peer);
-			enet_peer_reset(peer);
-			
-			Packet s;
-			s.put("type", PacketType::player_removed);
-			s.put("user_id", player.id);
-			s.broadcast(host, ENET_PACKET_FLAG_RELIABLE);
 			break;
 		}
 		default:

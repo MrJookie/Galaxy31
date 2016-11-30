@@ -132,6 +132,7 @@ namespace Network {
 		
 		Packet p;
 		p.put("type", PacketType::update_objects);
+		p.put("resource_money", GameState::resource_money);
 		p.put("num_objects", 1);
 		
 		// send ship state
@@ -201,10 +202,7 @@ namespace Network {
 	}
 	
 	void SendGoodBye() {
-		Packet p;
-		p.put("type", PacketType::goodbye);
-		p.send(host, Channel::control, ENET_PACKET_FLAG_RELIABLE);
-		flush();
+		enet_peer_disconnect_now(host, 0);
 	}
 	
 	

@@ -1,0 +1,50 @@
+==4248== Memcheck, a memory error detector
+==4248== Copyright (C) 2002-2015, and GNU GPL'd, by Julian Seward et al.
+==4248== Using Valgrind-3.12.0 and LibVEX; rerun with -h for copyright info
+==4248== Command: ./Galaxy31_server
+==4248== 
+==4248== Thread 2:
+==4248== Invalid write of size 4
+==4248==    at 0x42E19C: parse_packet(_ENetPeer*, _ENetPacket*) (server.cpp:485)
+==4248==    by 0x42B457: server_work() (server.cpp:243)
+==4248==    by 0x456C7C: void std::_Bind_simple<void (*())()>::_M_invoke<>(std::_Index_tuple<>) (functional:1400)
+==4248==    by 0x456478: std::_Bind_simple<void (*())()>::operator()() (functional:1389)
+==4248==    by 0x455133: std::thread::_State_impl<std::_Bind_simple<void (*())()> >::_M_run() (thread:196)
+==4248==    by 0x5B4E31E: execute_native_thread_routine (thread.cc:83)
+==4248==    by 0x633D453: start_thread (in /usr/lib/libpthread-2.24.so)
+==4248==    by 0x663B7DE: clone (in /usr/lib/libc-2.24.so)
+==4248==  Address 0x68 is not stack'd, malloc'd or (recently) free'd
+==4248== 
+==4248== 
+==4248== Process terminating with default action of signal 11 (SIGSEGV): dumping core
+==4248==  Access not within mapped region at address 0x68
+==4248==    at 0x42E19C: parse_packet(_ENetPeer*, _ENetPacket*) (server.cpp:485)
+==4248==    by 0x42B457: server_work() (server.cpp:243)
+==4248==    by 0x456C7C: void std::_Bind_simple<void (*())()>::_M_invoke<>(std::_Index_tuple<>) (functional:1400)
+==4248==    by 0x456478: std::_Bind_simple<void (*())()>::operator()() (functional:1389)
+==4248==    by 0x455133: std::thread::_State_impl<std::_Bind_simple<void (*())()> >::_M_run() (thread:196)
+==4248==    by 0x5B4E31E: execute_native_thread_routine (thread.cc:83)
+==4248==    by 0x633D453: start_thread (in /usr/lib/libpthread-2.24.so)
+==4248==    by 0x663B7DE: clone (in /usr/lib/libc-2.24.so)
+==4248==  If you believe this happened as a result of a stack
+==4248==  overflow in your program's main thread (unlikely but
+==4248==  possible), you can try to increase the size of the
+==4248==  main thread stack using the --main-stacksize= flag.
+==4248==  The main thread stack size used in this run was 8388608.
+==4248== 
+==4248== HEAP SUMMARY:
+==4248==     in use at exit: 655,855 bytes in 828 blocks
+==4248==   total heap usage: 23,776 allocs, 22,948 frees, 5,221,179 bytes allocated
+==4248== 
+==4248== LEAK SUMMARY:
+==4248==    definitely lost: 256 bytes in 5 blocks
+==4248==    indirectly lost: 953 bytes in 40 blocks
+==4248==      possibly lost: 1,152 bytes in 4 blocks
+==4248==    still reachable: 653,494 bytes in 779 blocks
+==4248==                       of which reachable via heuristic:
+==4248==                         length64           : 34,120 bytes in 17 blocks
+==4248==         suppressed: 0 bytes in 0 blocks
+==4248== Rerun with --leak-check=full to see details of leaked memory
+==4248== 
+==4248== For counts of detected and suppressed errors, rerun with: -v
+==4248== ERROR SUMMARY: 1 errors from 1 contexts (suppressed: 0 from 0)
