@@ -22,13 +22,15 @@ namespace GameState {
 	int resource_money;
 	int resource_uranium;
 	int resource_energy;
-	std::map< unsigned int, std::pair<Ship*, std::queue<Object>> > ships;
+	std::map< unsigned int, std::pair<Ship*, std::queue<Object>> > enemyShips; //key: object_id?
+	std::map<unsigned int, std::vector<ng::Control*>> enemyShipsHUD; //key: client_id
 	std::list<Projectile> projectiles;
 	std::list<Asteroid> asteroids;
 
 	bool input_taken;
 	//move to Ship
 	int account_challenge;
+	unsigned int client_id;
 	unsigned int user_id;
 	std::string user_name;
 	std::string serverPublicKeyStr;

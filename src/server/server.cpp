@@ -63,7 +63,7 @@ static std::vector<Object> static_objects;
 static unsigned int unique_id = 0;
 
 struct Player {
-	uint32_t id;
+	unsigned int client_id;
 	unsigned int user_id;
 	int challenge;
 	std::string ip_address;
@@ -76,7 +76,7 @@ struct Player {
 
 // local data (statics)
 static ENetHost* host;
-static uint32_t last_id = 0;
+static unsigned int last_id = 0;
 static std::map<ENetPeer*, Player*> players;
 
 #define IP_ANY "0.0.0.0"
@@ -359,7 +359,7 @@ void handle_new_client(ENetPeer* peer) {
 	std::string ipAddress(ipAddr);
 	
 	Player* player = new Player;
-	player->id = last_id;
+	player->client_id = last_id;
 	player->user_id = 0;
 	player->challenge = challenge;
 	player->ip_address = ipAddress;
@@ -369,11 +369,12 @@ void handle_new_client(ENetPeer* peer) {
 }
 
 void remove_client(ENetPeer* peer) {
-	cout << "removing client id: " << players[peer]->id << endl;
+	cout << "removing client id: " << players[peer]->client_id << endl;
 	
 	Packet s;
 	s.put("type", PacketType::player_removed);
-	s.put("user_id", players[peer]->id);
+	s.put("client_id", players[peer]->client_id);
+	s.put("user_id", players[peer]->user_id);
 	s.broadcast(host, ENET_PACKET_FLAG_RELIABLE);
 	
 	delete players[peer];
@@ -409,7 +410,7 @@ void send_states() {
 	for(auto& p : players) {
 		for(auto& o : p.second->obj) {
 			obj[i] = o;
-			obj[i].SetId(p.second->id);
+			obj[i].SetId(p.second->client_id);
 			std::strcpy(obj[i].name.data(), p.second->user_name.data());
 			assert(i < num_objects);
 			i++;
@@ -429,10 +430,10 @@ void send_states() {
 	s.broadcast(host, Channel::data, 0);
 }
 
-void send_authorize(ENetPeer* peer, status_code status = status_code::unknown, unsigned int id = 0, std::string user_name = "", int resource_money = 0) {
+void send_authorize(ENetPeer* peer, status_code status = status_code::unknown, unsigned int client_id = 0, unsigned int user_id = 0, std::string user_name = "", int resource_money = 0) {
 	Packet s;
 	s.put("type", PacketType::authorize);
-	s.put("user_id", id);
+	s.put("user_id", user_id);
 	s.put("status_code", status);
 	s.put("user_name", user_name);
 	s.put("resource_money", resource_money);
@@ -450,7 +451,8 @@ void display_packets() {
 	// GameState::debug_fields["incoming packets/s"] = std::to_string(num_packets);
 	// GameState::debug_fields["incoming B/s"] = std::to_string(data_size);
 	console.SetInfoString("incoming packets/s: " + std::to_string(num_packets) + "     " +
-						  "incoming B/s: " + std::to_string(data_size) );
+						  "incoming B/s: " + std::to_string(data_size) + "     " +
+						  "clients: " + std::to_string(players.size()) );
 	num_packets = 0;
 	data_size = 0;
 }
@@ -482,7 +484,7 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 			std::unique_lock<std::mutex> l(host_mutex);
 			player.resource_money = p.get_int("resource_money");
 			player.obj.push_back( *((Object*)p.get_pair("objects").first) );
-			// cout << "receiving states from " << player.id << "\n";
+			// cout << "receiving states from " << player.client_id << "\n";
 			break;
 		}
 		case PacketType::authenticate: {
@@ -507,7 +509,7 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 								players[peer]->user_name = user_name;
 								players[peer]->resource_money = resource_money;
 
-								send_authorize(peer, status_code::login_ok, user_id, user_name, resource_money);
+								send_authorize(peer, status_code::login_ok, players[peer]->client_id, user_id, user_name, resource_money);
 							}
 						);
 					//send account banned status if login_account_id = 0?
@@ -559,7 +561,7 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 								players[peer]->user_name = user_name;
 								players[peer]->resource_money = resource_money;
 								
-								send_authorize(peer, status_code::login_ok, user_id, user_name, resource_money);
+								send_authorize(peer, status_code::login_ok, players[peer]->client_id, user_id, user_name, resource_money);
 							}
 						);
 					} else {

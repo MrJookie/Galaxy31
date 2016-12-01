@@ -20,12 +20,9 @@ void Asteroid::Draw() {
 	m_sprite.DrawSprite(m_size, m_position, m_rotation);
 }
 
+//custom update per asteroid
 void Asteroid::Update() {
-	if(m_rotation > 0) {
-		//m_rotation += 0.1;
-		
-		this->SetSpeed(glm::vec2(5, 15));
-	}
+
 }
 
 Asteroid::Asteroid(const Asteroid& c) {

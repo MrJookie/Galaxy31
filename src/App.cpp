@@ -286,7 +286,7 @@ void App::init() {
     
     //move to Network.cpp, get all asteroids from server
     const Asset::Texture& texture = GameState::asset.GetTexture("1.png");
-    Asteroid asteroid(texture, glm::vec2(0, 0), 50.0f, 10.0f);
+    Asteroid asteroid(texture, glm::vec2(0, 0), 50.0f, 10.0f, glm::vec2(5, 15));
     asteroid.SetOwner(0);
 	GameState::asteroids.push_back(asteroid);
 	
@@ -321,14 +321,14 @@ void App::init() {
 	Event::Listen("collision", [&](Object* obj1, Object* obj2) {
 		
 		if(obj2->GetType() == object_type::projectile) {
-			unsigned int user_id = (obj2->GetOwner() == GameState::player->GetId()) ? GameState::player->GetOwner() : GameState::ships[obj2->GetOwner()].first->GetOwner();
+			unsigned int user_id = (obj2->GetOwner() == GameState::player->GetId()) ? GameState::player->GetOwner() : GameState::enemyShips[obj2->GetOwner()].first->GetOwner();
 			// std::cout << "COLLISION !! projectile user_id: " << user_id << " hit ship player user_id: " << obj1->GetOwner() << std::endl;
 
 			if(obj1->GetType() == object_type::ship) { 
 				if(obj1 == GameState::player) {
 					Command::Execute( 
 						std::string("im_hit \"") + 
-						GameState::ships[obj2->GetOwner()].first->name.data() + 
+						GameState::enemyShips[obj2->GetOwner()].first->name.data() + 
 						"\""
 					);
 				} else {
@@ -384,7 +384,9 @@ void App::main_loop() {
 						break;
 						case SDLK_TAB:
 							//tb_game_tab->IsVisible() ? tb_game_tab->SetVisible(false) : tb_game_tab->SetVisible(true);
-							
+							wt_options->IsVisible() ? wt_options->SetVisible(false) : wt_options->SetVisible(true);
+							wt_options->LockWidget(wt_options->IsVisible());
+							/*
 							if(wt_options->IsVisible()) {
 								GameState::set_gui_page(GameState::activePage);
 								
@@ -399,6 +401,7 @@ void App::main_loop() {
 								
 								wt_options->SetVisible(true); 
 							}
+							*/
 						break;
 					}
 				}
@@ -600,7 +603,7 @@ void App::game_loop() {
 	}
 	
 	// add multiplayer enemy ships to m_quadtree
-	for(auto& ship : GameState::ships) {
+	for(auto& ship : GameState::enemyShips) {
 		m_quadtree->AddObject(ship.second.first);
 		
 		//ship.second.first->Draw();

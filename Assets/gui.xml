@@ -90,7 +90,7 @@
 			<terminal id="game_terminal" rect="0,0,400,150" textwrap="true" log_colors="true" placeholder="Type message" log_bordercolor="#00000000" log_backgroundcolor="#00000000" cursor_blinking_rate="30" log_hoverbordercolor="#00000000" colors="false" bordercolor="#00000000" fadeout_speed="200" fadeout_delay="1000" />
 		</anchor>
 		
-		<label id="game_ship_armor" rect="0,0,265,29" value=""></label>
+		<label id="game_ship_nickname" rect="0,0,265,29" value=""></label>
 		
 		<anchor pos="L+50%-40%,T+50%-250">
 			<textbox id="game_tab" multiline="true" rect="0,0,80%,500" value="Players online | Inventory" interactible="false" backgroundcolor="#AA111111" visible="false" />

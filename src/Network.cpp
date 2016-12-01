@@ -263,7 +263,7 @@ namespace Network {
 		GameState::debug_string += "dtime mean: " + std::to_string(mean) + "\n";
 		*/
 		
-		for(auto& obj : GameState::ships) {
+		for(auto& obj : GameState::enemyShips) {
 			auto& p = obj.second;
 			auto &queue = p.second;
 			auto &current = p.first;
@@ -352,16 +352,16 @@ namespace Network {
 						continue;
 					}
 
-					if(GameState::ships.find(o.GetId()) == GameState::ships.end()) {
+					if(GameState::enemyShips.find(o.GetId()) == GameState::enemyShips.end()) {
 						cout << "added new ship" << endl;
 						if(!chassis)
 							chassis = new Ship::Chassis("main_ship", "ship_01_skin.png", "ship_01_skin.png");
 						Ship *s = new Ship({0,0}, 0, *chassis);
 						s->CopyObjectState(o);
 						//cout << "id: " << s->GetId() << ", owner: " << s->GetOwner() << endl;
-						GameState::ships[o.GetId()] = std::pair<Ship*, std::queue<Object>>(s, std::queue<Object>());
+						GameState::enemyShips[o.GetId()] = std::pair<Ship*, std::queue<Object>>(s, std::queue<Object>());
 					} else {
-						std::queue<Object> &q = GameState::ships[o.GetId()].second;
+						std::queue<Object> &q = GameState::enemyShips[o.GetId()].second;
 						while(q.size() > max_queue)
 							q.pop();
 						
@@ -388,6 +388,7 @@ namespace Network {
 				break;
 			}
 			case PacketType::authorize: {
+				GameState::client_id = p.get_int("client_id");
 				GameState::user_id = p.get_int("user_id");
 				GameState::user_name = p.get_string("user_name");
 				GameState::resource_money = p.get_int("resource_money");
@@ -420,9 +421,19 @@ namespace Network {
 				break;
 			}
 			case PacketType::player_removed: {
-				int id = p.get_int("user_id");
-				cout << "removing player: " << id << endl;
-				GameState::ships.erase(id);
+				unsigned int client_id = p.get_int("client_id");
+
+				for(const auto& control : GameState::enemyShipsHUD[client_id]) {
+					GameState::gui.RemoveControl(control);
+				}
+				
+				cout << "removing player: " << client_id << endl;
+				
+				GameState::enemyShips[client_id].first->GetSprite()->RemoveFromDrawing();
+				
+				GameState::enemyShips.erase(client_id);
+				GameState::enemyShipsHUD.erase(client_id);
+				
 				break;
 			}
 		}

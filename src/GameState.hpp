@@ -64,7 +64,8 @@ namespace GameState {
 	extern int resource_uranium;
 	extern int resource_energy;
 	//extern int level_exp; //set scale, 0-99 = lvl1, 100-1000 = lvl2 and so on, so if user has 150exp we know its lvl1 +50exp out of 1000 to next lvl (level details should be hardcoded)
-	extern std::map< unsigned int, std::pair<Ship*, std::queue<Object>> > ships;
+	extern std::map< unsigned int, std::pair<Ship*, std::queue<Object>> > enemyShips; //key: object_id
+	extern std::map<unsigned int, std::vector<ng::Control*>> enemyShipsHUD; //key: client_id
 	extern std::list<Projectile> projectiles;
 	extern std::list<Asteroid> asteroids;
 	
@@ -72,6 +73,7 @@ namespace GameState {
 	
 	//move to Ship
 	extern int account_challenge;
+	extern unsigned int client_id;
 	extern unsigned int user_id;
 	extern std::string user_name;
 	extern std::string serverPublicKeyStr;

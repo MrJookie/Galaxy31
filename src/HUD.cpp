@@ -8,8 +8,7 @@ namespace HUD {
 ng::Canvas* cv_minimap = 0;
 ng::Canvas* cv_minimap_ship = 0;
 ng::Label* lb_game_bar_basic = 0;
-ng::Label* lb_game_ship_armor = 0;
-ng::Label* lb_game_ship_armor_enemy = 0; //dynamically create
+ng::Label* lb_game_ship_nickname = 0;
 
 void Radar() {
 	bool relativeRadar = true;
@@ -48,7 +47,7 @@ void Radar() {
 	glm::vec2 myShipPosition = ship.GetPosition();
 
 	// draw enemy ships on radar
-	for(auto& enemyObj : GameState::ships) {
+	for(auto& enemyObj : GameState::enemyShips) {
 		auto& enemyShip = enemyObj.second.first;
 		
 		if(relativeRadar) {
@@ -82,9 +81,9 @@ void BarResources() {
 void ShipBillboards() {
 	Ship& ship = *GameState::player;
 	
-	if(!lb_game_ship_armor) {
-		lb_game_ship_armor = (ng::Label*)GameState::gui.GetControlById("game_ship_armor");
-		lb_game_ship_armor->SetText(GameState::user_name);
+	if(!lb_game_ship_nickname) {
+		lb_game_ship_nickname = (ng::Label*)GameState::gui.GetControlById("game_ship_nickname");
+		lb_game_ship_nickname->SetText(GameState::user_name);
 	}
 		
 	float offset = GameState::zoom*25.0f;
@@ -92,29 +91,33 @@ void ShipBillboards() {
 	glm::ivec4 myShipWorldSpace(ship.GetPosition().x - ship.GetSize().x/2.0, ship.GetPosition().y - ship.GetSize().y/2.0 - offset, 0.0f, 1.0f);
 	glm::ivec2 myShipScreenSpace = GameState::camera.worldToScreen(myShipWorldSpace, GameState::windowSize, GameState::camera.GetViewMatrix(), GameState::camera.GetProjectionMatrix());
 			
-	lb_game_ship_armor->SetPosition(myShipScreenSpace.x, myShipScreenSpace.y);
+	lb_game_ship_nickname->SetPosition(myShipScreenSpace.x, myShipScreenSpace.y);
 	
 	//or just +offsets
 	//lb_game_ship_armor->SetPosition(GameState::windowSize.x/2.0f, GameState::windowSize.y/2.0f);
 	
-	for(auto& enemyObj : GameState::ships) {
+	for(auto& enemyObj : GameState::enemyShips) {
 		auto& enemyShip = enemyObj.second.first;
-
-		//dynamically create and dealloc?
-		if(!lb_game_ship_armor_enemy) {
-			//lb_game_ship_armor_enemy = (ng::Label*)GameState::gui.GetControlById("game_ship_armor_enemy");
-			lb_game_ship_armor_enemy = (ng::Label*)GameState::gui.CreateControl("label");
-			lb_game_ship_armor_enemy->SetId("ship_armor_enemy");
-			lb_game_ship_armor_enemy->SetStyle("rect", "0,0,265,29");
-			GameState::gui.AddControl(lb_game_ship_armor_enemy);
+		unsigned int client_id = enemyShip->GetId();
+		
+		if(GameState::enemyShipsHUD.count(client_id) == 0) {
+			ng::Label* lb_enemy_ship_nickname = (ng::Label*)GameState::gui.CreateControl("label");
+			lb_enemy_ship_nickname->SetId("enemy_ship_nickname_" + std::to_string(enemyShip->GetOwner()));
+			lb_enemy_ship_nickname->SetStyle("rect", "0,0,265,29");
+			lb_enemy_ship_nickname->SetText(enemyShip->name.data());
 			
-			lb_game_ship_armor_enemy->SetText(enemyShip->name.data());
+			GameState::gui.AddControl(lb_enemy_ship_nickname); //removed in Network.cpp
+						
+			std::vector<ng::Control*> controls;
+			controls.push_back(lb_enemy_ship_nickname);
+			GameState::enemyShipsHUD[client_id] = controls;
 		}
 		
 		glm::ivec4 enemyShipWorldSpace(enemyShip->GetPosition().x - enemyShip->GetSize().x/2.0, enemyShip->GetPosition().y - enemyShip->GetSize().y/2.0 - offset, 0.0f, 1.0f);
 		glm::ivec2 enemyShipScreenSpace = GameState::camera.worldToScreen(enemyShipWorldSpace, GameState::windowSize, GameState::camera.GetViewMatrix(), GameState::camera.GetProjectionMatrix());
-			
-		lb_game_ship_armor_enemy->SetPosition(enemyShipScreenSpace.x, enemyShipScreenSpace.y);
+		
+		//0 = nickname
+		GameState::enemyShipsHUD[client_id][0]->SetPosition(enemyShipScreenSpace.x, enemyShipScreenSpace.y);
 	}
 }
 
