@@ -384,13 +384,90 @@ void remove_client(ENetPeer* peer) {
 void flush_to_db(ENetPeer* peer) {
 	if(peer) { //flush one specific player (on disconnect ideally
 		if(players[peer]->user_id > 0) { //if peer logged on, not only connected
-			std::cout << "flushing player's " << players[peer]->user_name << " money: " << players[peer]->resource_money << std::endl;
+			std::cout << "flushing one: player's " << players[peer]->user_name << " money: " << players[peer]->resource_money << std::endl;
+			
+			//using UPDATE here, should be more safe than latter due to possibility to add new user_id into database if user_id does not exist!
+			std::stringstream ss;
+			ss << "UPDATE accounts SET resource_money = " << mysqlpp::escape << players[peer]->resource_money << " WHERE id = " << mysqlpp::escape << players[peer]->user_id;
+			
+			w.MakeWork(
+				flushPlayerData,
+				ss.str()
+			)
+			.then(
+				[=](int result) {
+					if(result > 0) {
+						std::cout << "Data one flushed successfully" << std::endl;
+					} else {
+						std::cout << "Error while flusing one data!" << std::endl;
+					}
+				}
+			);
+			
+			//std::cout << ss.str() << std::endl;
 		}
 	} else { //flush all players in the list
-		for(const auto& p : players) {
-			if(p.second->user_id > 0) { //if peer logged on, not only connected
-				std::cout << "flushing player's " << p.second->user_name << " money: " << p.second->resource_money << std::endl;
+		int playerToFlush = players.size();
+		if(playerToFlush > 0) { //at least one client is connected (not known whether authorized and has correct user_id at this moment!)
+			int counter = 0; //used to remove comma ',' in last item entry, thus query is not malformed
+			bool executeQuery = false; //do query if query was filled with data => query is correct
+			
+			//to consider/test whether will work (speed?)
+			/*
+			UPDATE accounts
+				SET resource_money = (case 
+										when id = players[peer]->user_id then players[peer]->resource_money
+										when id = players[peer]->user_id then players[peer]->resource_money
+										when id = players[peer]->user_id then players[peer]->resource_money
+									 end),
+				SET resource_uranium = (case 
+										when id = players[peer]->user_id then players[peer]->resource_uranium
+										when id = players[peer]->user_id then players[peer]->resource_uranium
+										when id = players[peer]->user_id then players[peer]->resource_uranium
+									 end),
+				WHERE id in (players[peer]->user_id, players[peer]->user_id, players[peer]->user_id);
+            */
+			
+			std::stringstream ss;
+			ss << "INSERT INTO accounts (id,resource_money) VALUES ";
+			
+			for(const auto& p : players) {
+				if(p.second->user_id > 0) { //if peer logged on, not only connected
+					std::cout << "flushing in bulk: player's " << p.second->user_name << " money: " << p.second->resource_money << std::endl;
+					
+					if(counter == playerToFlush-1) {
+						ss << "(" << mysqlpp::escape << p.second->user_id << ", " << mysqlpp::escape << p.second->resource_money << ") ";
+					} else {
+						ss << "(" << mysqlpp::escape << p.second->user_id << ", " << mysqlpp::escape << p.second->resource_money << "), ";
+					}
+					
+					executeQuery = true;
+				}
+				
+				counter++;
 			}
+			
+			ss << "ON DUPLICATE KEY UPDATE resource_money = VALUES(resource_money)";
+			
+			if(executeQuery) { //at least one player connected and authorized, thus user_id > 0, otherwise it would miss VALUES (x, y) and thus query would be incorrect
+				w.MakeWork(
+					flushPlayerData,
+					ss.str()
+				)
+				.then(
+					[=](int result) {
+						if(result > 0) {
+							std::cout << "Data bulk flushed successfully" << std::endl;
+						} else {
+							std::cout << "Error while flusing bulk data!" << std::endl;
+						}
+					}
+				);
+				
+				//std::cout << ss.str() << std::endl;
+			}
+		} else {
+			//std::cout << "No players to flush" << std::endl;
 		}
 	}
 }

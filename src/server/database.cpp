@@ -96,6 +96,19 @@ mysqlpp::Row getExistingUser(mysqlpp::Connection &con, unsigned int account_id) 
 	return mysqlpp::Row();
 }
 
+int flushPlayerData(mysqlpp::Connection &con, std::string statement) {
+	mysqlpp::Query query = con.query();
+	
+	query << statement;
+ 
+	if(query.execute()) {
+		return 1;
+	}
+	
+	return 0;
+}
+
+/*
 std::vector<mysqlpp::Row> getAllAccountsVec(mysqlpp::Connection &con) {
 	std::vector<mysqlpp::Row> result;
 	
@@ -104,3 +117,4 @@ std::vector<mysqlpp::Row> getAllAccountsVec(mysqlpp::Connection &con) {
 	
 	return result;
 }
+*/

@@ -386,6 +386,10 @@ void App::main_loop() {
 							//tb_game_tab->IsVisible() ? tb_game_tab->SetVisible(false) : tb_game_tab->SetVisible(true);
 							wt_options->IsVisible() ? wt_options->SetVisible(false) : wt_options->SetVisible(true);
 							wt_options->LockWidget(wt_options->IsVisible());
+							
+							//just for tests, todo: update HUD
+							GameState::resource_money++;
+							
 							/*
 							if(wt_options->IsVisible()) {
 								GameState::set_gui_page(GameState::activePage);
