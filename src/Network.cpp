@@ -422,14 +422,26 @@ namespace Network {
 			}
 			case PacketType::player_removed: {
 				unsigned int client_id = p.get_int("client_id");
-
+				unsigned int user_id = p.get_int("user_id");
+				
+				cout << "removing player: " << client_id << endl;
+				
 				for(const auto& control : GameState::enemyShipsHUD[client_id]) {
 					GameState::gui.RemoveControl(control);
 				}
 				
-				cout << "removing player: " << client_id << endl;
+				GameState::enemyShips[client_id].first->Destroy(); //removes propulsion and ship from drawing
 				
-				GameState::enemyShips[client_id].first->GetSprite()->RemoveFromDrawing();
+				//cleanup all user's projectiles (What if ship is erased and projectiles are flying and hit player, then user_id is not allocated anymore)
+				//remove from drawing aswell
+				for(auto it = GameState::projectiles.begin(); it != GameState::projectiles.end(); it++) {
+					if(it->GetOwner() == user_id) {
+						it->GetSprite()->RemoveFromDrawing();
+						
+						it = GameState::projectiles.erase(it);
+						if(it == GameState::projectiles.end()) break;
+					}
+				}
 				
 				GameState::enemyShips.erase(client_id);
 				GameState::enemyShipsHUD.erase(client_id);

@@ -5,7 +5,7 @@
 #include <cryptopp/hex.h>
 
 
-mysqlpp::Connection mysql_connect(const char *mdb, const char *mserver, const char *muser, const char *mpassword, ushort mport) {
+mysqlpp::Connection mysql_connect(const char *mdb, const char *mserver, const char *muser, const char *mpassword, unsigned short mport) {
 	mysqlpp::Connection con;
 	con.set_option(new mysqlpp::ReconnectOption(true));
 	//con.set_option(new mysqlpp::ConnectTimeoutOption(5));
@@ -31,7 +31,7 @@ mysqlpp::Connection mysql_connect(const char *mdb, const char *mserver, const ch
 }
 
 //add ip_addr INET_ATON(ip_of_user);
-int createAccount(mysqlpp::Connection &con, std::string email, std::string userName, std::string password, std::string ipAddr) {
+int createAccount(mysqlpp::Connection& con, std::string email, std::string userName, std::string password, std::string ipAddr) {
 	mysqlpp::Query query = con.query();
     query << "SELECT id FROM accounts WHERE email = '" << mysqlpp::escape << email << "' OR username = '" << mysqlpp::escape << userName << "' LIMIT 1";
     
@@ -57,7 +57,7 @@ int createAccount(mysqlpp::Connection &con, std::string email, std::string userN
 }
 
 //update ip_addr INET_ATON(ip_of_user);
-int loginAccount(mysqlpp::Connection &con, std::string email, std::string password, std::string ipAddress, int challenge) {
+int loginAccount(mysqlpp::Connection& con, std::string email, std::string password, std::string ipAddress, int challenge) {
 	mysqlpp::Query query = con.query();
     query << "SELECT id, active, password FROM accounts WHERE email = '" << mysqlpp::escape << email << "' LIMIT 1";
 
@@ -84,7 +84,7 @@ int loginAccount(mysqlpp::Connection &con, std::string email, std::string passwo
 	return -1;
 }
 
-mysqlpp::Row getExistingUser(mysqlpp::Connection &con, unsigned int account_id) {
+mysqlpp::Row getExistingUser(mysqlpp::Connection& con, unsigned int account_id) {
 	mysqlpp::Query query = con.query();
     query << "SELECT * FROM accounts WHERE id = " << mysqlpp::escape << account_id << " LIMIT 1";
     
@@ -96,7 +96,7 @@ mysqlpp::Row getExistingUser(mysqlpp::Connection &con, unsigned int account_id) 
 	return mysqlpp::Row();
 }
 
-int flushPlayerData(mysqlpp::Connection &con, std::string statement) {
+int flushPlayerData(mysqlpp::Connection& con, std::string statement) {
 	mysqlpp::Query query = con.query();
 	
 	query << statement;
@@ -109,7 +109,7 @@ int flushPlayerData(mysqlpp::Connection &con, std::string statement) {
 }
 
 /*
-std::vector<mysqlpp::Row> getAllAccountsVec(mysqlpp::Connection &con) {
+std::vector<mysqlpp::Row> getAllAccountsVec(mysqlpp::Connection& con) {
 	std::vector<mysqlpp::Row> result;
 	
 	mysqlpp::Query query = con.query("SELECT * FROM accounts");

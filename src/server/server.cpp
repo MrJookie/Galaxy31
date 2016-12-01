@@ -257,10 +257,10 @@ void server_work() {
 			display_packets();
 		}
 		
-		if(now - last_db_flush > std::chrono::seconds(5)) {
+		if(now - last_db_flush > std::chrono::seconds(30)) {
+			last_db_flush = now;
 			//players_mutex?
 			std::unique_lock<std::mutex> l(host_mutex);
-			last_db_flush = now;
 			flush_to_db();
 		}
 		
@@ -377,12 +377,14 @@ void remove_client(ENetPeer* peer) {
 	s.put("user_id", players[peer]->user_id);
 	s.broadcast(host, ENET_PACKET_FLAG_RELIABLE);
 	
+	flush_to_db(peer);
+	
 	delete players[peer];
 	players.erase(peer);
 }
 
 void flush_to_db(ENetPeer* peer) {
-	if(peer) { //flush one specific player (on disconnect ideally
+	if(peer) { //flush one specific player (on disconnect ideally)
 		if(players[peer]->user_id > 0) { //if peer logged on, not only connected
 			std::cout << "flushing one: player's " << players[peer]->user_name << " money: " << players[peer]->resource_money << std::endl;
 			

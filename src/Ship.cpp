@@ -164,3 +164,8 @@ Ship::Chassis::Chassis(std::string _name, std::string _texture, std::string _ski
 Sprite* Ship::GetSprite() {
 	return &m_chassis.sprite;
 }
+
+void Ship::Destroy() {
+	m_engine_propulsion.RemoveFromDrawing();
+	m_chassis.sprite.RemoveFromDrawing();
+}

@@ -563,15 +563,14 @@ void App::game_loop() {
 	Collision::WorldBoundary();
 	//
 	
-	//Network::handle_events(5);
 	ship.Process();
 	
-	for(auto it = GameState::projectiles.begin(); it != GameState::projectiles.end(); it++) {
-		it->Process();
+	for(auto& projectile : GameState::projectiles) {
+		projectile.Process();
 	}
 	
-	for(auto it = GameState::asteroids.begin(); it != GameState::asteroids.end(); it++) {
-		it->Process();
+	for(auto& asteroid : GameState::asteroids) {
+		asteroid.Process();
 	}
 	
 	Network::Process();
@@ -611,7 +610,8 @@ void App::game_loop() {
 		m_quadtree->AddObject(ship.second.first);
 		
 		//ship.second.first->Draw();
-		ship.second.first->GetSprite()->RemoveFromDrawing();
+		//ship.second.first->GetSprite()->RemoveFromDrawing();
+		ship.second.first->Destroy(); //removes also propulsion
 		
 		ship.second.first->UpdateHullVertices(GameState::asset.GetTextureHull("ship_01_skin_collision.png").vertices);
 		if(Command::Get("collisionhull"))
