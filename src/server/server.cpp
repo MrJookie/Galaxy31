@@ -257,7 +257,7 @@ void server_work() {
 			display_packets();
 		}
 		
-		if(now - last_db_flush > std::chrono::seconds(30)) {
+		if(now - last_db_flush > std::chrono::seconds(5)) {
 			last_db_flush = now;
 			//players_mutex?
 			std::unique_lock<std::mutex> l(host_mutex);
@@ -411,7 +411,7 @@ void flush_to_db(ENetPeer* peer) {
 	} else { //flush all players in the list
 		int playerToFlush = players.size();
 		if(playerToFlush > 0) { //at least one client is connected (not known whether authorized and has correct user_id at this moment!)
-			int counter = 0; //used to remove comma ',' in last item entry, thus query is not malformed
+			bool firstEntry = true;
 			bool executeQuery = false; //do query if query was filled with data => query is correct
 			
 			//to consider/test whether will work (speed?)
@@ -431,26 +431,26 @@ void flush_to_db(ENetPeer* peer) {
             */
 			
 			std::stringstream ss;
-			ss << "INSERT INTO accounts (id,resource_money) VALUES ";
+			ss << "INSERT INTO accounts (id,resource_money) VALUES";
 			
 			for(const auto& p : players) {
 				if(p.second->user_id > 0) { //if peer logged on, not only connected
 					std::cout << "flushing in bulk: player's " << p.second->user_name << " money: " << p.second->resource_money << std::endl;
-					
-					if(counter == playerToFlush-1) {
-						ss << "(" << mysqlpp::escape << p.second->user_id << ", " << mysqlpp::escape << p.second->resource_money << ") ";
-					} else {
-						ss << "(" << mysqlpp::escape << p.second->user_id << ", " << mysqlpp::escape << p.second->resource_money << "), ";
+					if(!firstEntry) {
+						ss << ",";
 					}
+					ss << " (" << mysqlpp::escape << p.second->user_id << ", " << mysqlpp::escape << p.second->resource_money << ")";
 					
+					firstEntry = false;
 					executeQuery = true;
 				}
-				
-				counter++;
 			}
 			
-			ss << "ON DUPLICATE KEY UPDATE resource_money = VALUES(resource_money)";
+			ss << " ON DUPLICATE KEY UPDATE resource_money = VALUES(resource_money)";
 			
+			std::cout << ss.str() << std::endl;
+			
+			/*
 			if(executeQuery) { //at least one player connected and authorized, thus user_id > 0, otherwise it would miss VALUES (x, y) and thus query would be incorrect
 				w.MakeWork(
 					flushPlayerData,
@@ -468,6 +468,7 @@ void flush_to_db(ENetPeer* peer) {
 				
 				//std::cout << ss.str() << std::endl;
 			}
+			*/
 		} else {
 			//std::cout << "No players to flush" << std::endl;
 		}
