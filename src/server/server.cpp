@@ -431,7 +431,7 @@ void flush_to_db(ENetPeer* peer) {
             */
 			
 			std::stringstream ss;
-			ss << "INSERT INTO accounts (id,resource_money) VALUES";
+			ss << "INSERT INTO accounts (id, resource_money) VALUES";
 			
 			for(const auto& p : players) {
 				if(p.second->user_id > 0) { //if peer logged on, not only connected
@@ -448,9 +448,6 @@ void flush_to_db(ENetPeer* peer) {
 			
 			ss << " ON DUPLICATE KEY UPDATE resource_money = VALUES(resource_money)";
 			
-			std::cout << ss.str() << std::endl;
-			
-			/*
 			if(executeQuery) { //at least one player connected and authorized, thus user_id > 0, otherwise it would miss VALUES (x, y) and thus query would be incorrect
 				w.MakeWork(
 					flushPlayerData,
@@ -468,7 +465,6 @@ void flush_to_db(ENetPeer* peer) {
 				
 				//std::cout << ss.str() << std::endl;
 			}
-			*/
 		} else {
 			//std::cout << "No players to flush" << std::endl;
 		}
