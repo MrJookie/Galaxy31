@@ -59,7 +59,11 @@
 	
 	<widget rect="0,0,100%,100%" id="game">
 		<anchor pos="L,T">
-			<label id="game_user_name" rect="0,0,265,29"></label>
+			<label id="game_user_name" rect="0,0,164,29"></label>
+		</anchor>
+		
+		<anchor pos="R,T">
+			<label id="game_menu" rect="0,0,164,29" value="Menu & options" image="Assets/Textures/hud_2.png"></label>
 		</anchor>
 		
 		<anchor pos="M,T">
@@ -83,7 +87,7 @@
 		
 		<anchor pos="R,B">
 			<canvas id="game_minimap" rect="0,0,250,250" interactible="false" grid="false" color="#FF0021FF" pixelsize="4" aligntogrid="false" grid_color="#FF220000" backgroundcolor="#00000000" bordercolor="#001228D1" hoverbordercolor="#FF1228D1" readonly="true" />
-			<canvas id="game_minimap_ship" rect="-119,-118,12,14" interactible="false" grid="false" color="#FF0021FF" pixelsize="4" aligntogrid="false" grid_color="#FF220000" backgroundcolor="#00000000" bordercolor="#001228D1" hoverbordercolor="#FF1228D1" readonly="true" />
+			<canvas id="game_minimap_ship" rect="-119,-119,11,11" interactible="false" grid="false" color="#FF0021FF" pixelsize="4" aligntogrid="false" grid_color="#FF220000" backgroundcolor="#00000000" bordercolor="#001228D1" hoverbordercolor="#FF1228D1" readonly="true" />
 		</anchor>
 		
 		<anchor pos="L,B">

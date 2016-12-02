@@ -45,10 +45,10 @@ class App {
         void takeScreenshotPNG(int x, int y, int w, int h);
         void generate_RSA_keypair();
         
-        glm::vec2 m_initialWindowSize;
-        glm::vec2 m_windowSize;
-        glm::vec2 m_screenMousePosition;
-        glm::vec2 m_worldMousePosition;
+        glm::ivec2 m_initialWindowSize;
+        glm::ivec2 m_windowSize;
+        glm::ivec2 m_screenMousePosition;
+        glm::ivec2 m_worldMousePosition;
         
         int m_ticks_previous;
         int m_ticks_current;

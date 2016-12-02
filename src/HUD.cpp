@@ -41,8 +41,10 @@ void Radar() {
 		pointY = (ship.GetPosition().y / (2 * GameState::worldSize.y) * (cv_minimap->GetRect().h-4)) + (cv_minimap->GetRect().h-4)/2.0f;
 	}
 	
+	/*
 	cv_minimap->SetPixelColor(0xFFFFFF00);
 	cv_minimap->PutPixel(pointX, pointY);
+	*/
 	
 	glm::vec2 myShipPosition = ship.GetPosition();
 

@@ -20,7 +20,7 @@ using ng::Widget;
 using ng::ComboBox;
 
 bool toggleMouseRelative = false;
-bool toggleFullscreen = false;
+bool toggleFullscreen = true;
 bool toggleWireframe = false;
 
 int skipMouseResolution = 0;
@@ -39,8 +39,8 @@ Object* hoveredObject = 0;
 Object* selectedObject = 0;
 
 App::App() {
-	m_initialWindowSize = glm::vec2(1024, 768);
-    this->setWindowSize(m_initialWindowSize);
+	//m_initialWindowSize = glm::vec2(1024, 768);
+    //this->setWindowSize(m_initialWindowSize);
 
     m_ticks_previous = SDL_GetTicks();
     m_ticks_current = 0;
@@ -72,9 +72,12 @@ namespace Timer {
 }
 
 void App::init() {
+	Command::LoadFromFile("galaxy31.cfg");
+	Command::LoadFromFile("user.cfg");
 	
 	tick_id = Event::Register("tick");
 	Timer::Init();
+	//
     Network::initialize();
     NetworkChat::initialize();
     // Network::connect("89.177.76.215", SERVER_PORT);
@@ -87,14 +90,33 @@ void App::init() {
 		throw std::string("SDL_GetDesktopDisplayMode failed: ") + SDL_GetError();;
 	}
 	
-	//use this later and fix fullscreen toggle
-	//this->setWindowSize(glm::vec2(desktopDisplayMode.w, desktopDisplayMode.h));
+	/*
+	//std::cout << Command::Get("window_size_x") << "xxx" << Command::Get("window_size_y") << std::endl;
+	
+	//add toggle fullscreen
+	if(Command::Get("window_size_x") && Command::Get("window_size_y")) {
+		this->setWindowSize(glm::ivec2(Command::Get("window_size_x").i, Command::Get("window_size_y").i));
+	} else {
+		int sizeX = desktopDisplayMode.w;
+		int sizeY = desktopDisplayMode.h;
+		this->setWindowSize(glm::ivec2(sizeX, sizeY));
+		
+		Command::Execute("window_size_x " + std::to_string(sizeX));
+		Command::Execute("window_size_y " + std::to_string(sizeY));
+	}
+	*/
 
-    window = SDL_CreateWindow("Galaxy31", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, this->getWindowSize().x, this->getWindowSize().y, SDL_WINDOW_OPENGL);
+	int sizeX = desktopDisplayMode.w;
+	int sizeY = desktopDisplayMode.h;
+	this->setWindowSize(glm::ivec2(sizeX, sizeY));
+
+    window = SDL_CreateWindow("Galaxy31", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, this->getWindowSize().x, this->getWindowSize().y, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_FULLSCREEN);
     if(window == nullptr) {
         throw std::string("Failed to create window: ") + SDL_GetError();
     }
-
+    
+    SDL_SetWindowMinimumSize(window, 800, 600);
+    
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
@@ -310,8 +332,8 @@ void App::init() {
 	}
 	*/
 	
-	Command::LoadFromFile("galaxy31.cfg");
-	Command::LoadFromFile("user.cfg");
+	//Command::LoadFromFile("galaxy31.cfg");
+	//Command::LoadFromFile("user.cfg");
 	Network::connect(Command::GetString("server_ip").c_str(), SERVER_PORT);
 	
 	Collision::Init();
@@ -371,6 +393,20 @@ void App::main_loop() {
 
             if(e.type == SDL_QUIT) {
                 m_running = false;
+            } else if(e.type == SDL_WINDOWEVENT) {
+				switch (e.window.event) {
+					case SDL_WINDOWEVENT_RESIZED:
+							this->setWindowSize(glm::vec2(e.window.data1, e.window.data2));
+						break;
+					case SDL_WINDOWEVENT_SIZE_CHANGED:
+							this->setWindowSize(glm::vec2(e.window.data1, e.window.data2));
+						break;
+					default:
+					/*
+						SDL_Log("Window %d got unknown event %d", e.window.windowID, e.window.event);
+					*/
+						break;
+				}
             } else if(e.type == SDL_KEYDOWN) {
 				if(!GameState::input_taken) {
 					if(m_bind.OnEvent(e).i != 0)
@@ -383,6 +419,7 @@ void App::main_loop() {
 							tm_game_chat.Focus();
 						break;
 						case SDLK_TAB:
+							SDL_SetWindowDisplayMode(window, &desktopDisplayMode);
 							//tb_game_tab->IsVisible() ? tb_game_tab->SetVisible(false) : tb_game_tab->SetVisible(true);
 							wt_options->IsVisible() ? wt_options->SetVisible(false) : wt_options->SetVisible(true);
 							wt_options->LockWidget(wt_options->IsVisible());
@@ -877,10 +914,12 @@ void App::init_commands() {
 			skipMouseResolution = 4;
 		} else {
 			SDL_SetWindowFullscreen(window, 0);
-			this->setWindowSize(m_initialWindowSize);
+			//this->setWindowSize(m_initialWindowSize);
 
 			skipMouseResolution = 4;
 		}
+		
+		SDL_SetWindowMinimumSize(window, 800, 600);
 		
 		//doenst work? http://forums.libsdl.org/viewtopic.php?t=9899&sid=0c6cf97b3791991ba61f169498385a70
 		/*
@@ -889,11 +928,13 @@ void App::init_commands() {
 		std::cout << x << "----" << y << std::endl;
 		*/
 		
+		/*
 		//SDL_WINDOWPOS_CENTERED centers startup window, but after window is moved and fullscreen is toggled, recenter it again, so mouse is warped in the window, because SDL_GetWindowPosition doesnt work
 		SDL_SetWindowPosition(window, desktopDisplayMode.w/2 - this->getWindowSize().x/2, desktopDisplayMode.h/2 - this->getWindowSize().y/2);
 		
 		//put mouse to the center of screen
 		SDL_WarpMouseGlobal(desktopDisplayMode.w/2, desktopDisplayMode.h/2);
+		*/
 	});
 	
 	Command::AddCommand("wireframe", [&]() {
