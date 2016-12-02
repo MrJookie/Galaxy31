@@ -79,7 +79,7 @@
 		</anchor>
 		
 		<anchor pos="R,T">
-			<widget rect="0,0,300,200">
+			<widget rect="0,100,300,200">
 				<textbox id="game_debug" multiline="true" rect="0,0,300,200" value="debug" interactible="false" font="Assets/Fonts/DroidSansMono.ttf,13" />
 				<widgetmover rect="0,0,100,20" zindex="50"></widgetmover>
 			</widget>

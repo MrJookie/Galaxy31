@@ -599,22 +599,18 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 		}
 		case PacketType::signup: {
 			//decryption
-			CryptoPP::AutoSeededRandomPool rng;
-				
-			std::string encrypted(p.get_string("user_password"), RSA_MAX_ENCRYPTED_LEN);
+			std::string encrypted(p.get_string("user_password"));
 			std::string decrypted;
 			
-			if(encrypted.length() == RSA_MAX_ENCRYPTED_LEN) {
-				try {
+			CryptoPP::AutoSeededRandomPool rng;
+
+			try {
 				CryptoPP::RSA::PrivateKey privateKey;
 				privateKey.Load(CryptoPP::StringSource(serverPrivateKeyStr, true, new CryptoPP::HexDecoder()).Ref());
 				
 				CryptoPP::RSAES_OAEP_SHA_Decryptor d(privateKey);
 				CryptoPP::StringSource ss2(encrypted, true, new CryptoPP::PK_DecryptorFilter(rng, d, new CryptoPP::StringSink(decrypted)));
-				} catch(...) {}
-			} else {
-				break;
-			}
+			} catch(...) { break; }
 
 			w.MakeWork(
 				createAccount,

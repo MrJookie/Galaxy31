@@ -192,12 +192,12 @@ namespace Network {
 		
 		CryptoPP::RSAES_OAEP_SHA_Encryptor e(loadPublicKey);
 		CryptoPP::StringSource ss1(plain_cut, true, new CryptoPP::PK_EncryptorFilter(rng, e, new CryptoPP::StringSink(encrypted)));
-		
+				
 		Packet s;
 		s.put("type", PacketType::signup);
 		s.put("user_email", user_email);
 		s.put("user_name", user_name);
-		s.put("user_password", user_password);
+		s.put("user_password", encrypted);
 		s.send(host, Channel::control, ENET_PACKET_FLAG_RELIABLE);
 	}
 	

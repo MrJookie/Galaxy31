@@ -29,7 +29,7 @@ static void handle_new_client(ENetPeer* peer);
 static void remove_client(ENetPeer* peer);
 
 struct Player {
-	uint32_t id;
+	unsigned int client_id;
 	unsigned int user_id;
 	std::string user_name;
 	std::string public_key;
@@ -39,7 +39,7 @@ std::array<unsigned char, 17> server_chatAESkey;
 
 // local data (statics)
 static ENetHost* host;
-static uint32_t last_id = 0;
+static unsigned int last_id = 0;
 static std::map<ENetPeer*, Player*> players;
 
 void generate_AES_key() {
@@ -77,7 +77,7 @@ void server_wait_for_packet() {
     //enet_host_flush(host);
 }
 
-void server_start(ushort port) {
+void server_start(unsigned short port) {
 	generate_AES_key();
 	
     ENetAddress address;
@@ -98,7 +98,7 @@ void handle_new_client(ENetPeer* peer) {
 	last_id++;
 	
 	Player* player = new Player;
-	player->id = last_id;
+	player->client_id = last_id;
 	player->user_id = 0;
 	players[peer] = player;
 }
@@ -173,7 +173,7 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 			players[peer]->public_key = p.get_string("public_key");
 			
 			if(players[peer]->user_id > 0 && !players[peer]->user_name.empty() && players[peer]->public_key.length() == RSA_PUBLIC_KEY_SIZE) {
-				cout << "id: " << players[peer]->id << " user_id: " << p.get_int("user_id") << " user_name: " << p.get_string("user_name") << endl;
+				cout << "client_id: " << players[peer]->client_id << " user_id: " << p.get_int("user_id") << " user_name: " << p.get_string("user_name") << endl;
 				
 				//send back encrypted aes
 				SendEncryptedAESKey(peer);
