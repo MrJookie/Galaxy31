@@ -257,12 +257,14 @@ void server_work() {
 			display_packets();
 		}
 		
+		/*
 		if(now - last_db_flush > std::chrono::seconds(5)) {
-			last_db_flush = now;
 			//players_mutex?
 			std::unique_lock<std::mutex> l(host_mutex);
+			last_db_flush = now;
 			flush_to_db();
 		}
+		*/
 		
 		std::this_thread::sleep_for(std::chrono::microseconds(100));
 	} 
@@ -384,6 +386,7 @@ void remove_client(ENetPeer* peer) {
 }
 
 void flush_to_db(ENetPeer* peer) {
+	return;
 	if(peer) { //flush one specific player (on disconnect ideally)
 		if(players[peer]->user_id > 0) { //if peer logged on, not only connected
 			std::cout << "flushing one: player's " << players[peer]->user_name << " money: " << players[peer]->resource_money << std::endl;

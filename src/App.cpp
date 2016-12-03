@@ -91,26 +91,72 @@ void App::init() {
 	}
 	
 	/*
-	//std::cout << Command::Get("window_size_x") << "xxx" << Command::Get("window_size_y") << std::endl;
-	
-	//add toggle fullscreen
-	if(Command::Get("window_size_x") && Command::Get("window_size_y")) {
-		this->setWindowSize(glm::ivec2(Command::Get("window_size_x").i, Command::Get("window_size_y").i));
+	if(Command::Get("resolution_x") && Command::Get("resolution_y")) {
+		this->setWindowSize(glm::ivec2(Command::Get("resolution_x").i, Command::Get("resolution_y").i));
 	} else {
 		int sizeX = desktopDisplayMode.w;
 		int sizeY = desktopDisplayMode.h;
 		this->setWindowSize(glm::ivec2(sizeX, sizeY));
 		
-		Command::Execute("window_size_x " + std::to_string(sizeX));
-		Command::Execute("window_size_y " + std::to_string(sizeY));
+		Command::Set("resolution_x", sizeX);
+		Command::Set("resolution_y", sizeY);
 	}
 	*/
+	
+	Uint32 flags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE;
+	
+	/*
+	std::cout << Command::Get("window_fullscreen") << std::endl;
+	
+	if(Command::Get("window_fullscreen")) {
+		if(Command::Get("window_fullscreen").i == 1) {
+			int sizeX = desktopDisplayMode.w;
+			int sizeY = desktopDisplayMode.h;
+			this->setWindowSize(glm::ivec2(sizeX, sizeY));
+			
+			Command::Set("resolution_x", sizeX);
+			Command::Set("resolution_y", sizeY);
+				
+			toggleFullscreen = true;
+		} else {
+			if(Command::Get("resolution_x") && Command::Get("resolution_y")) {
+				this->setWindowSize(glm::ivec2(Command::Get("resolution_x").i, Command::Get("resolution_y").i));
 
-	int sizeX = desktopDisplayMode.w;
-	int sizeY = desktopDisplayMode.h;
-	this->setWindowSize(glm::ivec2(sizeX, sizeY));
+				toggleFullscreen = false;
+			} else {
+				int sizeX = desktopDisplayMode.w;
+				int sizeY = desktopDisplayMode.h;
+				this->setWindowSize(glm::ivec2(sizeX, sizeY));
+				
+				Command::Set("resolution_x", sizeX);
+				Command::Set("resolution_y", sizeY);
+				
+				Command::Set("window_fullscreen", 1);
+				toggleFullscreen = true;
+			}
+		}
+	} else {
+		Command::Set("window_fullscreen", 1);
+		toggleFullscreen = true;
+	}
+	
+	if(toggleFullscreen) {
+		flags |= SDL_WINDOW_FULLSCREEN;
+	}
+	*/
+	
+	if(Command::Get("window_fullscreen")) {
+		std::cout << "okej" << std::endl;
+	} else {
+		std::cout << "not okej" << std::endl;
+		Command::Set("window_fullscreen", 1);
+	}
+	
+	if(toggleFullscreen) {
+		flags |= SDL_WINDOW_FULLSCREEN;
+	}
 
-    window = SDL_CreateWindow("Galaxy31", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, this->getWindowSize().x, this->getWindowSize().y, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_FULLSCREEN);
+    window = SDL_CreateWindow("Galaxy31", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, this->getWindowSize().x, this->getWindowSize().y, flags);
     if(window == nullptr) {
         throw std::string("Failed to create window: ") + SDL_GetError();
     }
@@ -176,6 +222,8 @@ void App::init() {
 	GameState::gui.SetDefaultFont("Assets/Fonts/Ubuntu-R.ttf");
 	GameState::gui.LoadXml("Assets/gui.xml");
 	GameState::gui.ApplyAnchoring();
+	
+	HUD::Init();
 	
 	tb_debug = (TextBox*)GameState::gui.GetControlById("game_debug");
 	
@@ -396,10 +444,16 @@ void App::main_loop() {
             } else if(e.type == SDL_WINDOWEVENT) {
 				switch (e.window.event) {
 					case SDL_WINDOWEVENT_RESIZED:
-							this->setWindowSize(glm::vec2(e.window.data1, e.window.data2));
+							this->setWindowSize(glm::ivec2(e.window.data1, e.window.data2));
+							
+							Command::Set("resolution_x", e.window.data1);
+							Command::Set("resolution_y", e.window.data2);
 						break;
 					case SDL_WINDOWEVENT_SIZE_CHANGED:
-							this->setWindowSize(glm::vec2(e.window.data1, e.window.data2));
+							this->setWindowSize(glm::ivec2(e.window.data1, e.window.data2));
+							
+							Command::Set("resolution_x", e.window.data1);
+							Command::Set("resolution_y", e.window.data2);
 						break;
 					default:
 					/*
@@ -419,7 +473,9 @@ void App::main_loop() {
 							tm_game_chat.Focus();
 						break;
 						case SDLK_TAB:
-							SDL_SetWindowDisplayMode(window, &desktopDisplayMode);
+							//why would we set custom resolution in fullscreen mode? set maximum desktop resolution
+							//SDL_SetWindowDisplayMode(window, &desktopDisplayMode);
+							
 							//tb_game_tab->IsVisible() ? tb_game_tab->SetVisible(false) : tb_game_tab->SetVisible(true);
 							wt_options->IsVisible() ? wt_options->SetVisible(false) : wt_options->SetVisible(true);
 							wt_options->LockWidget(wt_options->IsVisible());
@@ -511,22 +567,7 @@ void App::main_loop() {
         } else {
             SDL_GetMouseState(&mousePositionX, &mousePositionY);
             this->setScreenMousePosition(glm::vec2(mousePositionX, mousePositionY));
-
-            this->setWorldMousePosition(
-				glm::vec2(
-					((float)this->getScreenMousePosition().x - this->getWindowSize().x * 0.5) * m_zooming + GameState::camera.GetPosition().x,
-					((float)this->getScreenMousePosition().y - this->getWindowSize().y * 0.5) * m_zooming + GameState::camera.GetPosition().y
-				)
-			);
         }
-        
-        GameState::windowSize = this->getWindowSize();
-        GameState::screenMousePosition = this->getScreenMousePosition();
-        GameState::worldMousePosition = this->getWorldMousePosition();
-        GameState::deltaTime = this->getDeltaTime();
-        GameState::timeElapsed = this->getTimeElapsed();
-        GameState::zoom = this->getZoom();
-        GameState::objectsDrawn = 0;
         
         Network::handle_events(5);
 
@@ -563,7 +604,7 @@ void App::main_loop() {
         glUniform2f(glGetUniformLocation(GameState::asset.GetShader("background.vs").id, "shipPosition"), ship.GetPosition().x, -ship.GetPosition().y);
         glUniform2f(glGetUniformLocation(GameState::asset.GetShader("background.vs").id, "windowSize"), this->getWindowSize().x, this->getWindowSize().y);
         glUniform1f(glGetUniformLocation(GameState::asset.GetShader("background.vs").id, "time"), this->getTimeElapsed());
-        glUniform1f(glGetUniformLocation(GameState::asset.GetShader("background.vs").id, "zoom"), GameState::zoom);
+        glUniform1f(glGetUniformLocation(GameState::asset.GetShader("background.vs").id, "zoom"), this->getZoom());
 
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         
@@ -594,14 +635,10 @@ void App::game_loop() {
 	GameState::debug_string = "";
 	Ship& ship = *GameState::player;
 	NetworkChat::handle_events(5);
-		
-	HUD::Draw();
 	
-	Collision::WorldBoundary();
-	//
-	
+	//process
 	ship.Process();
-	
+		
 	for(auto& projectile : GameState::projectiles) {
 		projectile.Process();
 	}
@@ -619,14 +656,37 @@ void App::game_loop() {
 			firing_tp = std::chrono::steady_clock::now();
 		}
 	}
-
+	
+	//set vars after processing
 	GameState::camera.SetPosition( glm::vec3(ship.GetPosition(), 0.0f) );
 	glm::mat4 projection = glm::ortho(-(float)this->getWindowSize().x*this->getZoom()*0.5, (float)this->getWindowSize().x*this->getZoom()*0.5, (float)this->getWindowSize().y*this->getZoom()*0.5, -(float)this->getWindowSize().y*this->getZoom()*0.5);
 	glm::mat4 view = GameState::camera.GetViewMatrix();
 	GameState::camera.SetProjection(projection);
 	GameState::camera.SetView(view);
 	
+	/*
+	this->setWorldMousePosition(
+		glm::vec2(
+			((float)this->getScreenMousePosition().x - this->getWindowSize().x * 0.5) * this->getZoom() + GameState::camera.GetPosition().x,
+			((float)this->getScreenMousePosition().y - this->getWindowSize().y * 0.5) * this->getZoom() + GameState::camera.GetPosition().y
+		)
+	);
+	
+	GameState::worldMousePosition = this->getWorldMousePosition();
+	*/
+	GameState::worldMousePosition = glm::vec2(GameState::camera.screenToWorld(this->getScreenMousePosition(), this->getWindowSize(), GameState::camera.GetViewMatrix(), GameState::camera.GetProjectionMatrix()));
+	GameState::windowSize = this->getWindowSize();
+	GameState::screenMousePosition = this->getScreenMousePosition();
+	GameState::deltaTime = this->getDeltaTime();
+	GameState::timeElapsed = this->getTimeElapsed();
+	GameState::zoom = this->getZoom();
+	GameState::objectsDrawn = 0;
+
 	Network::SendOurState();
+	
+	//dependent on processing, so GetPosition() and so
+	Collision::WorldBoundary();
+	HUD::Draw();
 	
 	// add projectiles to m_quadtree, Update (lifetime) could be move here, now is in 
 	for(auto& projectile : GameState::projectiles) {
@@ -732,11 +792,12 @@ void App::game_loop() {
 	
 	//ship.Draw(); //is handled by drawObjects quadtree
 	GameState::asset.RenderSprites();
-	
+
 	//edit to select most-top object
 	for(auto& object : drawObjects) {
 		if(object->GetType() == object_type::projectile) continue;
-		//edit, check whether point is inside collision hull, not AABB => accuracy
+		//edit: check whether point is inside collision hull, not AABB => accuracy
+		//edit2: GameState::worldMousePosition.x, GameState::worldMousePosition.y is buggy on speed!
 		if( ((SolidObject*)object)->DoesObjectIntersectMouse(GameState::worldMousePosition.x, GameState::worldMousePosition.y) ) {
 			//std::cout << "object_owner: " << object->GetOwner() << std::endl;
 			hoveredObject = object;
@@ -745,11 +806,11 @@ void App::game_loop() {
 	}
 	
 	if(hoveredObject != nullptr) {
-		this->DrawObjectSelection(hoveredObject->GetPosition().x - hoveredObject->GetSize().x/2.0, hoveredObject->GetPosition().y - hoveredObject->GetSize().y/2.0, hoveredObject->GetSize().x, hoveredObject->GetSize().y, glm::vec4(0, 1, 1, 1));
+		this->DrawObjectSelection(std::floor(hoveredObject->GetPosition().x - hoveredObject->GetSize().x/2), std::floor(hoveredObject->GetPosition().y - hoveredObject->GetSize().y/2), hoveredObject->GetSize().x, hoveredObject->GetSize().y, glm::vec4(0, 1, 1, 1));
 	}
 	
 	if(selectedObject != nullptr) {
-		this->DrawObjectSelection(selectedObject->GetPosition().x - selectedObject->GetSize().x/2.0, selectedObject->GetPosition().y - selectedObject->GetSize().y/2.0, selectedObject->GetSize().x, selectedObject->GetSize().y, glm::vec4(1, 0, 1, 1));
+		this->DrawObjectSelection(std::floor(selectedObject->GetPosition().x - selectedObject->GetSize().x/2), std::floor(selectedObject->GetPosition().y - selectedObject->GetSize().y/2), selectedObject->GetSize().x, selectedObject->GetSize().y, glm::vec4(1, 0, 1, 1));
 	}
 	
 	m_quadtree->Clear();
@@ -762,9 +823,10 @@ void App::game_loop() {
 		"App:m_screenMousePosition: " + std::to_string(this->getScreenMousePosition().x) + "," + std::to_string(this->getScreenMousePosition().y)  + "\n" +
 		*/
 		
-		"App:mousePos: " + std::to_string(this->getWorldMousePosition().x) + "," + std::to_string(this->getWorldMousePosition().y)  + "\n" +
+		"App:mousePos: " + std::to_string(GameState::worldMousePosition.x) + "," + std::to_string(GameState::worldMousePosition.y)  + "\n" +
 		"ShipPosCenter: " + std::to_string(ship.GetPosition().x) + "," + std::to_string(ship.GetPosition().y)  + "\n" +
 		"Ship::m_speed: " + std::to_string(glm::length(ship.GetSpeed()))  + "\n" +
+		"zoom: " + std::to_string(GameState::zoom)  + "\n" +
 		"GameState::objectsDrawn: " + std::to_string(GameState::objectsDrawn)  + "\n" +
 		// "Quadtree::DrawnOnScreen: " + std::to_string((drawObjects.size())) + "\n" +
 		// "Quadtree::GetObjects: " + std::to_string((nearObjects.size())) + "\n" +
@@ -910,11 +972,13 @@ void App::init_commands() {
 			int w, h;
 			SDL_GetWindowSize(window, &w, &h);
 			this->setWindowSize(glm::vec2(w, h));
+			Command::Set("window_fullscreen", 1);
 
 			skipMouseResolution = 4;
 		} else {
 			SDL_SetWindowFullscreen(window, 0);
 			//this->setWindowSize(m_initialWindowSize);
+			Command::Set("window_fullscreen", 0);
 
 			skipMouseResolution = 4;
 		}
@@ -1000,8 +1064,8 @@ void App::DrawObjectSelection(int x, int y, int w, int h, glm::vec4 color) {
     glUniformMatrix4fv(glGetUniformLocation(GameState::asset.GetShader("shader1.vs").id, "projection"), 1, GL_FALSE, glm::value_ptr(GameState::camera.GetProjectionMatrix()));
     
     //limit line size to 40px due to zoom, zooming will be limited later, so it will be fit
-    float offsetX = std::min(20.0f * GameState::zoom, 40.0f) / w;
-    float offsetY = std::min(20.0f * GameState::zoom, 40.0f) / h;
+    float offsetX = std::fmin(20.0f * GameState::zoom, 40.0f) / w;
+    float offsetY = std::fmin(20.0f * GameState::zoom, 40.0f) / h;
 
     GLfloat positions[] = {
 		//top left

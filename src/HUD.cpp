@@ -9,6 +9,7 @@ ng::Canvas* cv_minimap = 0;
 ng::Canvas* cv_minimap_ship = 0;
 ng::Label* lb_game_bar_basic = 0;
 ng::Label* lb_game_ship_nickname = 0;
+ng::Label* lb_game_bar_basic_money = 0;
 
 void Radar() {
 	bool relativeRadar = true;
@@ -22,7 +23,7 @@ void Radar() {
 		cv_minimap->SetImage(std::string(TEXTURE_PATH) + std::string("hud_radar.png")); // load via asset manager?
 	}
 	
-	cv_minimap->Clear(0);
+	cv_minimap->Clear(0x00000000);
 
 	if(!cv_minimap_ship) {
 		cv_minimap_ship = (ng::Canvas*)GameState::gui.GetControlById("game_minimap_ship");
@@ -53,12 +54,13 @@ void Radar() {
 		auto& enemyShip = enemyObj.second.first;
 		
 		if(relativeRadar) {
-			glm::dvec2 relativePosition = glm::dvec2(enemyShip->GetPosition().x - ship.GetPosition().x, enemyShip->GetPosition().y - ship.GetPosition().y);
+			glm::vec2 relativePosition = glm::vec2(enemyShip->GetPosition().x - ship.GetPosition().x, enemyShip->GetPosition().y - ship.GetPosition().y);
 			
-			float enemyDistance = glm::length(relativePosition);
-			if(enemyDistance < GameState::radarPerimeter.x) { //radius
-				pointX = (relativePosition.x / (2 * GameState::radarPerimeter.x) * (cv_minimap->GetRect().w-4)) + (cv_minimap->GetRect().w-4)/2.0f;
-				pointY = (relativePosition.y / (2 * GameState::radarPerimeter.y) * (cv_minimap->GetRect().h-4)) + (cv_minimap->GetRect().h-4)/2.0f;
+			float objectDistance = glm::length(relativePosition);
+			if(objectDistance < GameState::radarPerimeter) { //radius
+				pointX = (relativePosition.x / (2 * GameState::radarPerimeter) * (cv_minimap->GetRect().w-4)) + (cv_minimap->GetRect().w-4)/2.0f;
+				pointY = (relativePosition.y / (2 * GameState::radarPerimeter) * (cv_minimap->GetRect().h-4)) + (cv_minimap->GetRect().h-4)/2.0f;
+			
 			//if(cv_minimap->GetPixel().a != 0x00) { // if pixel is not transparent (get from SetImage)
 				cv_minimap->SetPixelColor(0xFFFF0000);
 				cv_minimap->PutPixel(pointX, pointY);
@@ -71,6 +73,29 @@ void Radar() {
 			cv_minimap->PutPixel(pointX, pointY);
 		}
 	}
+	
+	// draw asteroids on radar
+	for(auto& asteroid : GameState::asteroids) {
+		
+		if(relativeRadar) {
+			glm::vec2 relativePosition = glm::vec2(asteroid.GetPosition().x - ship.GetPosition().x, asteroid.GetPosition().y - ship.GetPosition().y);
+			
+			float objectDistance = glm::length(relativePosition);
+			if(objectDistance < GameState::radarPerimeter) { //radius
+				pointX = (relativePosition.x / (2 * GameState::radarPerimeter) * (cv_minimap->GetRect().w-4)) + (cv_minimap->GetRect().w-4)/2.0f;
+				pointY = (relativePosition.y / (2 * GameState::radarPerimeter) * (cv_minimap->GetRect().h-4)) + (cv_minimap->GetRect().h-4)/2.0f;
+				
+				cv_minimap->SetPixelColor(0xFF777777);
+				cv_minimap->PutPixel(pointX, pointY);
+			}
+		} else {
+			pointX = (asteroid.GetPosition().x / (2 * GameState::worldSize.x) * (cv_minimap->GetRect().w-4)) + (cv_minimap->GetRect().w-4)/2.0f;
+			pointY = (asteroid.GetPosition().y / (2 * GameState::worldSize.y) * (cv_minimap->GetRect().h-4)) + (cv_minimap->GetRect().h-4)/2.0f;
+			
+			cv_minimap->SetPixelColor(0xFF777777);
+			cv_minimap->PutPixel(pointX, pointY);
+		}
+	}
 }
 
 void BarResources() {
@@ -78,6 +103,12 @@ void BarResources() {
 		lb_game_bar_basic = (ng::Label*)GameState::gui.GetControlById("game_bar_basic");
 		lb_game_bar_basic->SetImage(std::string(TEXTURE_PATH) + std::string("hud_bar_basic.png"));
 	}
+	
+	if(!lb_game_bar_basic_money) {
+		lb_game_bar_basic_money = (ng::Label*)GameState::gui.GetControlById("game_bar_basic_money");
+	}
+	
+	lb_game_bar_basic_money->SetText(std::to_string(GameState::resource_money));
 }
 
 void ShipBillboards() {
@@ -90,7 +121,7 @@ void ShipBillboards() {
 		
 	float offset = GameState::zoom*25.0f;
 	
-	glm::ivec4 myShipWorldSpace(ship.GetPosition().x - ship.GetSize().x/2.0, ship.GetPosition().y - ship.GetSize().y/2.0 - offset, 0.0f, 1.0f);
+	glm::ivec4 myShipWorldSpace(std::floor(ship.GetPosition().x - ship.GetSize().x/2), std::floor(ship.GetPosition().y - ship.GetSize().y/2 - offset), 0.0f, 1.0f);
 	glm::ivec2 myShipScreenSpace = GameState::camera.worldToScreen(myShipWorldSpace, GameState::windowSize, GameState::camera.GetViewMatrix(), GameState::camera.GetProjectionMatrix());
 			
 	lb_game_ship_nickname->SetPosition(myShipScreenSpace.x, myShipScreenSpace.y);
@@ -102,6 +133,7 @@ void ShipBillboards() {
 		auto& enemyShip = enemyObj.second.first;
 		unsigned int client_id = enemyShip->GetId();
 		
+		//if HUD not created for enemy ship yet
 		if(GameState::enemyShipsHUD.count(client_id) == 0) {
 			ng::Label* lb_enemy_ship_nickname = (ng::Label*)GameState::gui.CreateControl("label");
 			lb_enemy_ship_nickname->SetId("enemy_ship_nickname_" + std::to_string(enemyShip->GetOwner()));
@@ -115,7 +147,7 @@ void ShipBillboards() {
 			GameState::enemyShipsHUD[client_id] = controls;
 		}
 		
-		glm::ivec4 enemyShipWorldSpace(enemyShip->GetPosition().x - enemyShip->GetSize().x/2.0, enemyShip->GetPosition().y - enemyShip->GetSize().y/2.0 - offset, 0.0f, 1.0f);
+		glm::ivec4 enemyShipWorldSpace(std::floor(enemyShip->GetPosition().x - enemyShip->GetSize().x/2), std::floor(enemyShip->GetPosition().y - enemyShip->GetSize().y/2 - offset), 0.0f, 1.0f);
 		glm::ivec2 enemyShipScreenSpace = GameState::camera.worldToScreen(enemyShipWorldSpace, GameState::windowSize, GameState::camera.GetViewMatrix(), GameState::camera.GetProjectionMatrix());
 		
 		//0 = nickname
@@ -131,7 +163,7 @@ void Draw() {
 
 // TODO: implement radar event request and radar event observer
 void Init() {
-	
+
 }
 
 }

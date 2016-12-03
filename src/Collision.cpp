@@ -75,13 +75,16 @@ namespace Collision {
 						float rayLen = speedLen > 10.0f ? std::min(speedLen, 1000.0f) : 10.0f;
 						float speedMul = 0.1f;
 						
+						/*
 						//colliding for too long, prevention against penetration
 						if(num_contacts > 10) {
 							//((SolidObject*)&ship)->SetAcceleration(-reflectDirection);
 							rayLen = 100.0f;
 							speedMul = 0.3f;
 						}
+						*/
 						
+						((SolidObject*)&ship)->SetAcceleration({0,0});
 						((SolidObject*)&ship)->SetSpeed(glm::dvec2( ((SolidObject*)&ship)->GetSpeed().x*speedMul + reflectDirection.x * rayLen, ((SolidObject*)&ship)->GetSpeed().y*speedMul + reflectDirection.y * rayLen));
 						
 						Event::Emit(collision_evt, (Object*)&ship, object);
