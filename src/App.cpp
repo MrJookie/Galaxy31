@@ -11,6 +11,9 @@
 #include <sstream>
 #include <algorithm>
 
+#define WINDOW_MIN_WIDTH 800
+#define WINDOW_MIN_HEIGHT 600
+
 using Commands::Arg;
 using ng::Control;
 using ng::Button;
@@ -39,9 +42,6 @@ Object* hoveredObject = 0;
 Object* selectedObject = 0;
 
 App::App() {
-	//m_initialWindowSize = glm::vec2(1024, 768);
-    //this->setWindowSize(m_initialWindowSize);
-
     m_ticks_previous = SDL_GetTicks();
     m_ticks_current = 0;
     m_frames_current = 0;
@@ -104,52 +104,33 @@ void App::init() {
 	*/
 	
 	Uint32 flags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE;
-	
-	/*
-	std::cout << Command::Get("window_fullscreen") << std::endl;
-	
-	if(Command::Get("window_fullscreen")) {
+		
+	if(Command::Exist("window_fullscreen")) {
 		if(Command::Get("window_fullscreen").i == 1) {
 			int sizeX = desktopDisplayMode.w;
 			int sizeY = desktopDisplayMode.h;
 			this->setWindowSize(glm::ivec2(sizeX, sizeY));
-			
-			Command::Set("resolution_x", sizeX);
-			Command::Set("resolution_y", sizeY);
 				
 			toggleFullscreen = true;
 		} else {
-			if(Command::Get("resolution_x") && Command::Get("resolution_y")) {
-				this->setWindowSize(glm::ivec2(Command::Get("resolution_x").i, Command::Get("resolution_y").i));
+			if(Command::Exist("window_resolution_x") && Command::Exist("window_resolution_y")) {
+				this->setWindowSize(glm::ivec2(Command::Get("window_resolution_x").i, Command::Get("window_resolution_y").i));
 
 				toggleFullscreen = false;
-			} else {
-				int sizeX = desktopDisplayMode.w;
-				int sizeY = desktopDisplayMode.h;
+			} else { //should never happen
+				int sizeX = WINDOW_MIN_WIDTH; //desktopDisplayMode.w
+				int sizeY = WINDOW_MIN_HEIGHT; //desktopDisplayMode.h
 				this->setWindowSize(glm::ivec2(sizeX, sizeY));
 				
-				Command::Set("resolution_x", sizeX);
-				Command::Set("resolution_y", sizeY);
-				
-				Command::Set("window_fullscreen", 1);
-				toggleFullscreen = true;
+				Command::Set("window_resolution_x", sizeX);
+				Command::Set("window_resolution_y", sizeY);
+
+				toggleFullscreen = false;
 			}
 		}
 	} else {
 		Command::Set("window_fullscreen", 1);
 		toggleFullscreen = true;
-	}
-	
-	if(toggleFullscreen) {
-		flags |= SDL_WINDOW_FULLSCREEN;
-	}
-	*/
-	
-	if(Command::Get("window_fullscreen")) {
-		std::cout << "okej" << std::endl;
-	} else {
-		std::cout << "not okej" << std::endl;
-		Command::Set("window_fullscreen", 1);
 	}
 	
 	if(toggleFullscreen) {
@@ -161,7 +142,7 @@ void App::init() {
         throw std::string("Failed to create window: ") + SDL_GetError();
     }
     
-    SDL_SetWindowMinimumSize(window, 800, 600);
+    SDL_SetWindowMinimumSize(window, WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT);
     
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
@@ -211,6 +192,7 @@ void App::init() {
     
     GameState::asset.LoadTexture("propulsion.png");
     GameState::asset.LoadTexture("1.png");
+    GameState::asset.LoadTextureHull("1_collision.png");
     GameState::asset.LoadTexture("skin.png");
 
     GameState::asset.LoadShader("background.vs", "background.fs");
@@ -446,14 +428,14 @@ void App::main_loop() {
 					case SDL_WINDOWEVENT_RESIZED:
 							this->setWindowSize(glm::ivec2(e.window.data1, e.window.data2));
 							
-							Command::Set("resolution_x", e.window.data1);
-							Command::Set("resolution_y", e.window.data2);
+							Command::Set("window_resolution_x", e.window.data1);
+							Command::Set("window_resolution_y", e.window.data2);
 						break;
 					case SDL_WINDOWEVENT_SIZE_CHANGED:
 							this->setWindowSize(glm::ivec2(e.window.data1, e.window.data2));
 							
-							Command::Set("resolution_x", e.window.data1);
-							Command::Set("resolution_y", e.window.data2);
+							Command::Set("window_resolution_x", e.window.data1);
+							Command::Set("window_resolution_y", e.window.data2);
 						break;
 					default:
 					/*
@@ -473,12 +455,20 @@ void App::main_loop() {
 							tm_game_chat.Focus();
 						break;
 						case SDLK_TAB:
+							/*
+							//set music volume
+							Mix_VolumeMusic(-1) > 0 ? Mix_VolumeMusic(0) : Mix_VolumeMusic(MIX_MAX_VOLUME);
+							*/
+							
 							//why would we set custom resolution in fullscreen mode? set maximum desktop resolution
 							//SDL_SetWindowDisplayMode(window, &desktopDisplayMode);
 							
 							//tb_game_tab->IsVisible() ? tb_game_tab->SetVisible(false) : tb_game_tab->SetVisible(true);
+							
+							/*
 							wt_options->IsVisible() ? wt_options->SetVisible(false) : wt_options->SetVisible(true);
 							wt_options->LockWidget(wt_options->IsVisible());
+							*/
 							
 							//just for tests, todo: update HUD
 							GameState::resource_money++;
@@ -708,7 +698,7 @@ void App::game_loop() {
 		
 		//ship.second.first->Draw();
 		//ship.second.first->GetSprite()->RemoveFromDrawing();
-		ship.second.first->Destroy(); //removes also propulsion
+		ship.second.first->RemoveFromDrawing(); //removes also propulsion
 		
 		ship.second.first->UpdateHullVertices(GameState::asset.GetTextureHull("ship_01_skin_collision.png").vertices);
 		if(Command::Get("collisionhull"))
@@ -725,9 +715,10 @@ void App::game_loop() {
 		asteroid.Update();
 		asteroid.GetSprite()->RemoveFromDrawing();
 		
+		asteroid.UpdateHullVertices(GameState::asset.GetTextureHull("1_collision.png").vertices);
 		//asteroid->UpdateHullVertices(GameState::asset.GetTextureHull("asteroid_01_skin_collision.png").vertices);
-		//if(Command::Get("collisionhull"))
-		//	asteroid->RenderCollisionHull();
+		if(Command::Get("collisionhull"))
+			asteroid.RenderCollisionHull();
 		
 		if(Command::Get("aabb")) {
 			m_quadtree->DrawRect(asteroid.GetPosition().x - asteroid.GetSize().x/2, asteroid.GetPosition().y - asteroid.GetSize().y/2, asteroid.GetSize().x, asteroid.GetSize().y, glm::vec4(0, 1, 0, 1));
@@ -827,6 +818,7 @@ void App::game_loop() {
 		"ShipPosCenter: " + std::to_string(ship.GetPosition().x) + "," + std::to_string(ship.GetPosition().y)  + "\n" +
 		"Ship::m_speed: " + std::to_string(glm::length(ship.GetSpeed()))  + "\n" +
 		"zoom: " + std::to_string(GameState::zoom)  + "\n" +
+		"num_contacts: " + std::to_string(GameState::collision_contacts)  + "\n" +
 		"GameState::objectsDrawn: " + std::to_string(GameState::objectsDrawn)  + "\n" +
 		// "Quadtree::DrawnOnScreen: " + std::to_string((drawObjects.size())) + "\n" +
 		// "Quadtree::GetObjects: " + std::to_string((nearObjects.size())) + "\n" +
@@ -983,7 +975,7 @@ void App::init_commands() {
 			skipMouseResolution = 4;
 		}
 		
-		SDL_SetWindowMinimumSize(window, 800, 600);
+		SDL_SetWindowMinimumSize(window, WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT);
 		
 		//doenst work? http://forums.libsdl.org/viewtopic.php?t=9899&sid=0c6cf97b3791991ba61f169498385a70
 		/*

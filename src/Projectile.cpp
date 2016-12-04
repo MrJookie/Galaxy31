@@ -2,6 +2,8 @@
 #include <iostream>
 #include "GameState.hpp"
 
+#define PROJECTILE_RAY_CONSTANT 0.02
+
 Projectile::Projectile(const Asset::Texture& texture, glm::dvec2 pos, glm::dvec2 speed) : SolidObject(glm::dvec2(0), pos, 0, speed) {
 	SetOwner(GameState::player->GetId());
 	isdead = false;
@@ -24,7 +26,7 @@ void Projectile::Update() {
 	timer -= GameState::deltaTime;
 	
 	//ray in front of every bullet to avoid fast bullets passing through objects
-	float rayLen = glm::length(this->GetSpeed()) * 0.03;
+	float rayLen = glm::length(this->GetSpeed()) * PROJECTILE_RAY_CONSTANT;
 	glm::vec2 projectileDirection = glm::normalize(glm::dvec2(m_acceleration));
 	
 	std::vector<glm::vec2> rayLine;

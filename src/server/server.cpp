@@ -490,7 +490,7 @@ void send_states() {
 		for(auto& o : p.second->obj) {
 			obj[i] = o;
 			obj[i].SetId(p.second->client_id);
-			std::strcpy(obj[i].name.data(), p.second->user_name.data());
+			//std::strcpy(obj[i].name.data(), p.second->user_name.data());
 			assert(i < num_objects);
 			i++;
 		}

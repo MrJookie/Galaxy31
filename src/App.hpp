@@ -45,7 +45,6 @@ class App {
         void takeScreenshotPNG(int x, int y, int w, int h);
         void generate_RSA_keypair();
         
-        glm::ivec2 m_initialWindowSize;
         glm::ivec2 m_windowSize;
         glm::ivec2 m_screenMousePosition;
         glm::ivec2 m_worldMousePosition;

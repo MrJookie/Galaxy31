@@ -59,6 +59,8 @@ namespace GameState {
 	extern Asset asset;
 	extern Camera camera;
 	
+	extern int collision_contacts;
+	
 	extern Ship* player;
 	extern int resource_money;
 	extern int resource_uranium;

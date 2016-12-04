@@ -96,6 +96,8 @@ void Radar() {
 			cv_minimap->PutPixel(pointX, pointY);
 		}
 	}
+	
+	cv_minimap->RefreshTexture();
 }
 
 void BarResources() {

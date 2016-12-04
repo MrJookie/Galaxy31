@@ -430,7 +430,7 @@ namespace Network {
 					GameState::gui.RemoveControl(control);
 				}
 				
-				GameState::enemyShips[client_id].first->Destroy(); //removes propulsion and ship from drawing
+				GameState::enemyShips[client_id].first->RemoveFromDrawing(); //removes propulsion and ship from drawing
 				
 				//cleanup all user's projectiles (What if ship is erased and projectiles are flying and hit player, then user_id is not allocated anymore)
 				//remove from drawing aswell

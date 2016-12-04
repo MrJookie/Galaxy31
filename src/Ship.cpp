@@ -165,7 +165,7 @@ Sprite* Ship::GetSprite() {
 	return &m_chassis.sprite;
 }
 
-void Ship::Destroy() {
+void Ship::RemoveFromDrawing() {
 	m_engine_propulsion.RemoveFromDrawing();
 	m_chassis.sprite.RemoveFromDrawing();
 }

@@ -18,6 +18,8 @@ namespace GameState {
 	Asset asset;
 	Camera camera(glm::vec3(0.0f, 0.0f, 0.0f));
 	
+	int collision_contacts;
+	
 	Ship* player;
 	int resource_money;
 	int resource_uranium;

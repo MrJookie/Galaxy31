@@ -6,18 +6,15 @@
 #include "SolidObject.hpp"
 #include "GameState.hpp"
 #include <iostream>
-using std::cout;
-using std::endl;
+
 namespace Collision {
-	
-	int num_contacts = 0;
-	
+		
 	int collision_evt;
 	void Init() {
 		collision_evt = Event::Register("collision");
 	}
 			
-	void CheckBullets(Quadtree* quadtree) {
+	void CheckProjectilesObject(Quadtree* quadtree) {
 		Object& myShip = *GameState::player;
 		
 		std::vector<Object*> projectiles;
@@ -25,29 +22,31 @@ namespace Collision {
 		for(auto& projectile : projectiles) {
 			if(projectile->GetType() != object_type::projectile) continue;
 						
-			std::vector<Object*> ships;
-			quadtree->QueryRectangle(projectile->GetPosition().x - projectile->GetSize().x/2, projectile->GetPosition().y - projectile->GetSize().y/2, projectile->GetSize().x, projectile->GetSize().y, ships);
-			for(auto& ship : ships) {
+			std::vector<Object*> objects;
+			quadtree->QueryRectangle(projectile->GetPosition().x - projectile->GetSize().x/2, projectile->GetPosition().y - projectile->GetSize().y/2, projectile->GetSize().x, projectile->GetSize().y, objects);
+			for(auto& object : objects) {
 				// if(ship->GetType() != object_type::ship) continue;
-				if(ship->GetType() != object_type::ship || projectile->GetOwner() == ship->GetId()) continue;
+				if(object->GetType() != object_type::ship && object->GetType() != object_type::asteroid || projectile->GetOwner() == object->GetId()) continue;
 				
-				if(((SolidObject*)projectile)->Collides((SolidObject*)ship) || ((SolidObject*)projectile)->CollidesProjectileRay((SolidObject*)ship)) {
-					Event::Emit(collision_evt, ship, projectile);
+				if(((SolidObject*)projectile)->Collides((SolidObject*)object) || ((SolidObject*)projectile)->CollidesProjectileRay((SolidObject*)object)) {
+					Event::Emit(collision_evt, object, projectile);
 					
-					//std::cout << "projectile collided a ship" << std::endl;
+					//std::cout << "projectile collided an object" << std::endl;
 				}
 			}
 		}
 	}
 	
-	void CheckShips(Quadtree* quadtree) {
+	void CheckShipObject(Quadtree* quadtree) {
+		bool had_collision = false;
+		
 		Ship& ship = *GameState::player;
 		
 		ship.CollisionHullColor = glm::vec4(1.0, 0.0, 1.0, 1.0);
 		std::vector<Object*> nearObjects;
 		quadtree->QueryRectangle(ship.GetPosition().x - ship.GetSize().x/2, ship.GetPosition().y - ship.GetSize().y/2, ship.GetSize().x, ship.GetSize().y, nearObjects);
 		for(auto& object : nearObjects) {
-			if(object->GetType() != object_type::ship) continue;
+			if(object->GetType() != object_type::ship && object->GetType() != object_type::asteroid) continue;
 			if((SolidObject*)object == (SolidObject*)&ship) continue;
 
 			if(Command::Get("aabb"))
@@ -64,6 +63,7 @@ namespace Collision {
 					glm::vec2 enemyShipPosition = ((SolidObject*)object)->GetPosition();
 					
 					//spawn
+					//~~~~NEEDS FIX, MAY CAUSE NaN!!
 					if(myShipPosition.x == enemyShipPosition.x && myShipPosition.y == enemyShipPosition.y) {
 						return;
 					} else {
@@ -72,15 +72,13 @@ namespace Collision {
 						//float dist = glm::length(glm::dvec2(enemyShipPosition.x - myShipPosition.x, enemyShipPosition.y - myShipPosition.y));
 						
 						float speedLen = glm::length( ((SolidObject*)&ship)->GetSpeed() );
-						float rayLen = speedLen > 10.0f ? std::min(speedLen, 1000.0f) : 10.0f;
+						float rayLen = speedLen > 100.0f ? std::min(speedLen, 500.0f) : 100.0f;
 						float speedMul = 0.1f;
 						
 						/*
 						//colliding for too long, prevention against penetration
-						if(num_contacts > 10) {
-							//((SolidObject*)&ship)->SetAcceleration(-reflectDirection);
-							rayLen = 100.0f;
-							speedMul = 0.3f;
+						if(GameState::collision_contacts > 0) {
+							//rayLen = 60.0f;
 						}
 						*/
 						
@@ -89,12 +87,10 @@ namespace Collision {
 						
 						Event::Emit(collision_evt, (Object*)&ship, object);
 						
-						//std::cout << "ship collided a ship" << std::endl;
+						//std::cout << "ship collided an object" << std::endl;
 					}
 					
-					num_contacts++;
-				} else {
-					num_contacts = 0;
+					had_collision = true;
 				}
 
 			/*
@@ -113,11 +109,17 @@ namespace Collision {
 			}
 			*/
 		}
+		
+		if(had_collision) {
+			GameState::collision_contacts++;
+		} else {
+			GameState::collision_contacts = 0;
+		}
 	}
 	
 	void Check(Quadtree* quadtree) {
-		CheckBullets(quadtree);
-		CheckShips(quadtree);
+		CheckProjectilesObject(quadtree);
+		CheckShipObject(quadtree);
 	}
 	
 	void WorldBoundary() {

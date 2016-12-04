@@ -28,10 +28,10 @@ class Ship : public SolidObject {
 		void Fire();
 		void Stabilizers();
 		Sprite* GetSprite();
-		void Destroy();
+		void RemoveFromDrawing();
 
 		//move here all account_user info
-		
+
 	private:
 		Chassis m_chassis;
 		double m_rotation_speed_coefficient;
