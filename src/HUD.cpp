@@ -48,7 +48,30 @@ void Radar() {
 	*/
 	
 	glm::vec2 myShipPosition = ship.GetPosition();
-
+	
+	// draw asteroids on radar
+	for(auto& asteroid : GameState::asteroids) {
+		
+		if(relativeRadar) {
+			glm::vec2 relativePosition = glm::vec2(asteroid.GetPosition().x - ship.GetPosition().x, asteroid.GetPosition().y - ship.GetPosition().y);
+			
+			float objectDistance = glm::length(relativePosition);
+			if(objectDistance < GameState::radarPerimeter) { //radius
+				pointX = (relativePosition.x / (2 * GameState::radarPerimeter) * (cv_minimap->GetRect().w-4)) + (cv_minimap->GetRect().w-4)/2.0f;
+				pointY = (relativePosition.y / (2 * GameState::radarPerimeter) * (cv_minimap->GetRect().h-4)) + (cv_minimap->GetRect().h-4)/2.0f;
+				
+				cv_minimap->SetPixelColor(0xFF777777);
+				cv_minimap->PutPixel(pointX, pointY);
+			}
+		} else {
+			pointX = (asteroid.GetPosition().x / (2 * GameState::worldSize.x) * (cv_minimap->GetRect().w-4)) + (cv_minimap->GetRect().w-4)/2.0f;
+			pointY = (asteroid.GetPosition().y / (2 * GameState::worldSize.y) * (cv_minimap->GetRect().h-4)) + (cv_minimap->GetRect().h-4)/2.0f;
+			
+			cv_minimap->SetPixelColor(0xFF777777);
+			cv_minimap->PutPixel(pointX, pointY);
+		}
+	}
+	
 	// draw enemy ships on radar
 	for(auto& enemyObj : GameState::enemyShips) {
 		auto& enemyShip = enemyObj.second.first;
@@ -70,29 +93,6 @@ void Radar() {
 			pointY = (enemyShip->GetPosition().y / (2 * GameState::worldSize.y) * (cv_minimap->GetRect().h-4)) + (cv_minimap->GetRect().h-4)/2.0f;
 			
 			cv_minimap->SetPixelColor(0xFFFF0000);
-			cv_minimap->PutPixel(pointX, pointY);
-		}
-	}
-	
-	// draw asteroids on radar
-	for(auto& asteroid : GameState::asteroids) {
-		
-		if(relativeRadar) {
-			glm::vec2 relativePosition = glm::vec2(asteroid.GetPosition().x - ship.GetPosition().x, asteroid.GetPosition().y - ship.GetPosition().y);
-			
-			float objectDistance = glm::length(relativePosition);
-			if(objectDistance < GameState::radarPerimeter) { //radius
-				pointX = (relativePosition.x / (2 * GameState::radarPerimeter) * (cv_minimap->GetRect().w-4)) + (cv_minimap->GetRect().w-4)/2.0f;
-				pointY = (relativePosition.y / (2 * GameState::radarPerimeter) * (cv_minimap->GetRect().h-4)) + (cv_minimap->GetRect().h-4)/2.0f;
-				
-				cv_minimap->SetPixelColor(0xFF777777);
-				cv_minimap->PutPixel(pointX, pointY);
-			}
-		} else {
-			pointX = (asteroid.GetPosition().x / (2 * GameState::worldSize.x) * (cv_minimap->GetRect().w-4)) + (cv_minimap->GetRect().w-4)/2.0f;
-			pointY = (asteroid.GetPosition().y / (2 * GameState::worldSize.y) * (cv_minimap->GetRect().h-4)) + (cv_minimap->GetRect().h-4)/2.0f;
-			
-			cv_minimap->SetPixelColor(0xFF777777);
 			cv_minimap->PutPixel(pointX, pointY);
 		}
 	}

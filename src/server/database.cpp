@@ -85,15 +85,17 @@ int loginAccount(mysqlpp::Connection& con, std::string email, std::string passwo
 }
 
 mysqlpp::Row getExistingUser(mysqlpp::Connection& con, unsigned int account_id) {
-	mysqlpp::Query query = con.query();
-    query << "SELECT * FROM accounts WHERE id = " << mysqlpp::escape << account_id << " LIMIT 1";
-    
-    mysqlpp::StoreQueryResult res = query.store();
-    if(res.num_rows() > 0) {
-		return res[0];
-	}
-	
-	return mysqlpp::Row();
+	try {
+		mysqlpp::Query query = con.query();
+		query << "SELECT * FROM accounts WHERE id = " << mysqlpp::escape << account_id << " LIMIT 1";
+		
+		mysqlpp::StoreQueryResult res = query.store();
+		if(res.num_rows() > 0) {
+			return res[0];
+		}
+		
+		return mysqlpp::Row();
+	} catch(...) {}
 }
 
 int flushPlayerData(mysqlpp::Connection& con, std::string statement) {

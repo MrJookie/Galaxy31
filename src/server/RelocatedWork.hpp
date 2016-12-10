@@ -72,7 +72,9 @@ class RelocatedWork {
 		};
 	
 		std::queue<std::function<void(ref_k)>> m_work;
-		std::queue<std::function<void()>*> m_continue;
+		
+		// pair< continue_func, destructor_func >
+		std::queue<std::pair< std::function<void()>*, std::function<void()> >> m_continue;
 		std::mutex m_mutex;
 		
 	private:
@@ -83,7 +85,7 @@ class RelocatedWork {
 			m_work.push([=](ref_k state){
 				ret->result = work_function(state, std::get<N>(tuple)...);
 				std::unique_lock<std::mutex> l(m_mutex);
-				m_continue.push((std::function<void()>*)ret);
+				m_continue.push(std::make_pair( &ret->func, [=](){ delete ret; } ));
 			});
 			return *ret;
 		}
@@ -105,17 +107,19 @@ class RelocatedWork {
 		void Continue() {
 			while(!m_continue.empty()) {
 				std::function<void()>* continue_func;
+				std::pair< std::function<void()>*, std::function<void()> > continue_element;
 				
 				{
 					std::unique_lock<std::mutex> l(m_mutex);
 					if(m_continue.empty()) return;
-					continue_func = m_continue.front();
+					continue_element = m_continue.front();
+					// continue_func = m_continue.front();
 					m_continue.pop();
 				}
 				
-				if(*continue_func)
-					(*continue_func)();
-				delete continue_func;
+				if(*continue_element.first)
+					(*continue_element.first)();
+				continue_element.second();
 			}
 		}
 		

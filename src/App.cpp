@@ -35,7 +35,6 @@ ng::TextBox* tb_debug;
 ng::Label* lb_game_user_name;
 ng::TextBox* tb_game_tab;
 ng::Widget* wt_options;
-ng::ComboBox* cb_resolutions;
 int tick_id;
 
 Object* hoveredObject = 0;
@@ -212,7 +211,7 @@ void App::init() {
 	GameState::set_gui_page("login");
 
 	Button &bt_login_submit = *((Button*)GameState::gui.GetControlById("login_submit"));
-	bt_login_submit.SubscribeEvent(Button::event::click, [&](Control* c) {
+	bt_login_submit.SubscribeEvent(ng::event::click, [&](Control* c) {
 		//Button* bt = (Button*)c;
 		
 		TextBox* tb_login_status = (TextBox*)GameState::gui.GetControlById("login_status");
@@ -226,7 +225,7 @@ void App::init() {
 	});
 	
 	Button &bt_pass_restore_submit = *((Button*)GameState::gui.GetControlById("pass_restore_submit"));
-	bt_pass_restore_submit.SubscribeEvent(Button::event::click, [&](Control* c) {
+	bt_pass_restore_submit.SubscribeEvent(ng::event::click, [&](Control* c) {
 		TextBox* tb_pass_restore_email = (TextBox*)GameState::gui.GetControlById("pass_restore_email");
 		
 		if(this->server_doPassRestore(tb_pass_restore_email->GetText())) {
@@ -235,7 +234,7 @@ void App::init() {
 	});
 	
 	Button &bt_register_submit = *((Button*)GameState::gui.GetControlById("register_submit"));
-	bt_register_submit.SubscribeEvent(Button::event::click, [&](Control* c) {
+	bt_register_submit.SubscribeEvent(ng::event::click, [&](Control* c) {
 		TextBox* tb_register_status = (TextBox*)GameState::gui.GetControlById("register_status");
 		TextBox* tb_register_email = (TextBox*)GameState::gui.GetControlById("register_email");
 		TextBox* tb_register_username = (TextBox*)GameState::gui.GetControlById("register_username");
@@ -252,38 +251,6 @@ void App::init() {
 		}
 	});
 	
-	
-	
-	cb_resolutions = (ComboBox*)GameState::gui.GetControlById("options_resolutions");
-	    
-    static int display_in_use = 0; /* Only using first display */
-
-    int display_mode_count;
-
-    SDL_Log("SDL_GetNumVideoDisplays(): %i", SDL_GetNumVideoDisplays());
-
-    display_mode_count = SDL_GetNumDisplayModes(display_in_use);
-    if (display_mode_count < 1) {
-        SDL_Log("SDL_GetNumDisplayModes failed: %s", SDL_GetError());
-        throw std::string("error");
-    }
-    SDL_Log("SDL_GetNumDisplayModes: %i", display_mode_count);
-
-    for (int i = 0; i < display_mode_count; ++i) {
-		SDL_DisplayMode mode;
-        if (SDL_GetDisplayMode(display_in_use, i, &mode) != 0) {
-            SDL_Log("SDL_GetDisplayMode failed: %s", SDL_GetError());
-            throw std::string("error");
-        }
-        Uint32 f = mode.format;
-
-        SDL_Log("Mode %i\tbpp %i\t%s\t%i x %i", i, SDL_BITSPERPIXEL(f), SDL_GetPixelFormatName(f), mode.w, mode.h);
-        
-        cb_resolutions->AddItem(std::to_string(i) + ". " + std::to_string(mode.w) + "x" + std::to_string(mode.h) + "x" + std::to_string(SDL_BITSPERPIXEL(f)));
-    }
-
-
-	
 	lb_game_user_name = (Label*)GameState::gui.GetControlById("game_user_name");
 	tb_game_tab = (TextBox*)GameState::gui.GetControlById("game_tab");
 	wt_options = (Widget*)GameState::gui.GetControlById("options");
@@ -292,28 +259,28 @@ void App::init() {
 	tb_game_tab->SetImage(std::string(TEXTURE_PATH) + std::string("hud_1.png"), true);
 	
 	Button &bt_login_register = *((Button*)GameState::gui.GetControlById("login_register"));
-	bt_login_register.SubscribeEvent(Button::event::click, [&](Control* c) {
+	bt_login_register.SubscribeEvent(ng::event::click, [&](Control* c) {
 		GameState::set_gui_page("register");
 	});
 	
 	Button &bt_login_pass_restore = *((Button*)GameState::gui.GetControlById("login_pass_restore"));
-	bt_login_pass_restore.SubscribeEvent(Button::event::click, [&](Control* c) {
+	bt_login_pass_restore.SubscribeEvent(ng::event::click, [&](Control* c) {
 		GameState::set_gui_page("pass_restore");
 	});
 	
 	Button &bt_register_login = *((Button*)GameState::gui.GetControlById("register_login"));
-	bt_register_login.SubscribeEvent(Button::event::click, [&](Control* c) {
+	bt_register_login.SubscribeEvent(ng::event::click, [&](Control* c) {
 		GameState::set_gui_page("login");
 	});
 	
 	Button &bt_pass_restore_login = *((Button*)GameState::gui.GetControlById("pass_restore_login"));
-	bt_pass_restore_login.SubscribeEvent(Button::event::click, [&](Control* c) {
+	bt_pass_restore_login.SubscribeEvent(ng::event::click, [&](Control* c) {
 		GameState::set_gui_page("login");
 	});
 
 	ng::Terminal &tm_game_chat = *((ng::Terminal*)GameState::gui.GetControlById("game_terminal"));
 
-	tm_game_chat.SubscribeEvent(ng::Terminal::event::command, [&](Control* c) {
+	tm_game_chat.SubscribeEvent(ng::event::enter, [&](Control* c) {
 		ng::Terminal* t = (ng::Terminal*)c;
 		if(t->GetLastCommand().size() > 0) {
 			if(t->GetLastCommand()[0] == '/') {
@@ -343,7 +310,7 @@ void App::init() {
 	GameState::asteroids.push_back(asteroid);
 	
 	const Asset::Texture& texture2 = GameState::asset.GetTexture("7.png");
-    Asteroid asteroid2(texture2, glm::vec2(-300, -300));
+    Asteroid asteroid2(texture2, glm::vec2(-500, -500));
     asteroid2.SetOwner(0);
 	GameState::asteroids.push_back(asteroid2);
 	

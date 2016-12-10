@@ -118,9 +118,9 @@ server_cpp := \
 server_exe := Galaxy31_server
 server_build := $(build)/server/
 server_obj := $(addprefix $(server_build)/, $(patsubst %.cpp, %.o, $(server_cpp)))
-server_link := -Llibs/enet-1.3.13 -lenet -lmysqlclient_r -lmysqlpp -lcryptopp -lncurses
+server_link := -Llibs/enet-1.3.13 -lenet -lmysqlclient_r -lmysqlpp -lcryptopp -lncurses -lprofiler
 server_includes := -Ilibs/enet-1.3.13/ -I/usr/include/mysql/ -I/usr/include/mysql++/ -Ilibs
-server_flags := -Wno-deprecated-declarations -g -DSERVER
+server_flags := -Wno-deprecated-declarations -g -DSERVER -DWITHPERFTOOLS
 
 server: make_dirs_server extract_tmp_files $(server_exe)
 	

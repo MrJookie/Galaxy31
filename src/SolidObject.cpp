@@ -151,7 +151,6 @@ void SolidObject::RenderProjectileRay() {
 }
 
 bool SolidObject::Collides(SolidObject* obj) {
-	// check whether object's AABB intersect
 	if(this->DoObjectsAABBIntersect(obj)) {
 		std::vector<glm::vec2> hullVerticesA = this->GetCollisionHull();
 		std::vector<glm::vec2> hullVerticesB = obj->GetCollisionHull();

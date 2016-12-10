@@ -30,7 +30,6 @@
 
 #include "CursesConsole.hpp"
 
-
 using Commands::Arg;
 
 using std::cout;
@@ -178,7 +177,7 @@ int main(int argc, char* argv[]) {
 	if(!config.getValue().empty()) {
 	//	Command::SaveVarariablesToFile(config.getValue(), true);
 	}
-	
+		
 	return 0;
 }
 
@@ -257,17 +256,15 @@ void server_work() {
 			display_packets();
 		}
 		
-		/*
 		if(now - last_db_flush > std::chrono::seconds(5)) {
 			//players_mutex?
 			std::unique_lock<std::mutex> l(host_mutex);
 			last_db_flush = now;
 			flush_to_db();
 		}
-		*/
 		
 		std::this_thread::sleep_for(std::chrono::microseconds(100));
-	} 
+	}
 }
 
 std::chrono::high_resolution_clock::time_point last_time_mysql_pinged = std::chrono::high_resolution_clock::now();
@@ -291,6 +288,8 @@ void mysql_work() {
 		w.Work(con);
 		std::this_thread::sleep_for(std::chrono::milliseconds(5));
 	}
+	
+	mysqlpp::Connection::thread_end();
 }
 
 void generate_RSA_keypair() {
@@ -323,22 +322,23 @@ void server_start() {
     unsigned int num_cores = std::thread::hardware_concurrency();
     unsigned int num_threads = (num_cores == 0) ?  1 : num_cores;
     
-    std::thread *t = new std::thread[num_threads];
+    //std::thread *t = new std::thread[num_threads];
     for(int i = 0; i < num_threads; i++) {
-		t[i] = std::thread(server_work);
+		std::thread worker(server_work);
 		
-		if(t[i].joinable()) {
-			t[i].detach();
+		if(worker.joinable()) {
+			worker.detach();
 		}
 	}
-
-    // delete[] t;
     
     std::thread mysql_thread(mysql_work);
 	mysql_thread.detach();
 	
-	std::thread *wait_packets_thread = new std::thread(server_wait_for_packet);
-	wait_packets_thread->detach();
+	std::thread wait_packets_thread(server_wait_for_packet);
+	wait_packets_thread.detach();
+	
+	//delete[] t;
+	//delete wait_packets_thread;
 }
 
 void handle_new_client(ENetPeer* peer) {
@@ -386,7 +386,6 @@ void remove_client(ENetPeer* peer) {
 }
 
 void flush_to_db(ENetPeer* peer) {
-	return;
 	if(peer) { //flush one specific player (on disconnect ideally)
 		if(players[peer]->user_id > 0) { //if peer logged on, not only connected
 			std::cout << "flushing one: player's " << players[peer]->user_name << " money: " << players[peer]->resource_money << std::endl;
@@ -490,7 +489,7 @@ void send_states() {
 		for(auto& o : p.second->obj) {
 			obj[i] = o;
 			obj[i].SetId(p.second->client_id);
-			//std::strcpy(obj[i].name.data(), p.second->user_name.data());
+			std::strcpy(obj[i].name.data(), p.second->user_name.data());
 			assert(i < num_objects);
 			i++;
 		}
@@ -564,6 +563,7 @@ void parse_packet(ENetPeer* peer, ENetPacket* pkt) {
 			player.resource_money = p.get_int("resource_money");
 			player.obj.push_back( *((Object*)p.get_pair("objects").first) );
 			// cout << "receiving states from " << player.client_id << "\n";
+			
 			break;
 		}
 		case PacketType::authenticate: {
